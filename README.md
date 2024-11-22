@@ -5,6 +5,9 @@ Create venv: ` python -m venv MMML_venv` (is ignored by git)
 Activate venv: `source MMML_venv/bin/activate`
 Install requirements: `pip install -r requirements.txt`
 
+## Abstract Classes in Python
+https://www.geeksforgeeks.org/abstract-classes-in-python/ (22.11.2024)
+
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
