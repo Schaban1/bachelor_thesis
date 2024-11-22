@@ -131,7 +131,7 @@ class AdditionalRecommender(Recommender):
             gaussian_noise = [additional_embedding[j] + random.gauss(mu=0.0, sigma=1.0) for j in range(len(prompt_embedding))]
             recommendations.append([p + g for p, g in zip(prompt_embedding, gaussian_noise)])
 
-        return recommendations   # TODO: Implement this method
+        return recommendations
 
 
 class LinearCombinationRecommender(Recommender):
