@@ -1,6 +1,9 @@
 # project-multimodal-machine-learning-lab-wise24
 
-
+## Python Virtual Environment
+Create venv: ` python -m venv MMML_venv` (is ignored by git)
+Activate venv: `source MMML_venv/bin/activate`
+Install requirements: `pip install -r requirements.txt`
 
 ## Getting started
 
