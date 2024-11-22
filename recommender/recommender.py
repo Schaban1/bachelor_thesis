@@ -5,6 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 #from splines.quaternion import slerp as SLERP
 import tensorflow as tf
 import torch
+import constants
 
 # WIP
 
