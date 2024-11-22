@@ -17,12 +17,28 @@ class RandomRecommender(Recommender):
 
     def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
                              user_profile: list, n: int = 5) -> list:
+
+        # cf. "Manipulating Embeddings of Stable Diffusion Prompts", Deckers et al. 2024
+        # random embedded prompt: concatenate random alphanumeric characters
+        random_embeddings = []  # TODO: ask Generator to embed prompts
+
+        # choose subset of embeddings with maximum pairwise cosine similarity -> diversity
+        diverse_subset = [] # TODO: compute pairwise cosine similarities & select subset
+
+        # choose individual interpolation parameters alpha_i s.t.
+        # prompt_embedding * SLERP(prompt_embedding, random_embedding, alpha_i) is constant
+        # TODO
+
+        # compute recommendations: SLERP(prompt_embedding, random_embedding, alpha_i)
+        # TODO
+
+
         recommendations = []
         for i in range(n):
             gaussian_noise = [random.gauss(mu=0.0, sigma=1.0) for _ in range(len(prompt_embedding))]
             recommendations.append(prompt_embedding + gaussian_noise)
 
-        return recommendations  # TODO: Ensure recommendations exist (cf. paper Decker et al. 2024)
+        return recommendations  # TODO: Ensure recommendations exist (cf. paper Deckers et al. 2024)
 
 
 class AdditionalRecommender(Recommender):
