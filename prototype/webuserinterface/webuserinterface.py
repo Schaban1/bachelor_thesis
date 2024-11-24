@@ -1,4 +1,5 @@
 import os
+from PIL import Image
 import prototype.utils.constants as constants
 
 class WebUI:
@@ -6,8 +7,8 @@ class WebUI:
         self.iteration = 0
         self.recommend_by = constants.RANDOM
         self.num_images_to_generate = 5
-        self.generator = object # Placeholder
-        self.save_path = f"{os.getcwd()}/output"
+        self.generator = Generator() # Placeholder
+        self.save_path = f"{os.getcwd()}/prototype/output"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
 
@@ -38,6 +39,12 @@ class WebUI:
         user_preferences = [int(x) for x in input().split()]
         print("Thanks! Your selections will be used to generate better fitting images.")
         return user_preferences
+
+
+# Placeholder
+class Generator:
+    def generate_images(self, user_prompt, num_images_to_generate, recommend_by, user_preferences):
+        return [Image.new('RGB', (64, 64)) for _ in range(num_images_to_generate)]
 
 
 if __name__ == '__main__':
