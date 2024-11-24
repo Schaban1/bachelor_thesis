@@ -31,7 +31,12 @@ class Recommender(ABC):
     3. Linear combination generation:
         Linear combinations of user profile embedding and the current CLIP embedding with different weightings
         are returned as recommendations.
+    4. Convex Combination generation:
+        The user profile consists of 10 weights associated with initial text embeddings.
+        The recommendations returned are interpolations of the initial prompts.
+        (A convex combination is a linear combination of vectors with non-negative weights that sum up to one.)
     """
+    #  TODO: Convex Combination generation usage of user profile
     # ABC = Abstract Base Class
 
     @abstractmethod
