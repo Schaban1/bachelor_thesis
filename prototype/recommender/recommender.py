@@ -10,11 +10,43 @@ import prototype.utils.constants as constants
 # WIP
 
 class Recommender(ABC):
+    """
+    A Recommender class instance derives recommended samples for the next iteration.
+    In other words:
+    Multiple alterations of the current CLIP embedding (first iteration: text prompt embedding) are returned.
+    The method used for generation depends on the user choice.
+    It is possible to generate embeddings via the following methods:
+    1. Random generation:
+        With reference to "Manipulating Embeddings of Stable Diffusion Prompts" (Deckers et al. 2024)
+        a subset of multiple random
+        embedded prompt (concatenated random alphanumeric characters)
+        with maximum pairwise cosine similarity is chosen.
+        Afterward, for each random embedding from the subset a
+        individual interpolation parameter alpha_i are chosen s.t. the product of the current CLIP embedding
+        and a SLERP interpolation of the current CLIP embedding and the random embedding is constant.
+        In the end, the interpolations (one per embedding from the subset) are returned as recommendation.
+    2. Additional generation:
+        A scaled version of the user profile embedding and the current CLIP embedding are summed.
+        Afterward, random versions of the new point in the CLIP space are returned as recommendations.
+    3. Linear combination generation:
+        Linear combinations of user profile embedding and the current CLIP embedding with different weightings
+        are returned as recommendations.
+    """
     # ABC = Abstract Base Class
 
     @abstractmethod
     def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
                              user_profile: list, n: int = 5) -> list:
+        """
+        :param recommend_by: Type of generation of recommendations. Must be element of RANDOM, ADDITIONAL
+            and LINEAR_COMBINATION
+        :param user_preferences: List of length of number of images to generate. Contains ordinal information about the
+            user's satisfaction with the images generated in the last iteration. Initially an empty list.
+        :param prompt_embedding: Embedding of the current CLIP embedding. Initially the text prompt embedding.
+        :param user_profile: Encodes the user profile in the CLIP space. Randomly initialized.
+        :param n: Number of recommendations to return. By default, 5.
+        :return: A list of recommendations, i.e. n many CLIP embeddings.
+        """
         pass
 
 
@@ -128,6 +160,7 @@ class AdditionalRecommender(Recommender):
         recommendations = []
         additional_embedding = [p + u * beta for p, u in zip(prompt_embedding, user_profile)]
         for i in range(n):
+            # TODO: use random generator instead to ensure existing embeddings in the latent space
             gaussian_noise = [additional_embedding[j] + random.gauss(mu=0.0, sigma=1.0) for j in range(len(prompt_embedding))]
             recommendations.append([p + g for p, g in zip(prompt_embedding, gaussian_noise)])
 
