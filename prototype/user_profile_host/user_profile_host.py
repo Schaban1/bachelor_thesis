@@ -19,6 +19,7 @@ and used for new recommendations by the recommender. Therefore i think it would 
 '''
 
 import torch
+import random
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
@@ -68,17 +69,17 @@ class UserProfileHost():
         This function initializes and fits a gaussian process for the available user preferences that can subsequently be used to 
         generate new interesting embeddings for the user.
         Parameters:
-            embeddings (List[Tensor]) : A list of embeddings that were presented to the user, where the embeddings are represented in the user-space.
-            preferences (List[Float]) : A list of preferences regarding the embeddings as real values.
+            embeddings (Tensor) : A list of embeddings that were presented to the user, where the embeddings are represented in the user-space.
+            preferences (Tensor) : A list of preferences regarding the embeddings as real values.
         '''
 
         # Initialize or extend the available user related data
         if self.embeddings == None:
-            self.embeddings = torch.cat(embeddings)
-            self.preferences = torch.tensor(preferences)
+            self.embeddings = embeddings
+            self.preferences = preferences
         else:
-            self.embeddings = torch.cat((self.embeddings, torch.cat(embeddings)))
-            self.preferences = torch.cat((self.preferences, torch.tensor(preferences)))
+            self.embeddings = torch.cat((self.embeddings, embeddings), dim=-1)
+            self.preferences = torch.cat((self.preferences, preferences), dim=-1)
 
         if self.recommendation_type == 'bayes-opt':
             # Initialize likelihood and model and train model on available data
@@ -92,9 +93,9 @@ class UserProfileHost():
             # TODO (Discuss): Weighted mean of all previously rated embeddings weighted by their value.
             # self.user_profile = (self.embeddings @ self.preferences)/self.preferences.sum()
 
-    def clip_embedding(self):
+    def clip_embedding(self, prompt):
         # TODO: Implement conversion from text to CLIP Embedding, should this be done here? Otherwise where can we get it?
-        return None
+        return torch.randn(size=(768,)) # Placeholder for tests
     
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = 1):
         '''
@@ -125,5 +126,27 @@ class UserProfileHost():
             
 
 if __name__ == '__main__':
-    # TODO: Write some tests.
-    print('test')
+    # Create a UserProfileHost()
+    user_profile_host = UserProfileHost(
+        original_prompt='A cute cat',
+        add_ons=None,
+        recommendation_type='bayes-opt'
+        )
+    
+    # Define some specifications
+    num_recommendations = 1
+    beta = 20
+    
+    # Play through an iteration loop
+    embeddings = user_profile_host.generate_recommendations(num_recommendations=num_recommendations, beta=beta)
+    preferences = torch.randint(0, 100, size=(num_recommendations,1))/10
+    for i in range(10):
+        # Reduce Beta
+        beta -= 1
+        # Update the user profile
+        user_profile_host.fit_user_profile(embeddings=embeddings, preferences=preferences)
+        # Generate new Recommendations
+        embeddings = user_profile_host.generate_recommendations(num_recommendations=num_recommendations, beta=beta)
+        # Evaluate new Recommendations
+        preferences = torch.randint(0, 100, size=(num_recommendations,1))/10
+    print("Test")
