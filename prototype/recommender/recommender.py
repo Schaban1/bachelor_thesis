@@ -42,11 +42,9 @@ class Recommender(ABC):
     # ABC = Abstract Base Class
 
     @abstractmethod
-    def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
+    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
                              user_profile: list, n: int = 5) -> list:
         """
-        :param recommend_by: Type of generation of recommendations. Must be element of RANDOM, ADDITIONAL
-            and LINEAR_COMBINATION
         :param user_preferences: List of length of number of images to generate. Contains ordinal information about the
             user's satisfaction with the images generated in the last iteration. Initially an empty list.
         :param prompt_embedding: Embedding of the current CLIP embedding. Initially the text prompt embedding.
@@ -120,8 +118,8 @@ class RandomRecommender(Recommender):
 
         return v3
 
-    def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
-                             user_profile: list, n: int = 5) -> list:
+    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
+                             user_profile, n: int = 5) -> list:
 
         # cf. "Manipulating Embeddings of Stable Diffusion Prompts", Deckers et al. 2024
         # random embedded prompt: concatenate random alphanumeric characters
@@ -160,8 +158,8 @@ class RandomRecommender(Recommender):
 
 class AdditionalRecommender(Recommender):
 
-    def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
-                             user_profile: list, n: int = 5) -> list:
+    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
+                             user_profile, n: int = 5) -> list:
         beta = 0.5  # Hyperparameter
         recommendations = []
         additional_embedding = [p + u * beta for p, u in zip(prompt_embedding, user_profile)]
@@ -176,8 +174,8 @@ class AdditionalRecommender(Recommender):
 
 class LinearCombinationRecommender(Recommender):
 
-    def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
-                             user_profile: list, n: int = 5) -> list:
+    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
+                             user_profile, n: int = 5) -> list:
         recommendations = []
         for alpha in np.linspace(0.1, 1.0, n):
             recommendations.append([alpha * prompt_embedding[j] + (1 - alpha) * user_profile[j] for j in
@@ -188,8 +186,8 @@ class LinearCombinationRecommender(Recommender):
 
 class ConvexCombinationRecommender(Recommender):
 
-    def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
-                             user_profile: list, n: int = 5) -> list:
+    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
+                             user_profile, n: int = 5) -> list:
         recommendations = []
         # TODO: user profile has to contain axes of initial text embeddings in the CLIP space for this approach
         user_profile = np.random.rand(10, len(prompt_embedding))  # TODO: dummy
