@@ -193,32 +193,27 @@ class ConvexCombinationRecommender(Recommender):
         recommendations = []
         # TODO: user profile has to contain axes of initial text embeddings in the CLIP space for this approach
         user_profile = np.random.rand(10, len(prompt_embedding))  # TODO: dummy
-        #print("user_profile", user_profile)
         for num_embs_to_combine in range(2, n + 1):
             embs_to_combine = user_profile[random.sample(range(len(user_profile)), num_embs_to_combine)]
-            #print("embs_to_combine", embs_to_combine)
             # Dirichlet's distribution is a distribution over vectors x that are positive and sum to 1
             weights = np.random.dirichlet(np.ones(num_embs_to_combine), size=1)[0]
-            #print("weights", weights)
-            #print("0th row embs_to_combine", embs_to_combine[:, 0])
             recommendations.append([sum([w * emb for w, emb in zip(weights, embs_to_combine[:, i])]) for i in
                                     range(len(prompt_embedding))])
-        print("recommendations", recommendations)
 
         return recommendations
 
 
 if __name__ == '__main__':
-    # random_recommender = RandomRecommender()
-    # print("random",
-    #       random_recommender.recommend_embeddings(constants.RANDOM, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
-    # additional_recommender = AdditionalRecommender()
-    # print("additional",
-    #       additional_recommender.recommend_embeddings(constants.ADDITIONAL, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
-    # linear_combination_recommender = LinearCombinationRecommender()
-    # print("linear-combi",
-    #       linear_combination_recommender.recommend_embeddings(constants.LINEAR_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
-    #                                                           [1, 2, 3, 4, 5]))
+    random_recommender = RandomRecommender()
+    print("random",
+          random_recommender.recommend_embeddings(constants.RANDOM, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
+    additional_recommender = AdditionalRecommender()
+    print("additional",
+          additional_recommender.recommend_embeddings(constants.ADDITIONAL, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
+    linear_combination_recommender = LinearCombinationRecommender()
+    print("linear-combi",
+          linear_combination_recommender.recommend_embeddings(constants.LINEAR_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
+                                                              [1, 2, 3, 4, 5]))
     convex_combination_recommender = ConvexCombinationRecommender()
     print("convex-combi",
           convex_combination_recommender.recommend_embeddings(constants.CONVEX_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
