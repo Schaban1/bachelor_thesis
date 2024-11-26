@@ -7,6 +7,7 @@ import tensorflow as tf
 import torch
 import prototype.utils.constants as constants
 
+
 # WIP
 
 class Recommender(ABC):
@@ -36,6 +37,7 @@ class Recommender(ABC):
         The recommendations returned are interpolations of the initial prompts.
         (A convex combination is a linear combination of vectors with non-negative weights that sum up to one.)
     """
+
     #  TODO: Convex Combination generation usage of user profile
     # ABC = Abstract Base Class
 
@@ -94,8 +96,8 @@ class RandomRecommender(Recommender):
         :param t1: end interpolation value
         :return: interpolated vectors
         """
-        v0 = v0.numpy()#v0.detach().cpu().numpy()
-        v1 = v1.numpy()#v1.detach().cpu().numpy()
+        v0 = v0.numpy()  #v0.detach().cpu().numpy()
+        v1 = v1.numpy()  #v1.detach().cpu().numpy()
 
         def interpolation(t, v0, v1, DOT_THRESHOLD=0.9995):
             """helper function to spherically interpolate two arrays v1 v2"""
@@ -127,7 +129,6 @@ class RandomRecommender(Recommender):
         random_embeddings = g1.normal(shape=[200, len(prompt_embedding)])
         #np.random.rand(200, len(prompt_embedding))  # TODO: ask Generator to embed prompts
 
-
         # choose subset of embeddings with maximum pairwise cosine similarity -> diversity
         diverse_subset = [random_embeddings[i] for i in
                           self.get_max_diverse_subset(embeddings=random_embeddings, subset_size=n)]
@@ -147,7 +148,7 @@ class RandomRecommender(Recommender):
 
         # TODO: compute matrix of products of prompt_embedding and recommendations, choose s.t. all products are similar
         # product_matr = np.array([tf.math.multiply(prompt_embedding, recommendations[random_embedding]) for random_embedding in diverse_subset])
-        recommendations = [recommendations[l][2] for l in range(len(diverse_subset))] # TODO: change to best choice
+        recommendations = [recommendations[l][2] for l in range(len(diverse_subset))]  # TODO: change to best choice
 
         # recommendations = []
         # for i in range(n):
@@ -161,12 +162,13 @@ class AdditionalRecommender(Recommender):
 
     def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
                              user_profile: list, n: int = 5) -> list:
-        beta = 0.5 # Hyperparameter
+        beta = 0.5  # Hyperparameter
         recommendations = []
         additional_embedding = [p + u * beta for p, u in zip(prompt_embedding, user_profile)]
         for i in range(n):
             # TODO: use random generator instead to ensure existing embeddings in the latent space
-            gaussian_noise = [additional_embedding[j] + random.gauss(mu=0.0, sigma=1.0) for j in range(len(prompt_embedding))]
+            gaussian_noise = [additional_embedding[j] + random.gauss(mu=0.0, sigma=1.0) for j in
+                              range(len(prompt_embedding))]
             recommendations.append([p + g for p, g in zip(prompt_embedding, gaussian_noise)])
 
         return recommendations
@@ -184,11 +186,40 @@ class LinearCombinationRecommender(Recommender):
         return recommendations
 
 
+class ConvexCombinationRecommender(Recommender):
+
+    def recommend_embeddings(self, recommend_by: str, user_preferences: list, prompt_embedding: list,
+                             user_profile: list, n: int = 5) -> list:
+        recommendations = []
+        # TODO: user profile has to contain axes of initial text embeddings in the CLIP space for this approach
+        user_profile = np.random.rand(10, len(prompt_embedding))  # TODO: dummy
+        #print("user_profile", user_profile)
+        for num_embs_to_combine in range(2, n + 1):
+            embs_to_combine = user_profile[random.sample(range(len(user_profile)), num_embs_to_combine)]
+            #print("embs_to_combine", embs_to_combine)
+            # Dirichlet's distribution is a distribution over vectors x that are positive and sum to 1
+            weights = np.random.dirichlet(np.ones(num_embs_to_combine), size=1)[0]
+            #print("weights", weights)
+            #print("0th row embs_to_combine", embs_to_combine[:, 0])
+            recommendations.append([sum([w * emb for w, emb in zip(weights, embs_to_combine[:, i])]) for i in
+                                    range(len(prompt_embedding))])
+        print("recommendations", recommendations)
+
+        return recommendations
+
+
 if __name__ == '__main__':
-    random_recommender = RandomRecommender()
-    print("random", random_recommender.recommend_embeddings('random', [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
-    additional_recommender = AdditionalRecommender()
-    print("additional", additional_recommender.recommend_embeddings('additional', [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
-    linear_combination_recommender = LinearCombinationRecommender()
-    print("linear-combi", linear_combination_recommender.recommend_embeddings('linear_combination', [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
+    # random_recommender = RandomRecommender()
+    # print("random",
+    #       random_recommender.recommend_embeddings(constants.RANDOM, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
+    # additional_recommender = AdditionalRecommender()
+    # print("additional",
+    #       additional_recommender.recommend_embeddings(constants.ADDITIONAL, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
+    # linear_combination_recommender = LinearCombinationRecommender()
+    # print("linear-combi",
+    #       linear_combination_recommender.recommend_embeddings(constants.LINEAR_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
+    #                                                           [1, 2, 3, 4, 5]))
+    convex_combination_recommender = ConvexCombinationRecommender()
+    print("convex-combi",
+          convex_combination_recommender.recommend_embeddings(constants.CONVEX_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
                                                               [1, 2, 3, 4, 5]))
