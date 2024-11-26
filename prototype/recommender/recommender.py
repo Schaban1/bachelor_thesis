@@ -2,15 +2,14 @@ from abc import abstractmethod, ABC
 import random
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-#from splines.quaternion import slerp as SLERP
+from prototype.utils.interpolation import slerp
 import tensorflow as tf
 import torch
 import prototype.utils.constants as constants
 
 
 # WIP
-
-class Recommender(ABC):
+class Recommender(ABC):  # ABC = Abstract Base Class
     """
     A Recommender class instance derives recommended samples for the next iteration.
     In other words:
@@ -22,7 +21,7 @@ class Recommender(ABC):
         a subset of multiple random
         embedded prompt (concatenated random alphanumeric characters)
         with maximum pairwise cosine similarity is chosen.
-        Afterward, for each random embedding from the subset a
+        Afterward, for each random embedding from the subset an
         individual interpolation parameter alpha_i are chosen s.t. the product of the current CLIP embedding
         and a SLERP interpolation of the current CLIP embedding and the random embedding is constant.
         In the end, the interpolations (one per embedding from the subset) are returned as recommendation.
@@ -34,12 +33,9 @@ class Recommender(ABC):
         are returned as recommendations.
     4. Convex Combination generation:
         The user profile consists of 10 weights associated with initial text embeddings.
-        The recommendations returned are interpolations of the initial prompts.
+        The recommendations returned are interpolations of the initial text embeddings.
         (A convex combination is a linear combination of vectors with non-negative weights that sum up to one.)
     """
-
-    #  TODO: Convex Combination generation usage of user profile
-    # ABC = Abstract Base Class
 
     @abstractmethod
     def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
@@ -58,102 +54,87 @@ class Recommender(ABC):
 class RandomRecommender(Recommender):
 
     def get_max_diverse_subset(self, embeddings: list, subset_size: int = 5) -> list:
-
-        # Step 1: Compute the cosine similarity matrix
+        """
+        :param embeddings: A list of embeddings
+        :param subset_size: Number of embeddings to select
+        :return: The indices of the subset of embeddings with maximum pairwise cosine dissimilarity
+            obtained by a greedy selection
+        """
         cos_sim_matrix = cosine_similarity(embeddings)
         np.fill_diagonal(cos_sim_matrix, 0)  # Ignore self-similarity
 
-        # Step 2: Initialize
         n_vectors = embeddings.shape[0]
         selected_indices = []
 
-        # Step 3: Greedy selection
+        # Greedy selection
         while len(selected_indices) < subset_size:
             if not selected_indices:
-                # Start with the vector having the highest total similarity
+                # Start with vector having the highest total similarity
                 next_index = np.argmax(cos_sim_matrix.sum(axis=1))
             else:
-                # Compute the marginal gain for adding each unselected vector
+                # Compute marginal gain for adding each unselected vector
                 unselected_indices = list(set(range(n_vectors)) - set(selected_indices))
-                gains = [
-                    cos_sim_matrix[i, selected_indices].sum()
-                    for i in unselected_indices
-                ]
+                gains = [cos_sim_matrix[i, selected_indices].sum() for i in unselected_indices]
                 next_index = unselected_indices[np.argmax(gains)]
 
             selected_indices.append(next_index)
 
         return selected_indices
 
-    def slerp(self, v0, v1, num, t0=0, t1=1):
-        """Spherical linear interpolation between two vectors.
-        :param v0: start vector
-        :param v1: end vector
-        :param num: number of interpolation steps
-        :param t0: start interpolation value
-        :param t1: end interpolation value
-        :return: interpolated vectors
+    def get_set_of_similar_distance_embeddings(self, original_prompt: list, embeddings: dict,
+                                               subset_size: int = 5) -> list:
         """
-        v0 = v0.numpy()  #v0.detach().cpu().numpy()
-        v1 = v1.numpy()  #v1.detach().cpu().numpy()
+        :param original_prompt: Original prompt embedding
+        :param embeddings: A list of embeddings
+        :param subset_size: Number of embeddings to select
+        :return: Subset of embeddings which are similar in distance to original embedding (i.e. product of embedding
+            with original embedding is similar)
+        """
+        # greedy selection
+        costs = {j: 0 for j in range(len(embeddings[0]))}
+        selection = {j: [] for j in range(len(embeddings[0]))}
+        for i in range(len(embeddings[0])):
+            product = np.dot(embeddings[i], original_prompt)
+            for j in list(embeddings.keys())[1:]:   # omit first key, bc it is used to as initial starting point
+                # sum of dot products of each embedding with original prompt
+                cost_per_embedding = [np.abs((np.dot(embeddings[j][k], original_prompt) - product).sum()) for k in
+                                      range(len(embeddings[j]))]
+                lowest_cost_idx = np.argmin(cost_per_embedding)
+                costs[i] += cost_per_embedding[lowest_cost_idx]
+                selection[i].append(embeddings[j][lowest_cost_idx])
 
-        def interpolation(t, v0, v1, DOT_THRESHOLD=0.9995):
-            """helper function to spherically interpolate two arrays v1 v2"""
-            dot = np.sum(v0 * v1 / (np.linalg.norm(v0) * np.linalg.norm(v1)))
-            if np.abs(dot) > DOT_THRESHOLD:
-                v2 = (1 - t) * v0 + t * v1
-            else:
-                theta_0 = np.arccos(dot)
-                sin_theta_0 = np.sin(theta_0)
-                theta_t = theta_0 * t
-                sin_theta_t = np.sin(theta_t)
-                s0 = np.sin(theta_0 - theta_t) / sin_theta_0
-                s1 = sin_theta_t / sin_theta_0
-                v2 = s0 * v0 + s1 * v1
-            return v2
+        sorted_costs = [(k, v) for k, v in costs.items()]
+        sorted_costs.sort(key=lambda s: s[1])
+        keys = [i[0] for i in sorted_costs[:min(subset_size, len(sorted_costs))]]
+        return [selection[k] for k in keys]
 
-        t = np.linspace(t0, t1, num)
-
-        v3 = torch.tensor(np.array([interpolation(t[i], v0, v1) for i in range(num)]))
-
-        return v3
 
     def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
                              user_profile, n: int = 5) -> list:
 
         # cf. "Manipulating Embeddings of Stable Diffusion Prompts", Deckers et al. 2024
         # random embedded prompt: concatenate random alphanumeric characters
+        # TODO: ask Generator to embed prompts
         g1 = tf.random.Generator.from_seed(1, alg='philox')
         random_embeddings = g1.normal(shape=[200, len(prompt_embedding)])
-        #np.random.rand(200, len(prompt_embedding))  # TODO: ask Generator to embed prompts
 
         # choose subset of embeddings with maximum pairwise cosine similarity -> diversity
         diverse_subset = [random_embeddings[i] for i in
                           self.get_max_diverse_subset(embeddings=random_embeddings, subset_size=n)]
 
-        # choose individual interpolation parameters alpha_i s.t.
-        # prompt_embedding * SLERP(prompt_embedding, random_embedding, alpha_i) is constant
-        # TODO: How to choose alpha_i effectively? cf. below: alpha corresponds to indices which correspond to similar products
-        alphas = np.linspace(0.1, 1.0, 10)
-        #print("alphas", alphas)
-
-        if type(prompt_embedding) == list:  # necessary during mocking
+        if isinstance(prompt_embedding, list):  # necessary during mocking
             prompt_embedding = tf.convert_to_tensor(prompt_embedding)
 
         # compute recommendations: SLERP(prompt_embedding, random_embedding, alpha_i), different here
-        recommendations = {l: self.slerp(prompt_embedding, diverse_subset[l], n) for l in
+        recommendations = {l: slerp(prompt_embedding, diverse_subset[l], n) for l in
                            range(len(diverse_subset))}
 
-        # TODO: compute matrix of products of prompt_embedding and recommendations, choose s.t. all products are similar
-        # product_matr = np.array([tf.math.multiply(prompt_embedding, recommendations[random_embedding]) for random_embedding in diverse_subset])
-        recommendations = [recommendations[l][2] for l in range(len(diverse_subset))]  # TODO: change to best choice
+        # compute matrix of products of prompt_embedding and recommendations, choose s.t. all products are similar
+        subset_recommendations = self.get_set_of_similar_distance_embeddings(original_prompt=prompt_embedding,
+                                                                      embeddings=recommendations,
+                                                                      subset_size=n)
 
-        # recommendations = []
-        # for i in range(n):
-        #     gaussian_noise = [random.gauss(mu=0.0, sigma=1.0) for _ in range(len(prompt_embedding))]
-        #     recommendations.append(prompt_embedding + gaussian_noise)
-
-        return recommendations
+        return subset_recommendations
 
 
 class AdditionalRecommender(Recommender):
@@ -204,15 +185,18 @@ class ConvexCombinationRecommender(Recommender):
 if __name__ == '__main__':
     random_recommender = RandomRecommender()
     print("random",
-          random_recommender.recommend_embeddings(constants.RANDOM, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
+          random_recommender.recommend_embeddings(constants.RANDOM, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], 5))
     additional_recommender = AdditionalRecommender()
     print("additional",
-          additional_recommender.recommend_embeddings(constants.ADDITIONAL, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
+          additional_recommender.recommend_embeddings(constants.ADDITIONAL, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
+                                                      5))
     linear_combination_recommender = LinearCombinationRecommender()
     print("linear-combi",
-          linear_combination_recommender.recommend_embeddings(constants.LINEAR_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
-                                                              [1, 2, 3, 4, 5]))
+          linear_combination_recommender.recommend_embeddings(constants.LINEAR_COMBINATION, [1, 2, 3, 4, 5],
+                                                              [1, 2, 3, 4, 5],
+                                                              5))
     convex_combination_recommender = ConvexCombinationRecommender()
     print("convex-combi",
-          convex_combination_recommender.recommend_embeddings(constants.CONVEX_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
-                                                              [1, 2, 3, 4, 5]))
+          convex_combination_recommender.recommend_embeddings(constants.CONVEX_COMBINATION, [1, 2, 3, 4, 5],
+                                                              [1, 2, 3, 4, 5],
+                                                              5))
