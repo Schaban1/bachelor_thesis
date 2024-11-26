@@ -13,3 +13,6 @@ MMML_venv/
 
 # VSCode
 .vscode/
+
+# Output folder from the WebUI
+output/
