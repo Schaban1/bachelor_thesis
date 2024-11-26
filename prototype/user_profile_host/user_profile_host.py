@@ -19,7 +19,6 @@ and used for new recommendations by the recommender. Therefore, I think it would
 '''
 
 import torch
-import random
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
@@ -29,6 +28,7 @@ from botorch.models import SingleTaskGP
 from botorch.acquisition import UpperConfidenceBound
 from prototype.recommender import *
 import prototype.utils.constants as constants
+from botorch.models.transforms import Standardize, Normalize
 
 
 class UserProfileHost():
@@ -55,9 +55,13 @@ class UserProfileHost():
         # Defining how we will generate recommendations for the user
         self.recommendation_type = recommendation_type
 
+        # Some Bayesian Optimization Hyperparameters
+        self.num_steps = 5
+
     def inv_transform(self, user_embedding):
         '''
         This function takes in a set of parameters [a_1, ..., a_n] and computes a respective CLIP embedding by using the dimensions provided in axis.
+
         Parameters:
             user_embedding (List[float]): Parameters concerning the initially defined axis of a user_embbing.
         '''
@@ -70,6 +74,7 @@ class UserProfileHost():
         '''
         This function initializes and fits a gaussian process for the available user preferences that can subsequently be used to 
         generate new interesting embeddings for the user.
+
         Parameters:
             embeddings (Tensor) : A list of embeddings that were presented to the user, where the embeddings are represented in the user-space.
             preferences (Tensor) : A list of preferences regarding the embeddings as real values.
@@ -80,12 +85,16 @@ class UserProfileHost():
             self.embeddings = embeddings
             self.preferences = preferences
         else:
-            self.embeddings = torch.cat((self.embeddings, embeddings), dim=-1)
-            self.preferences = torch.cat((self.preferences, preferences), dim=-1)
+            self.embeddings = torch.cat((self.embeddings, embeddings))
+            self.preferences = torch.cat((self.preferences, preferences))
 
         if self.recommendation_type == 'bayes-opt':
             # Initialize likelihood and model and train model on available data
-            self.user_profile = SingleTaskGP(self.embeddings, self.preferences)
+            # TODO: Insert Normalization
+            self.user_profile = SingleTaskGP(
+                train_X=self.embeddings,
+                train_Y=self.preferences
+                )
             mll = ExactMarginalLogLikelihood(self.user_profile.likelihood, self.user_profile)
             mll = fit_gpytorch_mll(mll)
         else:
@@ -102,6 +111,7 @@ class UserProfileHost():
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = 1):
         '''
         This function generates recommendations based on the previously fit user-profile
+
         Parameters:
             num_recommendations (int): Defines the number of embeddings that will be returned for user evaluation.
             beta (float): Defines the trade-off between exploration and exploitation.
@@ -112,11 +122,13 @@ class UserProfileHost():
             if self.user_profile:  # Use the fittet gaussian process to evaluate which regions to sample next
                 acqf = UpperConfidenceBound(self.user_profile, beta=beta)
                 bounds = torch.stack([torch.zeros(self.num_axis), torch.ones(self.num_axis)])
-                # TODO (Paul): Implement a method to ensure that the acquisition function only tests candidates that actually lead to
-                # useable image generations.
-                candidates, _ = optimize_acqf(
-                    acqf, bounds=bounds, q=num_recommendations, num_restarts=5, raw_samples=50,
-                )
+                # TODO (Paul): Implement a method to ensure that the acquisition function only tests candidates that actually lead to useable image generations.
+                xx = torch.linspace(start=0, end=1, steps=self.num_steps)
+                mesh = torch.meshgrid([xx for i in range(self.num_axis)])
+                mesh = torch.stack(mesh, dim=-1).reshape(self.num_steps**self.num_axis, 1, self.num_axis)
+                scores = acqf(mesh)
+                candidate_indices = torch.topk(scores, k=num_recommendations)[1]
+                candidates = mesh[candidate_indices].reshape(num_recommendations, self.num_axis)
                 return candidates
             else:  # If there is no user-profile available yet, return a number of random samples in the user-space
                 return torch.rand(size=(num_recommendations, self.num_axis))
@@ -138,30 +150,3 @@ class UserProfileHost():
             return recommender.recommend_embeddings(user_preferences=self.preferences,
                                                    prompt_embedding=self.embeddings,
                                                    user_profile=clip_user_profile, n=num_recommendations)
-
-
-if __name__ == '__main__':
-    # Create a UserProfileHost()
-    user_profile_host = UserProfileHost(
-        original_prompt='A cute cat',
-        add_ons=None,
-        recommendation_type='bayes-opt'
-    )
-
-    # Define some specifications
-    num_recommendations = 1
-    beta = 20
-
-    # Play through an iteration loop
-    embeddings = user_profile_host.generate_recommendations(num_recommendations=num_recommendations, beta=beta)
-    preferences = torch.randint(0, 100, size=(num_recommendations, 1)) / 10
-    for i in range(10):
-        # Reduce Beta
-        beta -= 1
-        # Update the user profile
-        user_profile_host.fit_user_profile(embeddings=embeddings, preferences=preferences)
-        # Generate new Recommendations
-        embeddings = user_profile_host.generate_recommendations(num_recommendations=num_recommendations, beta=beta)
-        # Evaluate new Recommendations
-        preferences = torch.randint(0, 100, size=(num_recommendations, 1)) / 10
-    print("Test")
