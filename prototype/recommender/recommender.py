@@ -142,14 +142,14 @@ class AdditionalRecommender(Recommender):
     def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
                              user_profile, n: int = 5) -> list:
         beta = 0.5  # Hyperparameter
-        recommendations = []
-        additional_embedding = [p + u * beta for p, u in zip(prompt_embedding, user_profile)]
-        for i in range(n):
-            # TODO: use random generator instead to ensure existing embeddings in the latent space
-            gaussian_noise = [additional_embedding[j] + random.gauss(mu=0.0, sigma=1.0) for j in
-                              range(len(prompt_embedding))]
-            recommendations.append([p + g for p, g in zip(prompt_embedding, gaussian_noise)])
 
+        additional_embedding = [p + u * beta for p, u in zip(prompt_embedding, user_profile)]
+
+        # use random generator to ensure existing embeddings in the latent space
+        random_recommender = RandomRecommender()
+        recommendations = random_recommender.recommend_embeddings(user_preferences=user_preferences,
+                                                                  user_profile=user_profile,
+                                                                  prompt_embedding=additional_embedding, n=n)
         return recommendations
 
 
@@ -185,18 +185,18 @@ class ConvexCombinationRecommender(Recommender):
 if __name__ == '__main__':
     random_recommender = RandomRecommender()
     print("random",
-          random_recommender.recommend_embeddings(constants.RANDOM, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], 5))
+          random_recommender.recommend_embeddings([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
     additional_recommender = AdditionalRecommender()
     print("additional",
-          additional_recommender.recommend_embeddings(constants.ADDITIONAL, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
-                                                      5))
+          additional_recommender.recommend_embeddings( [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
+                                                      [1, 2, 3, 4, 5]))
     linear_combination_recommender = LinearCombinationRecommender()
     print("linear-combi",
-          linear_combination_recommender.recommend_embeddings(constants.LINEAR_COMBINATION, [1, 2, 3, 4, 5],
+          linear_combination_recommender.recommend_embeddings([1, 2, 3, 4, 5],
                                                               [1, 2, 3, 4, 5],
-                                                              5))
+                                                              [1, 2, 3, 4, 5]))
     convex_combination_recommender = ConvexCombinationRecommender()
     print("convex-combi",
-          convex_combination_recommender.recommend_embeddings(constants.CONVEX_COMBINATION, [1, 2, 3, 4, 5],
+          convex_combination_recommender.recommend_embeddings([1, 2, 3, 4, 5],
                                                               [1, 2, 3, 4, 5],
-                                                              5))
+                                                              [1, 2, 3, 4, 5]))
