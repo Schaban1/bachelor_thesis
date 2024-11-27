@@ -4,6 +4,7 @@ from prototype.utils.interpolation import slerp
 import torch
 from torch import Tensor
 import prototype.utils.visualize_recommendations as visualize_recommendations
+from botorch.acquisition import UpperConfidenceBound
 
 
 class Recommender(ABC):  # ABC = Abstract Base Class
@@ -96,11 +97,20 @@ class SinglePointWeightedAxesRecommender(Recommender):
         return torch.stack(interpolated_points)
 
 
-class FunctionBasedRecommender(Recommender):
+class BayesianRecommender(Recommender):
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
-        # TODO: Pauls BayesOpt approach
-        pass
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = 1) -> Tensor:
+            if user_profile:  # Use the fittet gaussian process to evaluate which regions to sample next
+                acqf = UpperConfidenceBound(self.user_profile, beta=beta)
+                xx = torch.linspace(start=0, end=1, steps=self.num_steps)
+                mesh = torch.meshgrid([xx for i in range(self.num_axis)])
+                mesh = torch.stack(mesh, dim=-1).reshape(self.num_steps**self.num_axis, 1, self.num_axis)
+                scores = acqf(mesh)
+                candidate_indices = torch.topk(scores, k=n_recommendations)[1]
+                candidates = mesh[candidate_indices].reshape(n_recommendations, self.num_axis)
+                return candidates
+            else:  # If there is no user-profile available yet, return a number of random samples in the user-space
+                return torch.rand(size=(n_recommendations, self.num_axis))
 
 
 if __name__ == '__main__':

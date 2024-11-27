@@ -21,25 +21,28 @@ and used for new recommendations by the recommender. Therefore, I think it would
 import torch
 from torch import Tensor
 
-from gpytorch.mlls import ExactMarginalLogLikelihood
-
-from botorch.fit import fit_gpytorch_mll
-from botorch.models import SingleTaskGP
-from botorch.acquisition import UpperConfidenceBound
-from prototype.recommender import *
+from .recommender import *
+from .optimizer import *
 import prototype.utils.constants as constants
 
 
 class UserProfileHost():
-    def __init__(self, original_prompt : str, add_ons : list = None, recommendation_type : str ='bayes-opt', hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5"):
+    def __init__(
+            self, 
+            original_prompt : str, 
+            add_ons : list = None, 
+            recommendation_type : str = 'bayes-opt', 
+            optimization_type : str = 'gaussian_process', 
+            hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5"
+            ):
+        
         self.center = self.clip_embedding(original_prompt)
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
         self.axis = []
         if not add_ons:
-            add_ons = ['drawing', 'picture that old people like', 'funny', 'award-winning', 'highly detailed photoreal',
-                       'aesthetic']
+            add_ons = ['drawing', 'picture that old people like', 'funny', 'award-winning', 'highly detailed photoreal', 'aesthetic']
         for prompt in [original_prompt + ',' + add for add in add_ons]:
             self.axis.append(self.clip_embedding(prompt))
         self.num_axis = len(self.axis)
@@ -48,14 +51,33 @@ class UserProfileHost():
         self.embeddings = None
         self.preferences = None
 
-        # Placeholder until fit, then its a gaussian process regression
+        # Placeholder until the user_profile is fit the first time
         self.user_profile = None
-
-        # Defining how we will generate recommendations for the user
-        self.recommendation_type = recommendation_type
 
         # Some Bayesian Optimization Hyperparameters
         self.num_steps = 5
+
+        # Initialize an Optimizer
+        if optimization_type == constants.MAX_PREF:
+            self.optimizer = MaxPrefOptimizer()
+        elif optimization_type == constants.WEIGHTED_SUM:
+            self.optimizer = WeightedSumOptimizer()
+        elif optimization_type == constants.GAUSSIAN_PROCESS:
+            self.optimizer = GaussianProcessOptimizer()
+        else:
+            raise ValueError(f"The optimization type {optimization_type} is not implemented yet.")
+
+        # Initialize a Recommender
+        if recommendation_type == constants.FUNCTION_BASED:
+            self.recommender = BayesianRecommender()
+        elif recommendation_type == constants.POINT:
+            self.recommender = SinglePointRecommender()
+        elif recommendation_type == constants.WEIGHTED_AXES:
+            self.recommender = SinglePointWeightedAxesRecommender()
+        else:
+            raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
+
+
 
     def inv_transform(self, user_embedding : Tensor):
         '''
@@ -87,25 +109,11 @@ class UserProfileHost():
             self.embeddings = torch.cat((self.embeddings, embeddings))
             self.preferences = torch.cat((self.preferences, preferences))
 
-        if self.recommendation_type == 'bayes-opt':
-            # Initialize likelihood and model and train model on available data
-            # TODO: Insert Normalization
-            self.user_profile = SingleTaskGP(
-                train_X=self.embeddings,
-                train_Y=self.preferences
-                )
-            mll = ExactMarginalLogLikelihood(self.user_profile.likelihood, self.user_profile)
-            mll = fit_gpytorch_mll(mll)
-        else:
-            # Use the highest valued user-space embedding as a user profile
-            self.user_profile = self.embeddings[torch.argmax(self.preferences)]
-
-            # TODO (Discuss): Weighted mean of all previously rated embeddings weighted by their value.
-            # self.user_profile = (self.embeddings @ self.preferences)/self.preferences.sum()
+        self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences)
 
     def clip_embedding(self, prompt : str):
         # TODO: Implement conversion from text to CLIP Embedding, should this be done here? Otherwise where can we get it?
-        return torch.randn(size=(768,))  # Placeholder for tests
+        return torch.randn(size=(constants.EMBEDDING_DIM,))  # Placeholder for tests
 
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
         '''
@@ -115,27 +123,8 @@ class UserProfileHost():
             num_recommendations (int): Defines the number of embeddings that will be returned for user evaluation.
             beta (float): Defines the trade-off between exploration and exploitation when using the BayesRecommender.
         Returns:
-            embeddings (List[tensor]): Embeddings that can be retransformed into the CLIP space and used for image generation
+            embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         '''
-        if self.recommendation_type == constants.FUNCTION_BASED:
-            if self.user_profile:  # Use the fittet gaussian process to evaluate which regions to sample next
-                acqf = UpperConfidenceBound(self.user_profile, beta=beta)
-                xx = torch.linspace(start=0, end=1, steps=self.num_steps)
-                mesh = torch.meshgrid([xx for i in range(self.num_axis)])
-                mesh = torch.stack(mesh, dim=-1).reshape(self.num_steps**self.num_axis, 1, self.num_axis)
-                scores = acqf(mesh)
-                candidate_indices = torch.topk(scores, k=num_recommendations)[1]
-                candidates = mesh[candidate_indices].reshape(num_recommendations, self.num_axis)
-                return candidates
-            else:  # If there is no user-profile available yet, return a number of random samples in the user-space
-                return torch.rand(size=(num_recommendations, self.num_axis))
-        else:
-            if self.recommendation_type == constants.POINT:
-                recommender = SinglePointRecommender()
-            elif self.recommendation_type == constants.WEIGHTED_AXES:
-                recommender = SinglePointWeightedAxesRecommender()
-            else:
-                raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
-
-            return recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                    n_recommendations=num_recommendations)
+        user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
+        clip_embeddings = self.inv_transform(user_space_embeddings).reshape(num_recommendations, 1, constants.EMBEDDING_DIM).expand(num_recommendations, constants.N_CLIP_TOKENS, constants.EMBEDDING_DIM)
+        return clip_embeddings
