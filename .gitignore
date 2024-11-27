@@ -16,3 +16,6 @@ MMML_venv/
 
 # Output folder from the WebUI
 output/
+
+# Cache dir for stable diffusion model
+cache/

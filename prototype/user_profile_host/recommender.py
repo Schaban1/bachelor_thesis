@@ -1,9 +1,12 @@
 from abc import abstractmethod, ABC
 import numpy as np
-from prototype.utils.interpolation import slerp
 import torch
 from torch import Tensor
-import prototype.utils.visualize_recommendations as visualize_recommendations
+from .utils import slerp, display_generated_points as visualize_recommendations
+from botorch.acquisition import UpperConfidenceBound
+from botorch.exceptions import InputDataWarning
+import warnings
+warnings.simplefilter("ignore", category=InputDataWarning)
 
 
 class Recommender(ABC):  # ABC = Abstract Base Class
@@ -55,7 +58,7 @@ class SinglePointRecommender(Recommender):
         """
         x = np.random.default_rng().normal(size=(n_samples, n_dims))
 
-        return torch.from_numpy(radius / np.sqrt(np.sum(x ** 2, 1, keepdims=True)) * x)
+        return torch.from_numpy(radius / np.sqrt(np.sum(x ** 2, 1, keepdims=True)) * x).float()
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
         """
@@ -96,11 +99,23 @@ class SinglePointWeightedAxesRecommender(Recommender):
         return torch.stack(interpolated_points)
 
 
-class FunctionBasedRecommender(Recommender):
+class BayesianRecommender(Recommender):
+    def __init__(self, n_steps, n_axis):
+        self.n_steps = n_steps
+        self.n_axis = n_axis
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
-        # TODO: Pauls BayesOpt approach
-        pass
+    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta : float = 1) -> Tensor:
+        acqf = UpperConfidenceBound(user_profile, beta=beta)
+        xx = torch.linspace(start=0, end=1, steps=self.n_steps)
+        mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
+        mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps**self.n_axis, 1, self.n_axis)
+        scores = acqf(mesh)
+        candidate_indices = torch.topk(scores, k=n_recommendations)[1]
+        candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
+        return candidates                
+
+
+
 
 
 if __name__ == '__main__':
@@ -125,7 +140,7 @@ if __name__ == '__main__':
     print("single point + weighted axes", weighted_axes_recommendations)
 
     # TODO: test function-based recommender (Bayesian approach)
-    # function_based_recommender = FunctionBasedRecommender()
-    # function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
-    #                                                                                  n_recommendations=100)
-    # print("function_based_recommender", function_based_recommendations)
+    function_based_recommender = BayesianRecommender()
+    function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
+                                                                                     n_recommendations=100)
+    print("function_based_recommender", function_based_recommendations)
