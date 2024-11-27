@@ -31,7 +31,7 @@ import prototype.utils.constants as constants
 
 
 class UserProfileHost():
-    def __init__(self, original_prompt : str, add_ons : list = None, recommendation_type : str ='bayes-opt'):
+    def __init__(self, original_prompt : str, add_ons : list = None, recommendation_type : str ='bayes-opt', hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5"):
         self.center = self.clip_embedding(original_prompt)
 
         # Generate axis to define the user profile space with extensions of the original user-promt
@@ -103,25 +103,23 @@ class UserProfileHost():
             # TODO (Discuss): Weighted mean of all previously rated embeddings weighted by their value.
             # self.user_profile = (self.embeddings @ self.preferences)/self.preferences.sum()
 
-    def clip_embedding(self, prompt):
+    def clip_embedding(self, prompt : str):
         # TODO: Implement conversion from text to CLIP Embedding, should this be done here? Otherwise where can we get it?
         return torch.randn(size=(768,))  # Placeholder for tests
 
-    def generate_recommendations(self, num_recommendations: int = 1, beta: float = 1):
+    def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
         '''
         This function generates recommendations based on the previously fit user-profile
 
         Parameters:
             num_recommendations (int): Defines the number of embeddings that will be returned for user evaluation.
-            beta (float): Defines the trade-off between exploration and exploitation.
+            beta (float): Defines the trade-off between exploration and exploitation when using the BayesRecommender.
         Returns:
             embeddings (List[tensor]): Embeddings that can be retransformed into the CLIP space and used for image generation
         '''
         if self.recommendation_type == constants.FUNCTION_BASED:
             if self.user_profile:  # Use the fittet gaussian process to evaluate which regions to sample next
                 acqf = UpperConfidenceBound(self.user_profile, beta=beta)
-                bounds = torch.stack([torch.zeros(self.num_axis), torch.ones(self.num_axis)])
-                # TODO (Paul): Implement a method to ensure that the acquisition function only tests candidates that actually lead to useable image generations.
                 xx = torch.linspace(start=0, end=1, steps=self.num_steps)
                 mesh = torch.meshgrid([xx for i in range(self.num_axis)])
                 mesh = torch.stack(mesh, dim=-1).reshape(self.num_steps**self.num_axis, 1, self.num_axis)
