@@ -10,8 +10,8 @@ def slerp(v0, v1, num, t0=0, t1=1):
     :param t1: end interpolation value
     :return: interpolated vectors
     """
-    v0 = v0.numpy()  # v0.detach().cpu().numpy()
-    v1 = v1.numpy()  # v1.detach().cpu().numpy()
+    v0 = v0.detach().cpu().numpy()
+    v1 = v1.detach().cpu().numpy()
 
     def interpolation(t, v0, v1, DOT_THRESHOLD=0.9995):
         """helper function to spherically interpolate two arrays v1 v2"""
