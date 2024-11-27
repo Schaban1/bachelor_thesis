@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from prototype.utils.interpolation import slerp
 import torch
+from torch import Tensor
 import prototype.utils.constants as constants
 
 
@@ -33,15 +34,11 @@ class Recommender(ABC):  # ABC = Abstract Base Class
     """
 
     @abstractmethod
-    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
-                             user_profile: list, n: int = 5) -> list:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
         """
-        :param user_preferences: List of length of number of images to generate. Contains ordinal information about the
-            user's satisfaction with the images generated in the last iteration. Initially an empty list.
-        :param prompt_embedding: Embedding of the current CLIP embedding. Initially the text prompt embedding.
-        :param user_profile: Encodes the user profile in the CLIP space. Randomly initialized.
-        :param n: Number of recommendations to return. By default, 5.
-        :return: A list of recommendations, i.e. n many CLIP embeddings.
+        :param user_profile: Encodes the user profile in the low-dimensional user profile space. Randomly initialized.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :return: A tensor of recommendations, i.e. n_recommendations many low-dimensional embeddings.
         """
         pass
 
