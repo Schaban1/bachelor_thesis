@@ -9,7 +9,7 @@ class WebUI:
     """
     def __init__(self):
         self.iteration = 0
-        self.recommend_by = Constants.POINT
+        self.recommendation_type = Constants.POINT
         self.num_images_to_generate = 5
         self.generator = Generator() # Placeholder
         self.save_path = f"{os.getcwd()}/prototype/output"
@@ -36,7 +36,17 @@ class WebUI:
     def build_userinterface(self):
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
         st.markdown(webis_template_top, unsafe_allow_html=True)
-        self.get_user_prompt()
+        _, input_col, _ = st.columns([2, 5, 2])
+        with input_col:
+            user_prompt = st.text_input("Your prompt:", key="user_prompt")
+            recommendation_option = st.selectbox(
+                "Recommendation Type:",
+                [t.value for t in Constants]
+            )
+            self.recommendation_type = Constants(recommendation_option).name
+        _, button_col, _ = st.columns([4, 3, 4])
+        with button_col:
+            st.button("Generate images", key="generate_images_button", use_container_width=True)
         st.markdown(webis_template_bottom, unsafe_allow_html=True)
     
     def get_webis_demo_template_html(self):
@@ -75,7 +85,7 @@ class WebUI:
             A list of the generated images.
         """
         # Shouldn't the feedback of the user preferences be processed seperately?
-        images = self.generator.generate_images(user_prompt, self.num_images_to_generate, self.recommend_by, user_preferences)
+        images = self.generator.generate_images(user_prompt, self.num_images_to_generate, self.recommendation_type, user_preferences)
         return images
     
     def display_images(self, images):
