@@ -1,15 +1,11 @@
 from abc import abstractmethod, ABC
-import random
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 from prototype.utils.interpolation import slerp
 import torch
 from torch import Tensor
-import prototype.utils.constants as constants
 import prototype.utils.visualize_recommendations as visualize_recommendations
 
 
-# WIP
 class Recommender(ABC):  # ABC = Abstract Base Class
     """
     A Recommender class instance derives recommended samples for the next iteration.
@@ -29,7 +25,7 @@ class Recommender(ABC):  # ABC = Abstract Base Class
         Hence, highly influential axes should be weighted less than others to counteract this phenomenon.
     3. Function-based generation:
         In this scenario, one doesn't want to optimize the position of the user profile (a point) in the suer profile
-        space and use this position to generate new generations, but one chooses multiple points in highly interesting
+        space and use this position to generate new generations, but one chooses multiple points in fascinating
         regions of the user sspace and requests feedback of the user to "learn" the space.
         The choice of the points is based on an acquisition function, e.g. a Gaussian process.
     """
@@ -87,16 +83,15 @@ class SinglePointWeightedAxesRecommender(Recommender):
         radius = 1.0
 
         # weights for influence of axes: integer between 0 and n_recommendations
-        weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))
-            # torch.ones(user_profile.shape[0], dtype=int)   # equal weight
-            #  # random weights for axes, TODO: where to get them from?
+        # TODO: where to get them from?
+        weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))   # random weights for axes
 
         # one hot encoding for axes
         axes = torch.multiply(torch.eye(user_profile.shape[0]), radius)
-        print("axes", axes)
-        print("weights", weights)
 
-        # interpolate between user profile and axes
+        # interpolate between user profile and axes:
+        # Weights are used to determine the influence of the axes (SLERP returns interpolated points with increasing
+        # influence of the axes) -> the higher the weight (i.e. index), the more the axis is taken into account
         # if fewer axes than n_recommendations, repeat axes
         interpolated_points = [slerp(user_profile, axis, num=n_recommendations)[weight] for axis, weight
                                in zip(axes.repeat(n_recommendations // axes.shape[0], 1), weights)]
@@ -134,7 +129,7 @@ if __name__ == '__main__':
                                                            user_profile=dummy_user_profile)
     print("single point + weighted axes", weighted_axes_recommendations)
 
-    # test function-based recommender (Bayesian approach)
+    # TODO: test function-based recommender (Bayesian approach)
     # function_based_recommender = FunctionBasedRecommender()
     # function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
     #                                                                                  n_recommendations=100)
