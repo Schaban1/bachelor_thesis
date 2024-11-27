@@ -1,23 +1,3 @@
-'''
-Based on the original prompt p_org, we can define our own coordinate system using the original prompt as the center (all zeros) and define
-new axis by extending the prompt with additional attributes.
-
-For example, given the original prompt p_org="A cute cat with a hat", we can define our own prompts like p_1="A cute cat with a hat, realistic" 
-or p_2="A cute cat with a hat, old people like this image" and build a new coordinate system in the clip embeddings space defined by
-emb(a_1, ..., a_n) = emb_org + a_1 * emb_1 + a_2 * emb_2 + ... + a_n * emb_n
-
-where emb_i is the CLIP embedding of the respective prompt. With this, we redefine a new, n-dimensional space that can generate new CLIP embeddings
-in the following way:
-Let's say our user_profile is a vector in form of (a_1, ..., a_n), then we can sample around this point in the 10 dimensional space to get 
-(b_1, ..., b_n) and inverse_transform it into the CLIP Embedding space, where it can either be used for image generation or creation of 
-embeddings for image generation.
-
-However, I feel like it would be smarter to consider a probability distribution over the user profile space as it allows us to draw samples at locations with
-high variance (exploration) and high mean (exploitation). This would involve Bayesian Optimization and a multimodal gaussian distribution that will be fit by the optimizer 
-and used for new recommendations by the recommender. Therefore, I think it would be easiest to store this inside one class, possibly the userProfileHost.
-
-'''
-
 import torch
 from torch import Tensor
 
@@ -27,15 +7,13 @@ from .utils import constants
 from diffusers import StableDiffusionPipeline
 
 
-
-
 class UserProfileHost():
     def __init__(
             self, 
             original_prompt : str, 
             add_ons : list = None, 
-            recommendation_type : str = 'bayes-opt', 
-            optimization_type : str = 'gaussian_process', 
+            recommendation_type : str = constants.FUNCTION_BASED, 
+            optimization_type : str = constants.GAUSSIAN_PROCESS, 
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5"
             ):
         
@@ -64,6 +42,7 @@ class UserProfileHost():
         for prompt in [original_prompt + ',' + add for add in add_ons]:
             self.axis.append(self.clip_embedding(prompt))
         self.num_axis = len(self.axis)
+        self.axis = torch.stack(self.axis)
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
@@ -76,6 +55,7 @@ class UserProfileHost():
         self.num_steps = 5
 
         # Initialize an Optimizer
+        # TODO (Paul): Bayesian Optimization seems to sometimes fail when there are only few datapoints. Find a solution.
         if optimization_type == constants.MAX_PREF:
             self.optimizer = MaxPrefOptimizer()
         elif optimization_type == constants.WEIGHTED_SUM:
@@ -87,7 +67,7 @@ class UserProfileHost():
 
         # Initialize a Recommender
         if recommendation_type == constants.FUNCTION_BASED:
-            self.recommender = BayesianRecommender()
+            self.recommender = BayesianRecommender(n_steps=self.num_steps, n_axis=self.num_axis)
         elif recommendation_type == constants.POINT:
             self.recommender = SinglePointRecommender()
         elif recommendation_type == constants.WEIGHTED_AXES:
@@ -97,36 +77,32 @@ class UserProfileHost():
 
 
 
-    def inv_transform(self, user_embedding : Tensor):
+    def inv_transform(self, user_embeddings : Tensor):
         '''
-        This function takes in a set of parameters [a_1, ..., a_n] and computes a respective CLIP embedding by using the dimensions provided in axis.
+        This function transforms embeddings in the user_space back into the clip embedding space.
 
         Parameters:
-            user_embedding (List[float]): Parameters concerning the initially defined axis of a user_embbing.
-        '''
-        clip_embedding = self.center
-        for a_i, ax in zip(user_embedding, self.axis):
-            clip_embedding += a_i * ax
-        return clip_embedding
+            user_embedding (Tensor): Parameters concerning the initially defined axis of a user_embbing.
 
-    def fit_user_profile(self, embeddings: Tensor, preferences: Tensor):
+        Returns
+            clip_embeddings (Tensor): The respective clip embeddings.
+        '''
+        clip_embeddings = self.center + (user_embeddings.to(self.device) @ self.axis)
+        return clip_embeddings
+
+    def fit_user_profile(self, preferences: Tensor):
         '''
         This function initializes and fits a gaussian process for the available user preferences that can subsequently be used to 
         generate new interesting embeddings for the user.
 
         Parameters:
-            embeddings (Tensor) : Embeddings that were presented to the user, where the embeddings are represented in the user-space.
-            preferences (Tensor) : Preferences regarding the embeddings as real valued numbers.
+            preferences (Tensor) : Preferences regarding the embeddings recommended last as real valued numbers.
         '''
-
         # Initialize or extend the available user related data
-        if self.embeddings == None:
-            self.embeddings = embeddings
+        if self.preferences == None:
             self.preferences = preferences
         else:
-            self.embeddings = torch.cat((self.embeddings, embeddings))
             self.preferences = torch.cat((self.preferences, preferences))
-
         self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences)
 
     def clip_embedding(self, prompt : str):
@@ -147,7 +123,7 @@ class UserProfileHost():
 
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
         '''
-        This function generates recommendations based on the previously fit user-profile
+        This function generates recommendations based on the previously fit user-profile.
 
         Parameters:
             num_recommendations (int): Defines the number of embeddings that will be returned for user evaluation.
@@ -156,5 +132,9 @@ class UserProfileHost():
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         '''
         user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
+        if self.embeddings != None:
+            self.embeddings = torch.cat((self.embeddings, user_space_embeddings)) # Safe the user_space_embeddings
+        else:
+            self.embeddings = user_space_embeddings
         clip_embeddings = self.inv_transform(user_space_embeddings).reshape(num_recommendations, 1, self.embedding_dim).expand(num_recommendations, self.n_clip_tokens, self.embedding_dim)
         return clip_embeddings
