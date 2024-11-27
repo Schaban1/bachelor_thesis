@@ -8,7 +8,7 @@ class WebUI:
     This class implements a interactive web user interface for an image generation system.
     """
     def __init__(self):
-        self.iteration = 0
+        self.iteration = 1
         self.recommendation_type = Constants.POINT
         self.num_images_to_generate = 5
         self.generator = Generator() # Placeholder
@@ -32,6 +32,7 @@ class WebUI:
             images = self.generate_images(user_prompt, user_preferences)
             self.display_images(images)
             user_preferences = self.select_best_images()
+            self.iteration += 1
     
     def build_userinterface(self):
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
