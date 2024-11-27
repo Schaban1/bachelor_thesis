@@ -25,7 +25,7 @@ class WebUI:
         """
         print("Welcome to our image generation system prototype!")
         st.set_page_config(page_title="Image Generation System Demo", layout="wide")
-        self.load_webis_demo_template()
+        self.build_userinterface()
         user_preferences = []
         while True:
             user_prompt = self.get_user_prompt()
@@ -33,13 +33,24 @@ class WebUI:
             self.display_images(images)
             user_preferences = self.select_best_images()
     
-    def load_webis_demo_template(self):
+    def build_userinterface(self):
+        webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
+        st.markdown(webis_template_top, unsafe_allow_html=True)
+        self.get_user_prompt()
+        st.markdown(webis_template_bottom, unsafe_allow_html=True)
+    
+    def get_webis_demo_template_html(self):
         """
-        Loads the webis html template for demo web applications.
+        Returns the webis html template for demo web applications.
+
+        Returns:
+            A tuple of the top half of the webis html template until the demo content and the bottom half/footer.
         """
-        with open("./prototype/resources/webis_template.html") as f:
-            webis_template = f.read()
-        st.markdown(webis_template, unsafe_allow_html=True)
+        with open("./prototype/resources/webis_template_top.html") as f:
+            webis_template_top = f.read()
+        with open("./prototype/resources/webis_template_bottom.html") as f:
+            webis_template_bottom = f.read()
+        return webis_template_top, webis_template_bottom
 
     def get_user_prompt(self):
         """
