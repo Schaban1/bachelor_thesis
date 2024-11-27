@@ -1,9 +1,8 @@
 from abc import abstractmethod, ABC
 import numpy as np
-from prototype.utils.interpolation import slerp
 import torch
 from torch import Tensor
-import prototype.utils.visualize_recommendations as visualize_recommendations
+from .utils import slerp, display_generated_points as visualize_recommendations
 from botorch.acquisition import UpperConfidenceBound
 
 
@@ -113,6 +112,9 @@ class BayesianRecommender(Recommender):
                 return torch.rand(size=(n_recommendations, self.num_axis))
 
 
+
+
+
 if __name__ == '__main__':
     dummy_user_profile = torch.tensor([1, 2, 3])  # torch.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
@@ -135,7 +137,7 @@ if __name__ == '__main__':
     print("single point + weighted axes", weighted_axes_recommendations)
 
     # TODO: test function-based recommender (Bayesian approach)
-    # function_based_recommender = FunctionBasedRecommender()
-    # function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
-    #                                                                                  n_recommendations=100)
-    # print("function_based_recommender", function_based_recommendations)
+    function_based_recommender = BayesianRecommender()
+    function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
+                                                                                     n_recommendations=100)
+    print("function_based_recommender", function_based_recommendations)

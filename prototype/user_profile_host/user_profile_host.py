@@ -23,7 +23,10 @@ from torch import Tensor
 
 from .recommender import *
 from .optimizer import *
-import prototype.utils.constants as constants
+from .utils import constants
+from diffusers import StableDiffusionPipeline
+
+
 
 
 class UserProfileHost():
@@ -36,6 +39,21 @@ class UserProfileHost():
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5"
             ):
         
+        # Some Clip Hyperparameters
+        self.embedding_dim = 768
+        self.n_clip_tokens = 77
+
+        # Initialize tokenizer and text encoder to calculate CLIP embeddings
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        pipe = StableDiffusionPipeline.from_pretrained(
+            pretrained_model_name_or_path=hf_model_name,
+            cache_dir='./cache/'
+        )
+        self.tokenizer = pipe.tokenizer
+        self.text_encoder = pipe.text_encoder
+        self.text_encoder.to(self.device)
+        
+        # Define the center of the user_space with the original prompt embedding
         self.center = self.clip_embedding(original_prompt)
 
         # Generate axis to define the user profile space with extensions of the original user-promt
@@ -112,8 +130,20 @@ class UserProfileHost():
         self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences)
 
     def clip_embedding(self, prompt : str):
-        # TODO: Implement conversion from text to CLIP Embedding, should this be done here? Otherwise where can we get it?
-        return torch.randn(size=(constants.EMBEDDING_DIM,))  # Placeholder for tests
+        '''
+        Embeds a given prompt using CLIP.
+
+        Returns:
+            embedding (Tensor) : An embedding for the prompt in shape (1, 77, 768)
+        '''
+        prompt_tokens = self.tokenizer(prompt,
+                            padding="max_length",
+                            max_length=self.tokenizer.model_max_length,
+                            truncation=True,
+                            return_tensors="pt",)
+
+        prompt_embeds = self.text_encoder(prompt_tokens.input_ids.to(self.device))[0]
+        return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)[0]
 
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
         '''
@@ -126,5 +156,5 @@ class UserProfileHost():
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         '''
         user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
-        clip_embeddings = self.inv_transform(user_space_embeddings).reshape(num_recommendations, 1, constants.EMBEDDING_DIM).expand(num_recommendations, constants.N_CLIP_TOKENS, constants.EMBEDDING_DIM)
+        clip_embeddings = self.inv_transform(user_space_embeddings).reshape(num_recommendations, 1, self.embedding_dim).expand(num_recommendations, self.n_clip_tokens, self.embedding_dim)
         return clip_embeddings
