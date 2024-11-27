@@ -1,6 +1,6 @@
 import os
 from PIL import Image
-import prototype.utils.constants as constants
+from prototype.utils.constants import Constants
 
 class WebUI:
     """
@@ -8,7 +8,7 @@ class WebUI:
     """
     def __init__(self):
         self.iteration = 0
-        self.recommend_by = constants.RANDOM
+        self.recommend_by = Constants.POINT
         self.num_images_to_generate = 5
         self.generator = Generator() # Placeholder
         self.save_path = f"{os.getcwd()}/prototype/output"
