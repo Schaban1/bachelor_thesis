@@ -118,7 +118,7 @@ class UserProfileHost():
         Returns:
             embeddings (List[tensor]): Embeddings that can be retransformed into the CLIP space and used for image generation
         '''
-        if self.recommendation_type == constants.BAYES_OPT:
+        if self.recommendation_type == constants.FUNCTION_BASED:
             if self.user_profile:  # Use the fittet gaussian process to evaluate which regions to sample next
                 acqf = UpperConfidenceBound(self.user_profile, beta=beta)
                 bounds = torch.stack([torch.zeros(self.num_axis), torch.ones(self.num_axis)])
@@ -133,20 +133,12 @@ class UserProfileHost():
             else:  # If there is no user-profile available yet, return a number of random samples in the user-space
                 return torch.rand(size=(num_recommendations, self.num_axis))
         else:
-            if self.recommendation_type == constants.RANDOM:
-                recommender = RandomRecommender()
-            elif self.recommendation_type == constants.ADDITIONAL:
-                recommender = AdditionalRecommender()
-            elif self.recommendation_type == constants.LINEAR_COMBINATION:
-                recommender = LinearCombinationRecommender()
-            elif self.recommendation_type == constants.CONVEX_COMBINATION:
-                recommender = ConvexCombinationRecommender()
+            if self.recommendation_type == constants.POINT:
+                recommender = SinglePointRecommender()
+            elif self.recommendation_type == constants.WEIGHTED_AXES:
+                recommender = SinglePointWeightedAxesRecommender()
             else:
-                raise ValueError("The recommendation type is not implemented yet.")
-            # get user profile
-            # TODO: where do we get the last iteration's embeddings and preferences from?
-            self.fit_user_profile(embeddings=self.embeddings, preferences=self.preferences)
-            clip_user_profile = self.inv_transform(self.user_profile)
-            return recommender.recommend_embeddings(user_preferences=self.preferences,
-                                                   prompt_embedding=self.embeddings,
-                                                   user_profile=clip_user_profile, n=num_recommendations)
+                raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
+
+            return recommender.recommend_embeddings(user_profile=self.user_profile,
+                                                    n_recommendations=num_recommendations)
