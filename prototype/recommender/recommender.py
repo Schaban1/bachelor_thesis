@@ -6,7 +6,7 @@ from prototype.utils.interpolation import slerp
 import torch
 from torch import Tensor
 import prototype.utils.constants as constants
-import matplotlib.pyplot as plt
+import prototype.utils.visualize_recommendations as visualize_recommendations
 
 
 # WIP
@@ -46,25 +46,6 @@ class Recommender(ABC):  # ABC = Abstract Base Class
 
 class SinglePointRecommender(Recommender):
 
-    def display_generated_points(self, generated_points: Tensor):
-        """
-        Display the generated points in a 3D plot. The points are assumed to be in 3D.
-        :param generated_points: Tensor of shape (n_points, 3) containing the generated points.
-        :return: -
-        """
-        fig = plt.figure()
-        ax = fig.add_subplot(projection='3d')
-
-        for point in generated_points:
-            ax.scatter(point[0], point[1], point[2])
-
-        ax.set_xlabel('X Label')
-        ax.set_ylabel('Y Label')
-        ax.set_zlabel('Z Label')
-
-        plt.title("Generated points on surface of sphere")
-        plt.show()
-
     def getRandomSamplesOnNSphere(self, n_dims: int = 10, radius: float = 1.0, n_samples: int = 5) -> Tensor:
         """
         Code from: https://stackoverflow.com/questions/52808880/algorithm-for-generating-uniformly-distributed-random
@@ -102,9 +83,25 @@ class SinglePointRecommender(Recommender):
 class SinglePointWeightedAxesRecommender(Recommender):
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
-        # TODO
-        recommendations = []
-        pass
+        # hyperparameter
+        radius = 1.0
+
+        # weights for influence of axes: integer between 0 and n_recommendations
+        weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))
+            # torch.ones(user_profile.shape[0], dtype=int)   # equal weight
+            #  # random weights for axes, TODO: where to get them from?
+
+        # one hot encoding for axes
+        axes = torch.multiply(torch.eye(user_profile.shape[0]), radius)
+        print("axes", axes)
+        print("weights", weights)
+
+        # interpolate between user profile and axes
+        # if fewer axes than n_recommendations, repeat axes
+        interpolated_points = [slerp(user_profile, axis, num=n_recommendations)[weight] for axis, weight
+                               in zip(axes.repeat(n_recommendations // axes.shape[0], 1), weights)]
+
+        return torch.stack(interpolated_points)
 
 
 class FunctionBasedRecommender(Recommender):
@@ -117,19 +114,29 @@ class FunctionBasedRecommender(Recommender):
 
 
 if __name__ == '__main__':
+    dummy_user_profile = torch.tensor([1, 2, 3])  # torch.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
     # test single point recommender
     single_recommender = SinglePointRecommender()
-    dummy_user_profile = torch.tensor([1, 2, 3])  #torch.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    single_point_recommendations = single_recommender.recommend_embeddings(dummy_user_profile, n_recommendations=200)
+    single_point_recommendations = single_recommender.recommend_embeddings(user_profile=dummy_user_profile,
+                                                                           n_recommendations=200)
     if dummy_user_profile.shape[0] == 3:
-        single_recommender.display_generated_points(single_point_recommendations)
-    # print("single point", single_point_recommendations)
+        visualize_recommendations.display_generated_points(single_point_recommendations,
+                                                           user_profile=dummy_user_profile)
+    print("single point", single_point_recommendations)
 
-    # single_weighted_recommender = SinglePointWeightedAxesRecommender()
-    # print("single point + weighted axes",
-    #       single_weighted_recommender.recommend_embeddings( [1, 2, 3, 4, 5]))
+    # test single point + weighted axes recommender
+    single_weighted_recommender = SinglePointWeightedAxesRecommender()
+    weighted_axes_recommendations = single_weighted_recommender.recommend_embeddings(user_profile=dummy_user_profile,
+                                                                                     n_recommendations=100)
+    if dummy_user_profile.shape[0] == 3:
+        visualize_recommendations.display_generated_points(weighted_axes_recommendations,
+                                                           user_profile=dummy_user_profile)
+    print("single point + weighted axes", weighted_axes_recommendations)
 
+    # test function-based recommender (Bayesian approach)
     # function_based_recommender = FunctionBasedRecommender()
-    # print("function_based_recommender",
-    #       function_based_recommender.recommend_embeddings([1, 2, 3, 4, 5]))
+    # function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
+    #                                                                                  n_recommendations=100)
+    # print("function_based_recommender", function_based_recommendations)
 
