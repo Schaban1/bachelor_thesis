@@ -19,20 +19,19 @@ and used for new recommendations by the recommender. Therefore, I think it would
 '''
 
 import torch
+from torch import Tensor
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from botorch.fit import fit_gpytorch_mll
-from botorch.optim import optimize_acqf
 from botorch.models import SingleTaskGP
 from botorch.acquisition import UpperConfidenceBound
 from prototype.recommender import *
 import prototype.utils.constants as constants
-from botorch.models.transforms import Standardize, Normalize
 
 
 class UserProfileHost():
-    def __init__(self, original_prompt, add_ons=None, recommendation_type='bayes-opt'):
+    def __init__(self, original_prompt : str, add_ons : list = None, recommendation_type : str ='bayes-opt'):
         self.center = self.clip_embedding(original_prompt)
 
         # Generate axis to define the user profile space with extensions of the original user-promt
@@ -58,7 +57,7 @@ class UserProfileHost():
         # Some Bayesian Optimization Hyperparameters
         self.num_steps = 5
 
-    def inv_transform(self, user_embedding):
+    def inv_transform(self, user_embedding : Tensor):
         '''
         This function takes in a set of parameters [a_1, ..., a_n] and computes a respective CLIP embedding by using the dimensions provided in axis.
 
@@ -70,14 +69,14 @@ class UserProfileHost():
             clip_embedding += a_i * ax
         return clip_embedding
 
-    def fit_user_profile(self, embeddings: list, preferences: list):
+    def fit_user_profile(self, embeddings: Tensor, preferences: Tensor):
         '''
         This function initializes and fits a gaussian process for the available user preferences that can subsequently be used to 
         generate new interesting embeddings for the user.
 
         Parameters:
-            embeddings (Tensor) : A list of embeddings that were presented to the user, where the embeddings are represented in the user-space.
-            preferences (Tensor) : A list of preferences regarding the embeddings as real values.
+            embeddings (Tensor) : Embeddings that were presented to the user, where the embeddings are represented in the user-space.
+            preferences (Tensor) : Preferences regarding the embeddings as real valued numbers.
         '''
 
         # Initialize or extend the available user related data
