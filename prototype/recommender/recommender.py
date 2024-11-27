@@ -1,218 +1,131 @@
 from abc import abstractmethod, ABC
-import random
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
-#from splines.quaternion import slerp as SLERP
-import tensorflow as tf
+from prototype.utils.interpolation import slerp
 import torch
-import prototype.utils.constants as constants
+from torch import Tensor
+import prototype.utils.visualize_recommendations as visualize_recommendations
 
 
-# WIP
-
-class Recommender(ABC):
+class Recommender(ABC):  # ABC = Abstract Base Class
     """
     A Recommender class instance derives recommended samples for the next iteration.
     In other words:
-    Multiple alterations of the current CLIP embedding (first iteration: text prompt embedding) are returned.
+    Multiple alterations of the current user profile (first iteration: random) are returned.
+    It is important to note, that the user profile is a vector in the user space,
+    i.e. a low dimensional subspace of the CLIP space.
+    Hence, one assumes that points generated in the user space which are projected back to the CLIP space
+    correspond to valid embeddings, i.e. produce meaningful images.
     The method used for generation depends on the user choice.
     It is possible to generate embeddings via the following methods:
-    1. Random generation:
-        With reference to "Manipulating Embeddings of Stable Diffusion Prompts" (Deckers et al. 2024)
-        a subset of multiple random
-        embedded prompt (concatenated random alphanumeric characters)
-        with maximum pairwise cosine similarity is chosen.
-        Afterward, for each random embedding from the subset a
-        individual interpolation parameter alpha_i are chosen s.t. the product of the current CLIP embedding
-        and a SLERP interpolation of the current CLIP embedding and the random embedding is constant.
-        In the end, the interpolations (one per embedding from the subset) are returned as recommendation.
-    2. Additional generation:
-        A scaled version of the user profile embedding and the current CLIP embedding are summed.
-        Afterward, random versions of the new point in the CLIP space are returned as recommendations.
-    3. Linear combination generation:
-        Linear combinations of user profile embedding and the current CLIP embedding with different weightings
-        are returned as recommendations.
-    4. Convex Combination generation:
-        The user profile consists of 10 weights associated with initial text embeddings.
-        The recommendations returned are interpolations of the initial prompts.
-        (A convex combination is a linear combination of vectors with non-negative weights that sum up to one.)
+    1. Single point generation:
+        Multiple random points on a sphere surface around the current user profile are generated.
+        These points are returned as recommendation.
+    2. Single point generation with weighted axes:
+        Some axes spanning the user space may convey more information than others.
+        Hence, highly influential axes should be weighted less than others to counteract this phenomenon.
+    3. Function-based generation:
+        In this scenario, one doesn't want to optimize the position of the user profile (a point) in the suer profile
+        space and use this position to generate new generations, but one chooses multiple points in fascinating
+        regions of the user sspace and requests feedback of the user to "learn" the space.
+        The choice of the points is based on an acquisition function, e.g. a Gaussian process.
     """
 
-    #  TODO: Convex Combination generation usage of user profile
-    # ABC = Abstract Base Class
-
     @abstractmethod
-    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
-                             user_profile: list, n: int = 5) -> list:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
         """
-        :param user_preferences: List of length of number of images to generate. Contains ordinal information about the
-            user's satisfaction with the images generated in the last iteration. Initially an empty list.
-        :param prompt_embedding: Embedding of the current CLIP embedding. Initially the text prompt embedding.
-        :param user_profile: Encodes the user profile in the CLIP space. Randomly initialized.
-        :param n: Number of recommendations to return. By default, 5.
-        :return: A list of recommendations, i.e. n many CLIP embeddings.
+        :param user_profile: Encodes the user profile in the low-dimensional user profile space. Randomly initialized.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :return: A tensor of recommendations, i.e. n_recommendations many low-dimensional embeddings.
         """
         pass
 
 
-class RandomRecommender(Recommender):
+class SinglePointRecommender(Recommender):
 
-    def get_max_diverse_subset(self, embeddings: list, subset_size: int = 5) -> list:
-
-        # Step 1: Compute the cosine similarity matrix
-        cos_sim_matrix = cosine_similarity(embeddings)
-        np.fill_diagonal(cos_sim_matrix, 0)  # Ignore self-similarity
-
-        # Step 2: Initialize
-        n_vectors = embeddings.shape[0]
-        selected_indices = []
-
-        # Step 3: Greedy selection
-        while len(selected_indices) < subset_size:
-            if not selected_indices:
-                # Start with the vector having the highest total similarity
-                next_index = np.argmax(cos_sim_matrix.sum(axis=1))
-            else:
-                # Compute the marginal gain for adding each unselected vector
-                unselected_indices = list(set(range(n_vectors)) - set(selected_indices))
-                gains = [
-                    cos_sim_matrix[i, selected_indices].sum()
-                    for i in unselected_indices
-                ]
-                next_index = unselected_indices[np.argmax(gains)]
-
-            selected_indices.append(next_index)
-
-        return selected_indices
-
-    def slerp(self, v0, v1, num, t0=0, t1=1):
-        """Spherical linear interpolation between two vectors.
-        :param v0: start vector
-        :param v1: end vector
-        :param num: number of interpolation steps
-        :param t0: start interpolation value
-        :param t1: end interpolation value
-        :return: interpolated vectors
+    def get_random_samples_on_n_sphere(self, n_dims: int = 10, radius: float = 1.0, n_samples: int = 5) -> Tensor:
         """
-        v0 = v0.numpy()  #v0.detach().cpu().numpy()
-        v1 = v1.numpy()  #v1.detach().cpu().numpy()
+        Code from: https://stackoverflow.com/questions/52808880/algorithm-for-generating-uniformly-distributed-random
+        -points-on-the-n-sphere (27.11.2024)
+        Idea from: https://mathworld.wolfram.com/HyperspherePointPicking.html (27.11.2024)
 
-        def interpolation(t, v0, v1, DOT_THRESHOLD=0.9995):
-            """helper function to spherically interpolate two arrays v1 v2"""
-            dot = np.sum(v0 * v1 / (np.linalg.norm(v0) * np.linalg.norm(v1)))
-            if np.abs(dot) > DOT_THRESHOLD:
-                v2 = (1 - t) * v0 + t * v1
-            else:
-                theta_0 = np.arccos(dot)
-                sin_theta_0 = np.sin(theta_0)
-                theta_t = theta_0 * t
-                sin_theta_t = np.sin(theta_t)
-                s0 = np.sin(theta_0 - theta_t) / sin_theta_0
-                s1 = sin_theta_t / sin_theta_0
-                v2 = s0 * v0 + s1 * v1
-            return v2
+        :param n_dims: Number of dimensions of system. The sphere surface is n_dims-1 dimensional.
+        :param radius: Radius of the sphere.
+        :param n_samples: Number of samples to generate.
+        :return: Tensor of shape (n_samples, n_dims) containing the samples on surface of sphere with center 0^n_dims.
+        """
+        x = np.random.default_rng().normal(size=(n_samples, n_dims))
 
-        t = np.linspace(t0, t1, num)
+        return torch.from_numpy(radius / np.sqrt(np.sum(x ** 2, 1, keepdims=True)) * x)
 
-        v3 = torch.tensor(np.array([interpolation(t[i], v0, v1) for i in range(num)]))
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+        """
+        :param user_profile: A point in the low-dimensional user profile space.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
+            user_profile where n_dims is the dimensionality of the user_profile.
+        """
 
-        return v3
+        # recommendations on the surface of a sphere around the 0-center
+        zero_centered_generated_points = self.get_random_samples_on_n_sphere(n_dims=len(user_profile),
+                                                                             n_samples=n_recommendations)
 
-    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
-                             user_profile, n: int = 5) -> list:
-
-        # cf. "Manipulating Embeddings of Stable Diffusion Prompts", Deckers et al. 2024
-        # random embedded prompt: concatenate random alphanumeric characters
-        g1 = tf.random.Generator.from_seed(1, alg='philox')
-        random_embeddings = g1.normal(shape=[200, len(prompt_embedding)])
-        #np.random.rand(200, len(prompt_embedding))  # TODO: ask Generator to embed prompts
-
-        # choose subset of embeddings with maximum pairwise cosine similarity -> diversity
-        diverse_subset = [random_embeddings[i] for i in
-                          self.get_max_diverse_subset(embeddings=random_embeddings, subset_size=n)]
-
-        # choose individual interpolation parameters alpha_i s.t.
-        # prompt_embedding * SLERP(prompt_embedding, random_embedding, alpha_i) is constant
-        # TODO: How to choose alpha_i effectively? cf. below: alpha corresponds to indices which correspond to similar products
-        alphas = np.linspace(0.1, 1.0, 10)
-        #print("alphas", alphas)
-
-        if type(prompt_embedding) == list:  # necessary during mocking
-            prompt_embedding = tf.convert_to_tensor(prompt_embedding)
-
-        # compute recommendations: SLERP(prompt_embedding, random_embedding, alpha_i), different here
-        recommendations = {l: self.slerp(prompt_embedding, diverse_subset[l], n) for l in
-                           range(len(diverse_subset))}
-
-        # TODO: compute matrix of products of prompt_embedding and recommendations, choose s.t. all products are similar
-        # product_matr = np.array([tf.math.multiply(prompt_embedding, recommendations[random_embedding]) for random_embedding in diverse_subset])
-        recommendations = [recommendations[l][2] for l in range(len(diverse_subset))]  # TODO: change to best choice
-
-        # recommendations = []
-        # for i in range(n):
-        #     gaussian_noise = [random.gauss(mu=0.0, sigma=1.0) for _ in range(len(prompt_embedding))]
-        #     recommendations.append(prompt_embedding + gaussian_noise)
-
-        return recommendations
+        # move the points s.t. the user profile is the center
+        return torch.add(zero_centered_generated_points, user_profile)
 
 
-class AdditionalRecommender(Recommender):
+class SinglePointWeightedAxesRecommender(Recommender):
 
-    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
-                             user_profile, n: int = 5) -> list:
-        beta = 0.5  # Hyperparameter
-        recommendations = []
-        additional_embedding = [p + u * beta for p, u in zip(prompt_embedding, user_profile)]
-        for i in range(n):
-            # TODO: use random generator instead to ensure existing embeddings in the latent space
-            gaussian_noise = [additional_embedding[j] + random.gauss(mu=0.0, sigma=1.0) for j in
-                              range(len(prompt_embedding))]
-            recommendations.append([p + g for p, g in zip(prompt_embedding, gaussian_noise)])
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+        # hyperparameter
+        radius = 1.0
 
-        return recommendations
+        # weights for influence of axes: integer between 0 and n_recommendations
+        # TODO: where to get them from?
+        weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))  # random weights for axes
 
+        # one hot encoding for axes
+        axes = torch.multiply(torch.eye(user_profile.shape[0]), radius)
 
-class LinearCombinationRecommender(Recommender):
+        # interpolate between user profile and axes:
+        # Weights are used to determine the influence of the axes (SLERP returns interpolated points with increasing
+        # influence of the axes) -> the higher the weight (i.e. index), the more the axis is taken into account
+        # if fewer axes than n_recommendations, repeat axes
+        interpolated_points = [slerp(user_profile, axis, num=n_recommendations)[weight] for axis, weight
+                               in zip(axes.repeat(n_recommendations // axes.shape[0], 1), weights)]
 
-    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
-                             user_profile, n: int = 5) -> list:
-        recommendations = []
-        for alpha in np.linspace(0.1, 1.0, n):
-            recommendations.append([alpha * prompt_embedding[j] + (1 - alpha) * user_profile[j] for j in
-                                    range(len(prompt_embedding))])  # TODO: type
-
-        return recommendations
+        return torch.stack(interpolated_points)
 
 
-class ConvexCombinationRecommender(Recommender):
+class FunctionBasedRecommender(Recommender):
 
-    def recommend_embeddings(self, user_preferences: list, prompt_embedding: list,
-                             user_profile, n: int = 5) -> list:
-        recommendations = []
-        # TODO: user profile has to contain axes of initial text embeddings in the CLIP space for this approach
-        user_profile = np.random.rand(10, len(prompt_embedding))  # TODO: dummy
-        for num_embs_to_combine in range(2, n + 1):
-            embs_to_combine = user_profile[random.sample(range(len(user_profile)), num_embs_to_combine)]
-            # Dirichlet's distribution is a distribution over vectors x that are positive and sum to 1
-            weights = np.random.dirichlet(np.ones(num_embs_to_combine), size=1)[0]
-            recommendations.append([sum([w * emb for w, emb in zip(weights, embs_to_combine[:, i])]) for i in
-                                    range(len(prompt_embedding))])
-
-        return recommendations
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+        # TODO: Pauls BayesOpt approach
+        pass
 
 
 if __name__ == '__main__':
-    random_recommender = RandomRecommender()
-    print("random",
-          random_recommender.recommend_embeddings(constants.RANDOM, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
-    additional_recommender = AdditionalRecommender()
-    print("additional",
-          additional_recommender.recommend_embeddings(constants.ADDITIONAL, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
-    linear_combination_recommender = LinearCombinationRecommender()
-    print("linear-combi",
-          linear_combination_recommender.recommend_embeddings(constants.LINEAR_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
-                                                              [1, 2, 3, 4, 5]))
-    convex_combination_recommender = ConvexCombinationRecommender()
-    print("convex-combi",
-          convex_combination_recommender.recommend_embeddings(constants.CONVEX_COMBINATION, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5],
-                                                              [1, 2, 3, 4, 5]))
+    dummy_user_profile = torch.tensor([1, 2, 3])  # torch.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+    # test single point recommender
+    single_recommender = SinglePointRecommender()
+    single_point_recommendations = single_recommender.recommend_embeddings(user_profile=dummy_user_profile,
+                                                                           n_recommendations=200)
+    if dummy_user_profile.shape[0] == 3:
+        visualize_recommendations.display_generated_points(single_point_recommendations,
+                                                           user_profile=dummy_user_profile)
+    print("single point", single_point_recommendations)
+
+    # test single point + weighted axes recommender
+    single_weighted_recommender = SinglePointWeightedAxesRecommender()
+    weighted_axes_recommendations = single_weighted_recommender.recommend_embeddings(user_profile=dummy_user_profile,
+                                                                                     n_recommendations=100)
+    if dummy_user_profile.shape[0] == 3:
+        visualize_recommendations.display_generated_points(weighted_axes_recommendations,
+                                                           user_profile=dummy_user_profile)
+    print("single point + weighted axes", weighted_axes_recommendations)
+
+    # TODO: test function-based recommender (Bayesian approach)
+    # function_based_recommender = FunctionBasedRecommender()
+    # function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
+    #                                                                                  n_recommendations=100)
+    # print("function_based_recommender", function_based_recommendations)
