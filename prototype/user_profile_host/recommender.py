@@ -58,7 +58,7 @@ class SinglePointRecommender(Recommender):
         """
         x = np.random.default_rng().normal(size=(n_samples, n_dims))
 
-        return torch.from_numpy(radius / np.sqrt(np.sum(x ** 2, 1, keepdims=True)) * x)
+        return torch.from_numpy(radius / np.sqrt(np.sum(x ** 2, 1, keepdims=True)) * x).float()
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
         """
@@ -105,17 +105,14 @@ class BayesianRecommender(Recommender):
         self.n_axis = n_axis
 
     def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta : float = 1) -> Tensor:
-            if user_profile:
-                acqf = UpperConfidenceBound(user_profile, beta=beta)
-                xx = torch.linspace(start=0, end=1, steps=self.n_steps)
-                mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
-                mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps**self.n_axis, 1, self.n_axis)
-                scores = acqf(mesh)
-                candidate_indices = torch.topk(scores, k=n_recommendations)[1]
-                candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
-                return candidates
-            else:  # If there is no user-profile available yet, return a number of random samples in the user-space
-                return torch.rand(size=(n_recommendations, self.n_axis))
+        acqf = UpperConfidenceBound(user_profile, beta=beta)
+        xx = torch.linspace(start=0, end=1, steps=self.n_steps)
+        mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
+        mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps**self.n_axis, 1, self.n_axis)
+        scores = acqf(mesh)
+        candidate_indices = torch.topk(scores, k=n_recommendations)[1]
+        candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
+        return candidates                
 
 
 

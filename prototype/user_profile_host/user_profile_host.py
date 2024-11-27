@@ -12,11 +12,10 @@ class UserProfileHost():
             self, 
             original_prompt : str, 
             add_ons : list = None, 
-            recommendation_type : str = constants.FUNCTION_BASED, 
-            optimization_type : str = constants.GAUSSIAN_PROCESS, 
+            recommendation_type : str = constants.POINT, 
+            optimization_type : str = constants.WEIGHTED_SUM, 
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5"
             ):
-        
         # Some Clip Hyperparameters
         self.embedding_dim = 768
         self.n_clip_tokens = 77
@@ -131,7 +130,11 @@ class UserProfileHost():
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         '''
-        user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
+        if self.user_profile != None:
+            user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
+        else:
+            user_space_embeddings = torch.rand(size=(num_recommendations, self.num_axis))
+        
         if self.embeddings != None:
             self.embeddings = torch.cat((self.embeddings, user_space_embeddings)) # Safe the user_space_embeddings
         else:

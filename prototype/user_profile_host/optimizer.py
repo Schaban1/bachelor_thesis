@@ -39,7 +39,8 @@ class MaxPrefOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        return embeddings[torch.argmax(preferences)]
+        user_profile = embeddings[torch.argmax(preferences)]
+        return user_profile
 
 class WeightedSumOptimizer:
 
@@ -49,7 +50,8 @@ class WeightedSumOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        return (embeddings @ preferences)/preferences.sum()
+        user_profile = (preferences.reshape(-1) @ embeddings)/preferences.sum()
+        return user_profile
     
 class GaussianProcessOptimizer:
 
