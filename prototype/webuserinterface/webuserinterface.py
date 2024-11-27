@@ -1,4 +1,5 @@
 import os
+import streamlit as st
 from PIL import Image
 from prototype.utils.constants import Constants
 
@@ -23,12 +24,22 @@ class WebUI:
         the displaying of the generated images and the selection of preferreble images by the user.
         """
         print("Welcome to our image generation system prototype!")
+        st.set_page_config(page_title="Image Generation System Demo", layout="wide")
+        self.load_webis_demo_template()
         user_preferences = []
         while True:
             user_prompt = self.get_user_prompt()
             images = self.generate_images(user_prompt, user_preferences)
             self.display_images(images)
             user_preferences = self.select_best_images()
+    
+    def load_webis_demo_template(self):
+        """
+        Loads the webis html template for demo web applications.
+        """
+        with open("./prototype/resources/webis_template.html") as f:
+            webis_template = f.read()
+        st.markdown(webis_template, unsafe_allow_html=True)
 
     def get_user_prompt(self):
         """
