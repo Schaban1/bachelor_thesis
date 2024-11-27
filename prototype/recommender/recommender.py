@@ -42,7 +42,7 @@ class Recommender(ABC):  # ABC = Abstract Base Class
 
 class SinglePointRecommender(Recommender):
 
-    def getRandomSamplesOnNSphere(self, n_dims: int = 10, radius: float = 1.0, n_samples: int = 5) -> Tensor:
+    def get_random_samples_on_n_sphere(self, n_dims: int = 10, radius: float = 1.0, n_samples: int = 5) -> Tensor:
         """
         Code from: https://stackoverflow.com/questions/52808880/algorithm-for-generating-uniformly-distributed-random
         -points-on-the-n-sphere (27.11.2024)
@@ -66,8 +66,8 @@ class SinglePointRecommender(Recommender):
         """
 
         # recommendations on the surface of a sphere around the 0-center
-        zero_centered_generated_points = self.getRandomSamplesOnNSphere(n_dims=len(user_profile),
-                                                                        n_samples=n_recommendations)
+        zero_centered_generated_points = self.get_random_samples_on_n_sphere(n_dims=len(user_profile),
+                                                                             n_samples=n_recommendations)
 
         # move the points s.t. the user profile is the center
         return torch.add(zero_centered_generated_points, user_profile)
