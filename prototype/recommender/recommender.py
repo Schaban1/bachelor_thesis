@@ -3,7 +3,6 @@ import random
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from prototype.utils.interpolation import slerp
-import tensorflow as tf
 import torch
 import prototype.utils.constants as constants
 
@@ -13,28 +12,24 @@ class Recommender(ABC):  # ABC = Abstract Base Class
     """
     A Recommender class instance derives recommended samples for the next iteration.
     In other words:
-    Multiple alterations of the current CLIP embedding (first iteration: text prompt embedding) are returned.
+    Multiple alterations of the current user profile (first iteration: random) are returned.
+    It is important to note, that the user profile is a vector in the user space,
+    i.e. a low dimensional subspace of the CLIP space.
+    Hence, one assumes that points generated in the user space which are projected back to the CLIP space
+    correspond to valid embeddings, i.e. produce meaningful images.
     The method used for generation depends on the user choice.
     It is possible to generate embeddings via the following methods:
-    1. Random generation:
-        With reference to "Manipulating Embeddings of Stable Diffusion Prompts" (Deckers et al. 2024)
-        a subset of multiple random
-        embedded prompt (concatenated random alphanumeric characters)
-        with maximum pairwise cosine similarity is chosen.
-        Afterward, for each random embedding from the subset an
-        individual interpolation parameter alpha_i are chosen s.t. the product of the current CLIP embedding
-        and a SLERP interpolation of the current CLIP embedding and the random embedding is constant.
-        In the end, the interpolations (one per embedding from the subset) are returned as recommendation.
-    2. Additional generation:
-        A scaled version of the user profile embedding and the current CLIP embedding are summed.
-        Afterward, random versions of the new point in the CLIP space are returned as recommendations.
-    3. Linear combination generation:
-        Linear combinations of user profile embedding and the current CLIP embedding with different weightings
-        are returned as recommendations.
-    4. Convex Combination generation:
-        The user profile consists of 10 weights associated with initial text embeddings.
-        The recommendations returned are interpolations of the initial text embeddings.
-        (A convex combination is a linear combination of vectors with non-negative weights that sum up to one.)
+    1. Single point generation:
+        Multiple random points on a sphere surface around the current user profile are generated.
+        These points are returned as recommendation.
+    2. Single point generation with weighted axes:
+        Some axes spanning the user space may convey more information than others.
+        Hence, highly influential axes should be weighted less than others to counteract this phenomenon.
+    3. Function-based generation:
+        In this scenario, one doesn't want to optimize the position of the user profile (a point) in the suer profile
+        space and use this position to generate new generations, but one chooses multiple points in highly interesting
+        regions of the user sspace and requests feedback of the user to "learn" the space.
+        The choice of the points is based on an acquisition function, e.g. a Gaussian process.
     """
 
     @abstractmethod
