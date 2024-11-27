@@ -43,7 +43,7 @@ class WebUI:
                 ngUI.button('Generate images', on_click=lambda: ngUI.notify('You clicked me!'))
                 ngUI.space()
             ngUI.html(webis_template_bottom).classes('w-full')
-        ngUI.run()
+        ngUI.run(title='Image Generation System Demo')
     
     def get_webis_demo_template_html(self):
         """
