@@ -57,7 +57,6 @@ class SinglePointRecommender(Recommender):
 
         return torch.from_numpy(radius / np.sqrt(np.sum(x ** 2, 1, keepdims=True)) * x)
 
-
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
         """
         :param user_profile: A point in the low-dimensional user profile space.
@@ -74,8 +73,6 @@ class SinglePointRecommender(Recommender):
         return torch.add(zero_centered_generated_points, user_profile)
 
 
-
-
 class SinglePointWeightedAxesRecommender(Recommender):
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
@@ -84,7 +81,7 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
         # weights for influence of axes: integer between 0 and n_recommendations
         # TODO: where to get them from?
-        weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))   # random weights for axes
+        weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))  # random weights for axes
 
         # one hot encoding for axes
         axes = torch.multiply(torch.eye(user_profile.shape[0]), radius)
@@ -104,8 +101,6 @@ class FunctionBasedRecommender(Recommender):
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
         # TODO: Pauls BayesOpt approach
         pass
-
-
 
 
 if __name__ == '__main__':
@@ -134,4 +129,3 @@ if __name__ == '__main__':
     # function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
     #                                                                                  n_recommendations=100)
     # print("function_based_recommender", function_based_recommendations)
-
