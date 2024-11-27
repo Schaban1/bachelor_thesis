@@ -1,5 +1,5 @@
 import os
-import streamlit as st
+from nicegui import ui as ngUI
 from PIL import Image
 from prototype.utils.constants import Constants
 
@@ -20,35 +20,30 @@ class WebUI:
         """
         The main loop of the application.
         This method should be run when wanting to start the application.
-        The main loop (currently) runs infinitely and contains the input of a textual prompt by the user, 
+        The main loop runs infinitely and contains the input of a textual prompt by the user, 
         the displaying of the generated images and the selection of preferreble images by the user.
         """
-        print("Welcome to our image generation system prototype!")
-        st.set_page_config(page_title="Image Generation System Demo", layout="wide")
         self.build_userinterface()
-        user_preferences = []
-        while True:
+        """while True:
             user_prompt = self.get_user_prompt()
             images = self.generate_images(user_prompt, user_preferences)
             self.display_images(images)
             user_preferences = self.select_best_images()
-            self.iteration += 1
+            self.iteration += 1"""
     
     def build_userinterface(self):
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
-        st.markdown(webis_template_top, unsafe_allow_html=True)
-        _, input_col, _ = st.columns([2, 5, 2])
-        with input_col:
-            user_prompt = st.text_input("Your prompt:", key="user_prompt")
-            recommendation_option = st.selectbox(
-                "Recommendation Type:",
-                [t.value for t in Constants]
-            )
-            self.recommendation_type = Constants(recommendation_option).name
-        _, button_col, _ = st.columns([4, 3, 4])
-        with button_col:
-            st.button("Generate images", key="generate_images_button", use_container_width=True)
-        st.markdown(webis_template_bottom, unsafe_allow_html=True)
+        with ngUI.column().classes('w-full'):
+            ngUI.html(webis_template_top).classes('w-full')
+            with ngUI.column().classes('mx-auto items-center'):
+                ngUI.input(label='Your prompt:', placeholder='start typing').props("size=100")
+                ngUI.space()
+                ngUI.select({t: t.value for t in Constants}, value=Constants.POINT).props('popup-content-class="max-w-[200px]"')
+                ngUI.space()
+                ngUI.button('Generate images', on_click=lambda: ngUI.notify('You clicked me!'))
+                ngUI.space()
+            ngUI.html(webis_template_bottom).classes('w-full')
+        ngUI.run()
     
     def get_webis_demo_template_html(self):
         """
@@ -118,7 +113,6 @@ class Generator:
     def generate_images(self, user_prompt, num_images_to_generate, recommend_by, user_preferences):
         return [Image.new('RGB', (64, 64)) for _ in range(num_images_to_generate)]
 
-
-if __name__ == '__main__':
+if __name__ in {"__main__", "__mp_main__"}:
     ui = WebUI()
     ui.main_loop()
