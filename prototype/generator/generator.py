@@ -32,6 +32,8 @@ class Generator(GeneratorBase):
         self.pipe = StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             scheduler=scheduler,
+            safety_checker = None,
+            requires_safety_checker = False
         )
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.pipe.to(self.device)
@@ -85,14 +87,15 @@ class Generator(GeneratorBase):
         )
 
         if type(embedding) != tuple:
-            return self.pipe(height=self.height,
+            images = [self.pipe(height=self.height,
                 width=self.width,
                 num_images_per_prompt=1,
-                prompt_embeds=embedding,
+                prompt_embeds=embedding[i][None, ...],
                 num_inference_steps=20,
                 guidance_scale=7,
                 latents=latents,
-            ).images
+            ).images[0] for i in range(embedding.shape[0])]
+            return images
 
         return self.pipe(height=self.height,
             width=self.width,
