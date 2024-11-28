@@ -3,7 +3,7 @@ from torch import Tensor
 
 from .recommender import *
 from .optimizer import *
-from .utils import constants
+from ..constants import RecommendationType, OptimizationType
 from diffusers import StableDiffusionPipeline
 
 
@@ -12,8 +12,8 @@ class UserProfileHost():
             self, 
             original_prompt : str, 
             add_ons : list = None, 
-            recommendation_type : str = constants.POINT, 
-            optimization_type : str = constants.WEIGHTED_SUM, 
+            recommendation_type : str = RecommendationType.POINT, 
+            optimization_type : str = OptimizationType.WEIGHTED_SUM, 
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5"
             ):
         # Some Clip Hyperparameters
@@ -55,21 +55,21 @@ class UserProfileHost():
 
         # Initialize an Optimizer
         # TODO (Paul): Bayesian Optimization seems to sometimes fail when there are only few datapoints. Find a solution.
-        if optimization_type == constants.MAX_PREF:
+        if optimization_type == OptimizationType.MAX_PREF:
             self.optimizer = MaxPrefOptimizer()
-        elif optimization_type == constants.WEIGHTED_SUM:
+        elif optimization_type == OptimizationType.WEIGHTED_SUM:
             self.optimizer = WeightedSumOptimizer()
-        elif optimization_type == constants.GAUSSIAN_PROCESS:
+        elif optimization_type == OptimizationType.GAUSSIAN_PROCESS:
             self.optimizer = GaussianProcessOptimizer()
         else:
             raise ValueError(f"The optimization type {optimization_type} is not implemented yet.")
 
         # Initialize a Recommender
-        if recommendation_type == constants.FUNCTION_BASED:
+        if recommendation_type == RecommendationType.FUNCTION_BASED:
             self.recommender = BayesianRecommender(n_steps=self.num_steps, n_axis=self.num_axis)
-        elif recommendation_type == constants.POINT:
+        elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender()
-        elif recommendation_type == constants.WEIGHTED_AXES:
+        elif recommendation_type == RecommendationType.WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender()
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")

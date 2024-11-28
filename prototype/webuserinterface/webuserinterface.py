@@ -5,7 +5,7 @@ from PIL import Image
 import torch
 import asyncio
 
-from prototype.utils.constants import RecommendationType, WebUIState
+from prototype.constants import RecommendationType, WebUIState
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
 
