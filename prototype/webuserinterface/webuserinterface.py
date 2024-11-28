@@ -43,7 +43,7 @@ class WebUI:
 
     def run(self):
         """
-        This function runs the Web UI indefenitely.
+        This function runs the Web UI indefinitely.
         """
         self.update_state_variables()
         self.build_userinterface()
@@ -91,7 +91,7 @@ class WebUI:
         Builds the UI for the initial iteration state.
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_initial_iteration', value=True):
-            ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input).props("size=100")
+            ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input, validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100")
             ngUI.space().classes('w-full h-[2vh]')
             ngUI.select({t: t.value for t in RecommendationType}, value=RecommendationType.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
             ngUI.space().classes('w-full h-[2vh]')
@@ -162,6 +162,9 @@ class WebUI:
         """
         Initializes the user profile host with the initial user prompt and generates the first images.
         """
+        if not self.user_prompt:
+            ngUI.notify('Please type in a prompt!')
+            return
         self.change_state(WebUIState.GENERATING_STATE)
         ngUI.notify('Generating images...')
         self.init_user_profile_host()
