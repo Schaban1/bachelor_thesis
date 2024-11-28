@@ -3,6 +3,8 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
 from prototype.utils.constants import Constants
+from prototype.user_profile_host import UserProfileHost
+from prototype.generator.generator import Generator
 
 class WebUI:
     """
@@ -15,8 +17,11 @@ class WebUI:
         self.user_prompt = ""
         self.recommendation_type = Constants.POINT
         self.num_images_to_generate = 5
-        self.generator = Generator() # Placeholder
+        self.user_profile_host = None
+        self.user_profile_host_beta = 20
+        self.generator = Generator()
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)]
+        self.images_display = [0 for _ in range(self.num_images_to_generate)]
         self.save_path = f"{os.getcwd()}/prototype/output"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
@@ -59,7 +64,7 @@ class WebUI:
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_non_initial_iteration', value=False):
             ngUI.label('Rate these images based on your satisfaction from 0 to 10 using the sliders.').style('font-size: 200%;')
             for i in range(self.num_images_to_generate):
-                ngUI.interactive_image(self.images[i]).classes('w-1028')
+                self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
                 slider = ngUI.slider(min=0, max=10, value=5)
                 ngUI.label().bind_text_from(slider, 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
@@ -68,13 +73,21 @@ class WebUI:
         self.__init__()
     
     def on_user_prompt_input(self, new_user_prompt):
-        self.user_prompt = new_user_prompt
+        self.user_prompt = new_user_prompt.value
     
     def on_recommendation_type_select(self, new_recommendation_type):
-        self.recommendation_type = new_recommendation_type
+        self.recommendation_type = new_recommendation_type.value
     
     def on_generate_images_button_click(self):
         ngUI.notify('Generating images...')
+        self.user_profile_host = UserProfileHost(
+            original_prompt=self.user_prompt,
+            add_ons=None,
+        )
+        embeddings = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
+        print(embeddings.shape)
+        self.images = self.generator.generate_image(embeddings)
+        [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
         self.update_components_visibility()
     
     def on_submit_scores_button_click(self):
@@ -148,9 +161,9 @@ class WebUI:
 
 
 # Placeholder
-class Generator:
+"""class Generator:
     def generate_images(self, user_prompt, num_images_to_generate, recommend_by, user_preferences):
-        return [Image.new('RGB', (64, 64)) for _ in range(num_images_to_generate)]
+        return [Image.new('RGB', (64, 64)) for _ in range(num_images_to_generate)]"""
 
 if __name__ in {"__main__", "__mp_main__"}:
     ui = WebUI()
