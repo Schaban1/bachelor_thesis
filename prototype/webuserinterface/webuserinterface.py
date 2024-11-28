@@ -2,6 +2,8 @@ import os
 from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
+import torch
+
 from prototype.utils.constants import Constants
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
@@ -16,17 +18,18 @@ class WebUI:
         self.is_non_initial_iteration = binding.BindableProperty()
         self.user_prompt = ""
         self.recommendation_type = Constants.POINT
-        self.num_images_to_generate = 5
+        self.num_images_to_generate = 2
         self.user_profile_host = None
         self.user_profile_host_beta = 20
         self.generator = Generator()
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)]
         self.images_display = [0 for _ in range(self.num_images_to_generate)]
+        self.scores_slider = [0 for _ in range(self.num_images_to_generate)]
         self.save_path = f"{os.getcwd()}/prototype/output"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
 
-    def main_loop(self):
+    def run(self):
         """
         The main loop of the application.
         This method should be run when wanting to start the application.
@@ -65,8 +68,8 @@ class WebUI:
             ngUI.label('Rate these images based on your satisfaction from 0 to 10 using the sliders.').style('font-size: 200%;')
             for i in range(self.num_images_to_generate):
                 self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
-                slider = ngUI.slider(min=0, max=10, value=5)
-                ngUI.label().bind_text_from(slider, 'value')
+                self.scores_slider[i] = ngUI.slider(min=0, max=10, value=5, step=0.1)
+                ngUI.label().bind_text_from(self.scores_slider[i], 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
     
     def on_debug_reset(self):
@@ -85,13 +88,20 @@ class WebUI:
             add_ons=None,
         )
         embeddings = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
-        print(embeddings.shape)
         self.images = self.generator.generate_image(embeddings)
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
         self.update_components_visibility()
     
     def on_submit_scores_button_click(self):
+        scores = torch.FloatTensor([slider.value for slider in self.scores_slider])
+        normalized_scores = scores / 10
+        self.user_profile_host_beta -= 1
+        self.user_profile_host.fit_user_profile(preferences=normalized_scores)
         ngUI.notify('Scores submitted!')
+        ngUI.notify('Generating new images...')
+        embeddings = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
+        self.images = self.generator.generate_image(embeddings)
+        [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
     
     def update_components_visibility(self):
         self.is_initial_iteration = not self.is_initial_iteration
@@ -167,4 +177,4 @@ class WebUI:
 
 if __name__ in {"__main__", "__mp_main__"}:
     ui = WebUI()
-    ui.main_loop()
+    ui.run()
