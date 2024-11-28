@@ -81,21 +81,21 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
+        batch_size = embedding.shape[0]
         latents = torch.randn(
-            (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
+            (batch_size, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
             device=self.device
         )
 
         if type(embedding) != tuple:
-            images = [self.pipe(height=self.height,
+            return self.pipe(height=self.height,
                 width=self.width,
                 num_images_per_prompt=1,
-                prompt_embeds=embedding[i][None, ...],
+                prompt_embeds=embedding,
                 num_inference_steps=20,
                 guidance_scale=7,
                 latents=latents,
-            ).images[0] for i in range(embedding.shape[0])]
-            return images
+            ).images
 
         return self.pipe(height=self.height,
             width=self.width,
