@@ -3,28 +3,38 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
 import torch
+import asyncio
 
-from prototype.utils.constants import Constants
+from prototype.utils.constants import RecommendationTypes, WebUIStates
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
 
 class WebUI:
+    is_initial_iteration = binding.BindableProperty()
+    is_non_initial_iteration = binding.BindableProperty()
+    is_generating = binding.BindableProperty()
+
     """
     This class implements a interactive web user interface for an image generation system.
     """
     def __init__(self):
+        self.state = WebUIStates.INITIAL_ITERATION
         self.iteration = 1
-        self.is_initial_iteration = binding.BindableProperty()
-        self.is_non_initial_iteration = binding.BindableProperty()
+        self.is_initial_iteration = True
+        self.is_non_initial_iteration = False
+        self.is_generating = False
         self.user_prompt = ""
-        self.recommendation_type = Constants.POINT
-        self.num_images_to_generate = 2
+        self.recommendation_type = RecommendationTypes.POINT
+        self.num_images_to_generate = 1
         self.user_profile_host = None
         self.user_profile_host_beta = 20
         self.generator = Generator()
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)]
         self.images_display = [0 for _ in range(self.num_images_to_generate)]
         self.scores_slider = [0 for _ in range(self.num_images_to_generate)]
+        self.initial_userinterface = None
+        self.main_loop_userinterface = None
+        self.loading_spinner = None
         self.save_path = f"{os.getcwd()}/prototype/output"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
@@ -36,6 +46,7 @@ class WebUI:
         The main loop runs infinitely and contains the input of a textual prompt by the user, 
         the displaying of the generated images and the selection of preferreble images by the user.
         """
+        self.update_state_variables()
         self.build_userinterface()
         """while True:
             user_prompt = self.get_user_prompt()
@@ -50,27 +61,41 @@ class WebUI:
             ngUI.html(webis_template_top).classes('w-full')
             self.build_initial_userinterface()
             self.build_main_loop_userinterface()
+            self.build_loading_spinner()
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.button('DEBUG RESET', on_click=self.on_debug_reset)
             ngUI.html(webis_template_bottom).classes('w-full')
         ngUI.run(title='Image Generation System Demo')
     
     def build_initial_userinterface(self):
-        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_initial_iteration'):
+        self.initial_userinterface = ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_initial_iteration', value=True)
+        with self.initial_userinterface:
             ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input).props("size=100")
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.select({t: t.value for t in Constants}, value=Constants.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
+            ngUI.select({t: t.value for t in RecommendationTypes}, value=RecommendationTypes.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
             ngUI.space().classes('w-full h-[2vh]')
             ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
     
     def build_main_loop_userinterface(self):
-        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_non_initial_iteration', value=False):
+        self.main_loop_userinterface = ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_non_initial_iteration', value=True)
+        with self.main_loop_userinterface:
             ngUI.label('Rate these images based on your satisfaction from 0 to 10 using the sliders.').style('font-size: 200%;')
             for i in range(self.num_images_to_generate):
                 self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
                 self.scores_slider[i] = ngUI.slider(min=0, max=10, value=5, step=0.1)
                 ngUI.label().bind_text_from(self.scores_slider[i], 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
+    
+    def build_loading_spinner(self):
+        self.loading_spinner = ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_generating', value=True)
+        with self.loading_spinner:
+            ngUI.label('Generating images...')
+            ngUI.spinner(size='lg')
+    
+    def update_state_variables(self):
+        self.is_initial_iteration = self.state == WebUIStates.INITIAL_ITERATION
+        self.is_non_initial_iteration = self.state == WebUIStates.MAIN_LOOP_ITERATION
+        self.is_generating = self.state == WebUIStates.GENERATING
     
     def on_debug_reset(self):
         self.__init__()
@@ -81,31 +106,40 @@ class WebUI:
     def on_recommendation_type_select(self, new_recommendation_type):
         self.recommendation_type = new_recommendation_type.value
     
-    def on_generate_images_button_click(self):
+    async def on_generate_images_button_click(self):
+        self.state = WebUIStates.GENERATING
+        self.update_state_variables()
         ngUI.notify('Generating images...')
+        self.initial_userinterface.update()
+        self.loading_spinner.update()
         self.user_profile_host = UserProfileHost(
             original_prompt=self.user_prompt,
             add_ons=None,
         )
         embeddings = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
-        self.images = self.generator.generate_image(embeddings)
+        loop = asyncio.get_event_loop()
+        self.images = await loop.run_in_executor(None, self.generator.generate_image, embeddings)
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
-        self.update_components_visibility()
+        self.state = WebUIStates.MAIN_LOOP_ITERATION
+        self.update_state_variables()
     
-    def on_submit_scores_button_click(self):
+    async def on_submit_scores_button_click(self):
         scores = torch.FloatTensor([slider.value for slider in self.scores_slider])
         normalized_scores = scores / 10
         self.user_profile_host_beta -= 1
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
         ngUI.notify('Scores submitted!')
+        self.state = WebUIStates.GENERATING
+        self.update_state_variables()
         ngUI.notify('Generating new images...')
+        self.main_loop_userinterface.update()
+        self.loading_spinner.update()
         embeddings = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
-        self.images = self.generator.generate_image(embeddings)
+        loop = asyncio.get_event_loop()
+        self.images = await loop.run_in_executor(None, self.generator.generate_image, embeddings)
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
-    
-    def update_components_visibility(self):
-        self.is_initial_iteration = not self.is_initial_iteration
-        self.is_non_initial_iteration = not self.is_non_initial_iteration
+        self.state = WebUIStates.MAIN_LOOP_ITERATION
+        self.update_state_variables()
     
     def get_webis_demo_template_html(self):
         """
