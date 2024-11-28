@@ -37,11 +37,11 @@ class WebUI:
             ngUI.html(webis_template_top).classes('w-full')
             with ngUI.column().classes('mx-auto items-center'):
                 ngUI.input(label='Your prompt:', placeholder='start typing').props("size=100")
-                ngUI.space()
+                ngUI.space().classes('w-full h-[2vh]')
                 ngUI.select({t: t.value for t in Constants}, value=Constants.POINT).props('popup-content-class="max-w-[200px]"')
-                ngUI.space()
-                ngUI.button('Generate images', on_click=lambda: ngUI.notify('You clicked me!'))
-                ngUI.space()
+                ngUI.space().classes('w-full h-[2vh]')
+                ngUI.button('Generate images', on_click=lambda: ngUI.notify('Generating images...'))
+            ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
         ngUI.run(title='Image Generation System Demo')
     
