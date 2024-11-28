@@ -184,6 +184,12 @@ class WebUI:
         normalized_scores = scores / 10
         return normalized_scores
     
+    def reset_sliders(self):
+        """
+        Reset the value of the score sliders to the default value.
+        """
+        [slider.set_value(5) for slider in self.scores_slider]
+    
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
@@ -203,6 +209,7 @@ class WebUI:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.generate_images)
         self.update_image_displays()
+        self.reset_sliders()
         self.change_state(WebUIState.MAIN_STATE)
     
     def get_webis_demo_template_html(self):
