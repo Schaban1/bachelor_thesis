@@ -1,5 +1,6 @@
 import os
 from nicegui import ui as ngUI
+from nicegui import binding
 from PIL import Image
 from prototype.utils.constants import Constants
 
@@ -9,10 +10,13 @@ class WebUI:
     """
     def __init__(self):
         self.iteration = 1
+        self.is_initial_iteration = binding.BindableProperty()
+        self.is_non_initial_iteration = binding.BindableProperty()
+        self.user_prompt = ""
         self.recommendation_type = Constants.POINT
         self.num_images_to_generate = 5
-        self.user_prompt = ""
         self.generator = Generator() # Placeholder
+        self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)]
         self.save_path = f"{os.getcwd()}/prototype/output"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
@@ -34,17 +38,34 @@ class WebUI:
     
     def build_userinterface(self):
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
-        with ngUI.column().classes('w-full'):
+        with ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif'):
             ngUI.html(webis_template_top).classes('w-full')
-            with ngUI.column().classes('mx-auto items-center'):
-                ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input).props("size=100")
-                ngUI.space().classes('w-full h-[2vh]')
-                ngUI.select({t: t.value for t in Constants}, value=Constants.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
-                ngUI.space().classes('w-full h-[2vh]')
-                ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
+            self.build_initial_userinterface()
+            self.build_main_loop_userinterface()
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
+            ngUI.button('DEBUG RESET', on_click=self.on_debug_reset)
             ngUI.html(webis_template_bottom).classes('w-full')
         ngUI.run(title='Image Generation System Demo')
+    
+    def build_initial_userinterface(self):
+        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_initial_iteration'):
+            ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input).props("size=100")
+            ngUI.space().classes('w-full h-[2vh]')
+            ngUI.select({t: t.value for t in Constants}, value=Constants.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
+            ngUI.space().classes('w-full h-[2vh]')
+            ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
+    
+    def build_main_loop_userinterface(self):
+        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_non_initial_iteration', value=False):
+            ngUI.label('Rate these images based on your satisfaction from 0 to 10 using the sliders.').style('font-size: 200%;')
+            for i in range(self.num_images_to_generate):
+                ngUI.interactive_image(self.images[i]).classes('w-1028')
+                slider = ngUI.slider(min=0, max=10, value=5)
+                ngUI.label().bind_text_from(slider, 'value')
+            ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
+    
+    def on_debug_reset(self):
+        self.__init__()
     
     def on_user_prompt_input(self, new_user_prompt):
         self.user_prompt = new_user_prompt
@@ -54,7 +75,14 @@ class WebUI:
     
     def on_generate_images_button_click(self):
         ngUI.notify('Generating images...')
-
+        self.update_components_visibility()
+    
+    def on_submit_scores_button_click(self):
+        ngUI.notify('Scores submitted!')
+    
+    def update_components_visibility(self):
+        self.is_initial_iteration = not self.is_initial_iteration
+        self.is_non_initial_iteration = not self.is_non_initial_iteration
     
     def get_webis_demo_template_html(self):
         """
