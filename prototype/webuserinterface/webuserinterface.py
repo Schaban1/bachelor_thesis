@@ -114,8 +114,8 @@ class WebUI:
         Builds the UI for the generating state.
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_generating', value=True):
-            ngUI.label('Generating images...')
-            ngUI.spinner(size='lg')
+            ngUI.label('Generating images...').style('font-size: 200%;')
+            ngUI.spinner(size='128px')
     
     def on_user_prompt_input(self, new_user_prompt):
         """
