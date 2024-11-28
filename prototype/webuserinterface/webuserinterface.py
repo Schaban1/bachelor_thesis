@@ -11,6 +11,7 @@ class WebUI:
         self.iteration = 1
         self.recommendation_type = Constants.POINT
         self.num_images_to_generate = 5
+        self.user_prompt = ""
         self.generator = Generator() # Placeholder
         self.save_path = f"{os.getcwd()}/prototype/output"
         if not os.path.exists(self.save_path):
@@ -36,14 +37,24 @@ class WebUI:
         with ngUI.column().classes('w-full'):
             ngUI.html(webis_template_top).classes('w-full')
             with ngUI.column().classes('mx-auto items-center'):
-                ngUI.input(label='Your prompt:', placeholder='start typing').props("size=100")
+                ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input).props("size=100")
                 ngUI.space().classes('w-full h-[2vh]')
-                ngUI.select({t: t.value for t in Constants}, value=Constants.POINT).props('popup-content-class="max-w-[200px]"')
+                ngUI.select({t: t.value for t in Constants}, value=Constants.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
                 ngUI.space().classes('w-full h-[2vh]')
-                ngUI.button('Generate images', on_click=lambda: ngUI.notify('Generating images...'))
+                ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
         ngUI.run(title='Image Generation System Demo')
+    
+    def on_user_prompt_input(self, new_user_prompt):
+        self.user_prompt = new_user_prompt
+    
+    def on_recommendation_type_select(self, new_recommendation_type):
+        self.recommendation_type = new_recommendation_type
+    
+    def on_generate_images_button_click(self):
+        ngUI.notify('Generating images...')
+
     
     def get_webis_demo_template_html(self):
         """
