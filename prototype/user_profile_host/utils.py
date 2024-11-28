@@ -1,20 +1,7 @@
-from enum import Enum
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from torch import Tensor
-
-
-class constants(Enum):
-    # Recommendation Types
-    POINT = "Single point generation"
-    WEIGHTED_AXES = "Single point generation with weighted axes"
-    FUNCTION_BASED = "Function-based generation"
-
-    # Optimization Types
-    MAX_PREF = "Maximum preference optimization"
-    WEIGHTED_SUM = "Weighted sum optimization"
-    GAUSSIAN_PROCESS = "Gaussian process regression"
     
 
 def slerp(v0, v1, num, t0=0, t1=1):

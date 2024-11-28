@@ -32,6 +32,8 @@ class Generator(GeneratorBase):
         self.pipe = StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             scheduler=scheduler,
+            safety_checker = None,
+            requires_safety_checker = False
         )
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.pipe.to(self.device)
@@ -79,8 +81,9 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
+        batch_size = embedding.shape[0]
         latents = torch.randn(
-            (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
+            (batch_size, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
             device=self.device
         )
 
