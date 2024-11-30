@@ -1,0 +1,10 @@
+defaults:
+  - _self_
+
+path:
+  output_dir: ./output/
+  cache_dir: ./cache/
+
+hydra:
+  run:
+    dir: ${path.output_dir}

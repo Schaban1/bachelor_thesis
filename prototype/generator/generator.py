@@ -3,7 +3,7 @@ from torch import Tensor
 
 import torch
 from PIL.Image import Image
-from diffusers import StableDiffusion3Pipeline, StableDiffusionPipeline, LMSDiscreteScheduler
+from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler
 
 
 class GeneratorBase(ABC):
@@ -18,7 +18,7 @@ class GeneratorBase(ABC):
 
 
 class Generator(GeneratorBase):
-    def __init__(self, hf_model_name="stable-diffusion-v1-5/stable-diffusion-v1-5"):
+    def __init__(self, hf_model_name="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir='/cache/'):
         self.height = 512
         self.width = 512
         scheduler = LMSDiscreteScheduler(
@@ -26,16 +26,17 @@ class Generator(GeneratorBase):
             beta_end=0.012,
             beta_schedule="scaled_linear",
             num_train_timesteps=1000,
-            steps_offset=1
+            steps_offset=1,
         )
         #self.pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo", torch_dtype=torch.float16, variant="fp16")
         self.pipe = StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             scheduler=scheduler,
             safety_checker = None,
-            requires_safety_checker = False
+            requires_safety_checker = False,
+            cache_dir=cache_dir
         )
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device("cpu") #torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.pipe.to(self.device)
 
     # TODO deprecated
@@ -82,6 +83,8 @@ class Generator(GeneratorBase):
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
         batch_size = embedding.shape[0]
+        # TODO (Discuss Paul): Shouldnt we keep the latent constant for all prompts to avoide additional factors impacting the generation?
+        # Proposition: Create a original latent when the generator is generated and then use expand here to expand it to the batch size.
         latents = torch.randn(
             (batch_size, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
             device=self.device
