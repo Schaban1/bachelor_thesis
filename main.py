@@ -1,12 +1,16 @@
 from prototype.webuserinterface import WebUI
+from prototype.utils import seed_everything
 
-#import hydra
+
 from omegaconf import DictConfig
 
-
+#TODO (Discuss) How to combine hydra and multi processing?
+#import hydra
 #@hydra.main(version_base=None, config_path="/home/phahn/repositories/project-multimodal-machine-learning-lab-wise24/config/", config_name="config")
 #def main(args):
-args = DictConfig({'path' : {'cache_dir' : './cache/'}, 'num_recommendations' : 4})
+
+seed_everything(42)
+args = DictConfig({'path' : {'cache_dir' : './cache/'}, 'num_recommendations' : 1})
 ui = WebUI(args=args)
 ui.run()
 
