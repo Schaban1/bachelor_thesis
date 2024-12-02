@@ -13,10 +13,6 @@ class GeneratorBase(ABC):
         pass
 
     @abstractmethod
-    def embed_prompt(self, prompt: str, negative_prompt: str = None) -> tuple[Tensor, Tensor]:
-        pass
-
-    @abstractmethod
     def generate_image(self, embedding: Tensor | tuple[Tensor, Tensor]) -> list[Image]:
         pass
 
@@ -37,7 +33,7 @@ class Generator(GeneratorBase):
             beta_end=0.012,
             beta_schedule="scaled_linear",
             num_train_timesteps=1000,
-            steps_offset=1,
+            steps_offset=1
         )
         #self.pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo", torch_dtype=torch.float16, variant="fp16")
         self.pipe = StableDiffusionPipeline.from_pretrained(
@@ -52,39 +48,9 @@ class Generator(GeneratorBase):
         self.n_images = n_images
 
         self.latents = torch.randn(
-            (n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
+            (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
             device=self.device,
-        )
-
-    # TODO deprecated
-    def embed_prompt(self, prompt: str, negative_prompt: str = None) -> tuple[Tensor, Tensor]:
-        """
-        Embeds a given prompt and a negative prompt
-
-        Returns:
-            `Tuple[Tensor, Tensor]: A tuple of embeddings for the prompt and negative prompt in shape (1, 77, 768)
-        """
-
-        prompt_tokens = self.pipe.tokenizer(prompt,
-                            padding="max_length",
-                            max_length=self.pipe.tokenizer.model_max_length,
-                            truncation=True,
-                            return_tensors="pt",)
-
-        prompt_embeds = self.pipe.text_encoder(prompt_tokens.input_ids.to(self.device))[0]
-        if negative_prompt is None:
-            negative_prompt = [""]
-
-        negative_prompt_tokens =self. pipe.tokenizer(
-            negative_prompt,
-            padding="max_length",
-            max_length=self.pipe.tokenizer.model_max_length,
-            truncation=True,
-            return_tensors="pt",
-        )
-        negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids.to(self.device))[0]
-
-        return prompt_embeds, negative_prompt_embeds
+        ).repeat(n_images, 1, 1, 1)
 
 
     def generate_image(self, embedding: Tensor | tuple[Tensor, Tensor]) -> list[Image]:
@@ -99,11 +65,6 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
-        #batch_size = embedding.shape[0]
-        # TODO (Discuss Paul): Shouldnt we keep the latent constant for all prompts to avoide additional factors impacting the generation?
-        # Proposition: Create a original latent when the generator is generated and then use expand here to expand it to the batch size.
-
-
         if type(embedding) != tuple:
             return self.pipe(height=self.height,
                 width=self.width,
