@@ -25,14 +25,14 @@ class WebUI:
         self.is_initial_iteration = False
         self.is_main_loop_iteration = False
         self.is_generating = False
-        # Other modules
-        self.user_profile_host = None # Initialized after initial iteration
-        self.user_profile_host_beta = 20
-        self.generator = Generator(cache_dir=args.path.cache_dir)
         # Provided by the user / system
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.POINT
         self.num_images_to_generate = args.num_recommendations
+        # Other modules
+        self.user_profile_host = None # Initialized after initial iteration
+        self.user_profile_host_beta = 20
+        self.generator = Generator(n_images=self.num_images_to_generate, cache_dir=args.path.cache_dir)
         # Lists / UI components
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
