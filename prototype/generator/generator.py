@@ -3,13 +3,13 @@ from torch import Tensor
 
 import torch
 from PIL.Image import Image
-from diffusers import StableDiffusion3Pipeline, StableDiffusionPipeline, LMSDiscreteScheduler
+from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler
 
 
 class GeneratorBase(ABC):
 
     @abstractmethod
-    def embed_prompt(self, prompt: str, negative_prompt: str = None) -> tuple[Tensor, Tensor]:
+    def __init__(self, n_images: int=5):
         pass
 
     @abstractmethod
@@ -18,7 +18,14 @@ class GeneratorBase(ABC):
 
 
 class Generator(GeneratorBase):
-    def __init__(self, hf_model_name="stable-diffusion-v1-5/stable-diffusion-v1-5"):
+    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', ):
+        """
+        Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
+
+        Args:
+            n_images: the number of embeddings that will be generated in a batch and returned from generate_images
+            hf_model_name: Huggingface model identifier, default is Stable diffusion 1.5
+        """
         self.height = 512
         self.width = 512
         scheduler = LMSDiscreteScheduler(
@@ -33,40 +40,17 @@ class Generator(GeneratorBase):
             hf_model_name,
             scheduler=scheduler,
             safety_checker = None,
-            requires_safety_checker = False
+            requires_safety_checker = False,
+            cache_dir=cache_dir,
         )
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.pipe.to(self.device)
+        self.n_images = n_images
 
-    # TODO deprecated
-    def embed_prompt(self, prompt: str, negative_prompt: str = None) -> tuple[Tensor, Tensor]:
-        """
-        Embeds a given prompt and a negative prompt
-
-        Returns:
-            `Tuple[Tensor, Tensor]: A tuple of embeddings for the prompt and negative prompt in shape (1, 77, 768)
-        """
-
-        prompt_tokens = self.pipe.tokenizer(prompt,
-                            padding="max_length",
-                            max_length=self.pipe.tokenizer.model_max_length,
-                            truncation=True,
-                            return_tensors="pt",)
-
-        prompt_embeds = self.pipe.text_encoder(prompt_tokens.input_ids.to(self.device))[0]
-        if negative_prompt is None:
-            negative_prompt = [""]
-
-        negative_prompt_tokens =self. pipe.tokenizer(
-            negative_prompt,
-            padding="max_length",
-            max_length=self.pipe.tokenizer.model_max_length,
-            truncation=True,
-            return_tensors="pt",
-        )
-        negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids.to(self.device))[0]
-
-        return prompt_embeds, negative_prompt_embeds
+        self.latents = torch.randn(
+            (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
+            device=self.device,
+        ).repeat(n_images, 1, 1, 1)
 
 
     def generate_image(self, embedding: Tensor | tuple[Tensor, Tensor]) -> list[Image]:
@@ -81,12 +65,6 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
-        batch_size = embedding.shape[0]
-        latents = torch.randn(
-            (batch_size, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
-            device=self.device
-        )
-
         if type(embedding) != tuple:
             return self.pipe(height=self.height,
                 width=self.width,
@@ -94,7 +72,7 @@ class Generator(GeneratorBase):
                 prompt_embeds=embedding,
                 num_inference_steps=20,
                 guidance_scale=7,
-                latents=latents,
+                latents=self.latents,
             ).images
 
         return self.pipe(height=self.height,
@@ -104,16 +82,17 @@ class Generator(GeneratorBase):
             negative_prompt_embeds=embedding[1],
             num_inference_steps=20,
             guidance_scale=7,
-            latents=latents,
+            latents=self.latents,
         ).images
 
 
 
 if __name__ == "__main__":
-    gen = Generator()
+    gen = Generator(n_images=1, cache_dir=None)
     embed = gen.embed_prompt("A cinematic shot of a baby racoon wearing an intricate italian priest robe.")
     print(embed[0].shape)
     print(embed[1].shape)
-    img = gen.generate_image(embed)
+    img = gen.generate_image(embed[0])
+    img[0].save("../output/3.png")
     print(img)
 

@@ -17,20 +17,22 @@ class WebUI:
     """
     This class implements a interactive web user interface for an image generation system.
     """
-    def __init__(self):
+    def __init__(self, args):
+        # Args of global config
+        self.args = args
         # State variables
         self.state = WebUIState.INIT_STATE
         self.is_initial_iteration = False
         self.is_main_loop_iteration = False
         self.is_generating = False
-        # Other modules
-        self.user_profile_host = None # Initialized after initial iteration
-        self.user_profile_host_beta = 20
-        self.generator = Generator()
         # Provided by the user / system
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.POINT
-        self.num_images_to_generate = 5
+        self.num_images_to_generate = args.num_recommendations
+        # Other modules
+        self.user_profile_host = None # Initialized after initial iteration
+        self.user_profile_host_beta = 20
+        self.generator = Generator(n_images=self.num_images_to_generate, cache_dir=args.path.cache_dir)
         # Lists / UI components
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
@@ -142,6 +144,7 @@ class WebUI:
         self.user_profile_host = UserProfileHost(
             original_prompt=self.user_prompt,
             add_ons=None,
+            cache_dir=self.args.path.cache_dir
         )
     
     def generate_images(self):

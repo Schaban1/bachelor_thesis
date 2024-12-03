@@ -14,21 +14,21 @@ class UserProfileHost():
             add_ons : list = None, 
             recommendation_type : str = RecommendationType.POINT, 
             optimization_type : str = OptimizationType.WEIGHTED_SUM, 
-            hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5"
+            hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
+            cache_dir : str = './cache/'
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
         self.n_clip_tokens = 77
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         pipe = StableDiffusionPipeline.from_pretrained(
             pretrained_model_name_or_path=hf_model_name,
-            cache_dir='./cache/'
+            cache_dir=cache_dir
         )
         self.tokenizer = pipe.tokenizer
         self.text_encoder = pipe.text_encoder
-        self.text_encoder.to(self.device)
+        pipe = None
         
         # Define the center of the user_space with the original prompt embedding
         self.center = self.clip_embedding(original_prompt)
@@ -86,7 +86,15 @@ class UserProfileHost():
         Returns
             clip_embeddings (Tensor): The respective clip embeddings.
         '''
-        clip_embeddings = self.center + (user_embeddings.to(self.device) @ self.axis)
+        # TODO (Paul): Find more PyTorch like implementation of these operations
+        #clip_embeddings = self.center + (user_embeddings @ self.axis)
+        clip_embeddings = []
+        for embed in user_embeddings:
+            clip_embed = self.center
+            for factor, ax in zip(embed, self.axis):
+                clip_embed += factor * ax
+            clip_embeddings.append(clip_embed)
+        clip_embeddings = torch.stack(clip_embeddings)
         return clip_embeddings
 
     def fit_user_profile(self, preferences: Tensor):
@@ -117,8 +125,8 @@ class UserProfileHost():
                             truncation=True,
                             return_tensors="pt",)
 
-        prompt_embeds = self.text_encoder(prompt_tokens.input_ids.to(self.device))[0]
-        return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)[0]
+        prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0]
+        return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
 
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
         '''
@@ -133,11 +141,12 @@ class UserProfileHost():
         if self.user_profile != None:
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
         else:
-            user_space_embeddings = torch.rand(size=(num_recommendations, self.num_axis))
+            # The zeros ensure that the original prompt embedding is included
+            user_space_embeddings = torch.cat((torch.zeros(size=(1, self.num_axis)), torch.rand(size=(num_recommendations-1, self.num_axis))))
         
         if self.embeddings != None:
             self.embeddings = torch.cat((self.embeddings, user_space_embeddings)) # Safe the user_space_embeddings
         else:
             self.embeddings = user_space_embeddings
-        clip_embeddings = self.inv_transform(user_space_embeddings).reshape(num_recommendations, 1, self.embedding_dim).expand(num_recommendations, self.n_clip_tokens, self.embedding_dim)
+        clip_embeddings = self.inv_transform(user_space_embeddings).cpu()
         return clip_embeddings
