@@ -94,7 +94,7 @@ class UserProfileHost():
         # t = n_tokens
         # e = embedding_size
         product = torch.einsum('ra,ate->rte', user_embeddings, torch.square(self.axis))
-        product=torch.sqrt(product)
+        product = torch.sqrt(product)
         length = torch.linalg.vector_norm(self.center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
         total = (self.center + product)
         total = total / torch.linalg.vector_norm(total, ord=2, dim=-1, keepdim=True) * length
