@@ -10,7 +10,7 @@ from omegaconf import DictConfig
 #def main(args):
 
 seed_everything(42)
-args = DictConfig({'path' : {'cache_dir' : './cache/'}, 'num_recommendations' : 5})
+args = DictConfig({'path' : {'cache_dir' : './cache/'}, 'num_recommendations' : 5, 'port': 8080})
 ui = WebUI(args=args)
 ui.run()
 

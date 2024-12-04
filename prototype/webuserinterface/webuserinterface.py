@@ -49,7 +49,7 @@ class WebUI:
         """
         self.update_state_variables()
         self.build_userinterface()
-        ngUI.run(title='Image Generation System Demo')
+        ngUI.run(title='Image Generation System Demo', port=self.args.port)
     
     def change_state(self, new_state: WebUIState):
         """
