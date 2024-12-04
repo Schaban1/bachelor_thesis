@@ -35,7 +35,6 @@ class Generator(GeneratorBase):
             num_train_timesteps=1000,
             steps_offset=1
         )
-        #self.pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo", torch_dtype=torch.float16, variant="fp16")
         self.pipe = StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             scheduler=scheduler,
