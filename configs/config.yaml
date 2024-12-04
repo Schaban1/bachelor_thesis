@@ -3,6 +3,8 @@ defaults:
 
 port: 8080
 
+random_seed: 42
+
 num_recommendations: 5
 
 path:
