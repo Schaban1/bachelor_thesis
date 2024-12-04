@@ -144,7 +144,8 @@ class WebUI:
         self.user_profile_host = UserProfileHost(
             original_prompt=self.user_prompt,
             add_ons=None,
-            cache_dir=self.args.path.cache_dir
+            cache_dir=self.args.path.cache_dir,
+            recommendation_type=self.recommendation_type
         )
     
     def generate_images(self):
