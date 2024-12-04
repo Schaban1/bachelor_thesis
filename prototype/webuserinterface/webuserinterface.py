@@ -144,6 +144,7 @@ class WebUI:
         self.user_profile_host = UserProfileHost(
             original_prompt=self.user_prompt,
             add_ons=None,
+            recommendation_type=self.recommendation_type,
             cache_dir=self.args.path.cache_dir
         )
     

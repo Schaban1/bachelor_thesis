@@ -88,14 +88,28 @@ class UserProfileHost():
         '''
         # TODO (Paul): Find more PyTorch like implementation of these operations
         #clip_embeddings = self.center + (user_embeddings @ self.axis)
-        clip_embeddings = []
-        for embed in user_embeddings:
-            clip_embed = self.center
-            for factor, ax in zip(embed, self.axis):
-                clip_embed += factor * ax
-            clip_embeddings.append(clip_embed)
-        clip_embeddings = torch.stack(clip_embeddings)
-        return clip_embeddings
+
+        # r = n_rec
+        # a = n_axis
+        # t = n_tokens
+        # e = embedding_size
+        product = torch.einsum('ra,ate->rte', user_embeddings, torch.square(self.axis))
+        product = torch.sqrt(product)
+        length = torch.linalg.vector_norm(self.center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
+        total = (self.center + product)
+        total = total / torch.linalg.vector_norm(total, ord=2, dim=-1, keepdim=True) * length
+        #quadratic norm,returns shape(77,1)
+        #print('len', length)
+        return total
+
+        # clip_embeddings = []
+        # for embed in user_embeddings:
+        #     clip_embed = self.center
+        #     for factor, ax in zip(embed, self.axis):
+        #         clip_embed += factor * ax
+        #     clip_embeddings.append(clip_embed)
+        # clip_embeddings = torch.stack(clip_embeddings)
+        # return clip_embeddings
 
     def fit_user_profile(self, preferences: Tensor):
         '''
