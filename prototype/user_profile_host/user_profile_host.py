@@ -3,7 +3,7 @@ from torch import Tensor
 
 from .recommender import *
 from .optimizer import *
-from ..constants import RecommendationType, OptimizationType
+from ..constants import RecommendationType
 from diffusers import StableDiffusionPipeline
 
 
@@ -11,9 +11,9 @@ class UserProfileHost():
     def __init__(
             self, 
             original_prompt : str, 
-            add_ons : list = None, 
-            recommendation_type : str = RecommendationType.POINT, 
-            optimization_type : str = OptimizationType.WEIGHTED_SUM, 
+            add_ons : list = None,
+            extend_original_prompt : bool = False,
+            recommendation_type : str = RecommendationType.FUNCTION_BASED, 
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/'
             ):
@@ -37,9 +37,18 @@ class UserProfileHost():
         # by calculating the respective CLIP embeddings to the resulting prompts
         self.axis = []
         if not add_ons:
-            add_ons = ['drawing', 'picture that old people like', 'funny', 'award-winning', 'highly detailed photoreal', 'aesthetic']
-        for prompt in [original_prompt + ',' + add for add in add_ons]:
-            self.axis.append(self.clip_embedding(prompt))
+            add_ons = [
+                'drawing, painting, funny, warm light', 
+                'realistic, colorful, 8k, trending on artstation', 
+                'futuristic, sci-fi, intergalactic, dark, hard light', 
+                'abstract, sketch, expressionism, creative, artistic'
+            ]
+        if extend_original_prompt:
+            for prompt in [original_prompt + ',' + add for add in add_ons]:
+                self.axis.append(self.clip_embedding(prompt))
+        else:
+            for prompt in add_ons:
+                self.axis.append(self.clip_embedding(prompt))
         self.num_axis = len(self.axis)
         self.axis = torch.stack(self.axis)
 
@@ -51,26 +60,19 @@ class UserProfileHost():
         self.user_profile = None
 
         # Some Bayesian Optimization Hyperparameters
-        self.num_steps = 5
+        self.num_steps = 50
+        self.bounds = (-5,5)
 
-        # Initialize an Optimizer
-        # TODO (Paul): Bayesian Optimization seems to sometimes fail when there are only few datapoints. Find a solution.
-        if optimization_type == OptimizationType.MAX_PREF:
-            self.optimizer = MaxPrefOptimizer()
-        elif optimization_type == OptimizationType.WEIGHTED_SUM:
-            self.optimizer = WeightedSumOptimizer()
-        elif optimization_type == OptimizationType.GAUSSIAN_PROCESS:
-            self.optimizer = GaussianProcessOptimizer()
-        else:
-            raise ValueError(f"The optimization type {optimization_type} is not implemented yet.")
-
-        # Initialize a Recommender
+        # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
-            self.recommender = BayesianRecommender(n_steps=self.num_steps, n_axis=self.num_axis)
+            self.recommender = BayesianRecommender(n_steps=self.num_steps, n_axis=self.num_axis, bounds=self.bounds)
+            self.optimizer = GaussianProcessOptimizer()
         elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender()
+            self.optimizer = MaxPrefOptimizer()
         elif recommendation_type == RecommendationType.WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender()
+            self.optimizer = WeightedSumOptimizer()
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
 
@@ -93,23 +95,11 @@ class UserProfileHost():
         # a = n_axis
         # t = n_tokens
         # e = embedding_size
-        product = torch.einsum('ra,ate->rte', user_embeddings, torch.square(self.axis))
-        product = torch.sqrt(product)
+        product = torch.einsum('ra,ate->rte', user_embeddings, self.axis)
         length = torch.linalg.vector_norm(self.center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
         total = (self.center + product)
         total = total / torch.linalg.vector_norm(total, ord=2, dim=-1, keepdim=True) * length
-        #quadratic norm,returns shape(77,1)
-        #print('len', length)
         return total
-
-        # clip_embeddings = []
-        # for embed in user_embeddings:
-        #     clip_embed = self.center
-        #     for factor, ax in zip(embed, self.axis):
-        #         clip_embed += factor * ax
-        #     clip_embeddings.append(clip_embed)
-        # clip_embeddings = torch.stack(clip_embeddings)
-        # return clip_embeddings
 
     def fit_user_profile(self, preferences: Tensor):
         '''
@@ -152,15 +142,19 @@ class UserProfileHost():
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         '''
+        # Generate recommendations in the user_space
         if self.user_profile != None:
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
         else:
             # The zeros ensure that the original prompt embedding is included
-            user_space_embeddings = torch.cat((torch.zeros(size=(1, self.num_axis)), torch.rand(size=(num_recommendations-1, self.num_axis))))
+            user_space_embeddings = torch.cat((torch.zeros(size=(1, self.num_axis)), torch.rand(size=(num_recommendations-1, self.num_axis))))*self.bounds[1]
         
+        # Safe the user_space_embeddings
         if self.embeddings != None:
-            self.embeddings = torch.cat((self.embeddings, user_space_embeddings)) # Safe the user_space_embeddings
+            self.embeddings = torch.cat((self.embeddings, user_space_embeddings)) 
         else:
             self.embeddings = user_space_embeddings
+
+        # Transform embeddings from user_space to CLIP space
         clip_embeddings = self.inv_transform(user_space_embeddings).cpu()
         return clip_embeddings
