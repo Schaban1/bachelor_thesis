@@ -1,4 +1,4 @@
-from prototype.webuserinterface import WebUI
+from prototype.app import App
 from prototype.utils import seed_everything
 
 
@@ -10,9 +10,9 @@ from omegaconf import DictConfig
 #def main(args):
 
 seed_everything(42)
-args = DictConfig({'path' : {'cache_dir' : './cache/'}, 'num_recommendations' : 5, 'port': 8080})
-ui = WebUI(args=args)
-ui.run()
+args = DictConfig({'path' : {'cache_dir' : './cache/'}, 'num_recommendations' : 1, 'port': 8080})
+app = App(args=args)
+app.start()
 
 
 #if __name__ in {"__main__", "__mp_main__"}:

@@ -4,10 +4,12 @@ from nicegui import binding
 from PIL import Image
 import torch
 import asyncio
+import threading
 
 from prototype.constants import RecommendationType, WebUIState
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
+
 
 class WebUI:
     is_initial_iteration = binding.BindableProperty()
@@ -28,11 +30,11 @@ class WebUI:
         # Provided by the user / system
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.POINT
-        self.num_images_to_generate = args.num_recommendations
+        self.num_images_to_generate = self.args.num_recommendations
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
         self.user_profile_host_beta = 20
-        self.generator = Generator(n_images=self.num_images_to_generate, cache_dir=args.path.cache_dir)
+        self.generator = Generator(n_images=self.num_images_to_generate, cache_dir=self.args.path.cache_dir)
         # Lists / UI components
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
@@ -42,6 +44,7 @@ class WebUI:
         self.save_path = f"{os.getcwd()}/prototype/output"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
+        self.queue_lock = threading.Lock()
 
     def run(self):
         """
@@ -49,7 +52,6 @@ class WebUI:
         """
         self.update_state_variables()
         self.build_userinterface()
-        ngUI.run(title='Image Generation System Demo', port=self.args.port)
     
     def change_state(self, new_state: WebUIState):
         """
@@ -153,8 +155,9 @@ class WebUI:
         Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated 
         images of the generator in self.images.
         """
-        embeddings = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
-        self.images = self.generator.generate_image(embeddings)
+        with self.queue_lock:
+            embeddings = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
+            self.images = self.generator.generate_image(embeddings)
     
     def update_image_displays(self):
         """
@@ -228,8 +231,3 @@ class WebUI:
         with open("./prototype/resources/webis_template_bottom.html") as f:
             webis_template_bottom = f.read()
         return webis_template_top, webis_template_bottom
-    
-
-if __name__ in {"__main__", "__mp_main__"}:
-    ui = WebUI()
-    ui.run()

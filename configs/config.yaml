@@ -1,6 +1,10 @@
 defaults:
   - _self_
 
+port: 8080
+
+num_recommendations: 5
+
 path:
   output_dir: ./output/
   cache_dir: ./cache/
