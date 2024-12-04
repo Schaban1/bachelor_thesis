@@ -78,7 +78,7 @@ class SinglePointRecommender(Recommender):
 
 class SinglePointWeightedAxesRecommender(Recommender):
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+    def recommend_on_sphere(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
         # hyperparameter
         radius = 1.0
 
@@ -95,6 +95,33 @@ class SinglePointWeightedAxesRecommender(Recommender):
         # if fewer axes than n_recommendations, repeat axes
         interpolated_points = [slerp(user_profile, axis, num=n_recommendations)[weight] for axis, weight
                                in zip(axes.repeat(n_recommendations // axes.shape[0], 1), weights)]
+
+        return torch.stack(interpolated_points)
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+        on_sphere = False  # whether recommendations should be on the sphere or not
+        axes = torch.eye(user_profile.shape[0])
+        print("axes", axes, axes.shape)
+
+
+        if on_sphere:   # usage of SLERP
+            return self.recommend_on_sphere(user_profile, n_recommendations)
+
+
+        matrix = torch.cat((axes, user_profile.unsqueeze(0)), dim=0)
+        print("extended matrix", matrix, matrix.shape)
+
+        # random weights for axes for each recommendation
+        weights = torch.rand(size=(n_recommendations, user_profile.shape[0] + 1))
+        weights /= torch.sum(weights, dim=1, keepdim=True)  # normalize weights
+
+        print("weights::::", weights[0], weights[0].shape)
+        interpolated_points = [torch.from_numpy(
+            np.einsum('i,ij->ij', weight, matrix)).sum(axis=0)
+                               for weight in weights]
+
+        print("weights", np.einsum('i,ij->ij', weights[0], matrix), weights[0], weights.shape)
+        print("interpolated_points", interpolated_points)
 
         return torch.stack(interpolated_points)
 
