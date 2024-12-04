@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 import numpy as np
 import torch
 from torch import Tensor
-from .utils import slerp, display_generated_points as visualize_recommendations
+from .utils import slerp
 from botorch.acquisition import UpperConfidenceBound
 from botorch.exceptions import InputDataWarning
 import warnings
@@ -112,35 +112,4 @@ class BayesianRecommender(Recommender):
         scores = acqf(mesh)
         candidate_indices = torch.topk(scores, k=n_recommendations)[1]
         candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
-        return candidates                
-
-
-
-
-
-if __name__ == '__main__':
-    dummy_user_profile = torch.tensor([1, 2, 3])  # torch.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-
-    # test single point recommender
-    single_recommender = SinglePointRecommender()
-    single_point_recommendations = single_recommender.recommend_embeddings(user_profile=dummy_user_profile,
-                                                                           n_recommendations=200)
-    if dummy_user_profile.shape[0] == 3:
-        visualize_recommendations.display_generated_points(single_point_recommendations,
-                                                           user_profile=dummy_user_profile)
-    print("single point", single_point_recommendations)
-
-    # test single point + weighted axes recommender
-    single_weighted_recommender = SinglePointWeightedAxesRecommender()
-    weighted_axes_recommendations = single_weighted_recommender.recommend_embeddings(user_profile=dummy_user_profile,
-                                                                                     n_recommendations=100)
-    if dummy_user_profile.shape[0] == 3:
-        visualize_recommendations.display_generated_points(weighted_axes_recommendations,
-                                                           user_profile=dummy_user_profile)
-    print("single point + weighted axes", weighted_axes_recommendations)
-
-    # TODO: test function-based recommender (Bayesian approach)
-    function_based_recommender = BayesianRecommender()
-    function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
-                                                                                     n_recommendations=100)
-    print("function_based_recommender", function_based_recommendations)
+        return candidates
