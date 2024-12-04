@@ -100,13 +100,14 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_steps, n_axis):
+    def __init__(self, n_steps, n_axis, bounds=(0,1)):
         self.n_steps = n_steps
         self.n_axis = n_axis
+        self.bounds = bounds
 
     def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta : float = 1) -> Tensor:
         acqf = UpperConfidenceBound(user_profile, beta=beta)
-        xx = torch.linspace(start=0, end=1, steps=self.n_steps)
+        xx = torch.linspace(start=self.bounds[0], end=self.bounds[1], steps=self.n_steps)
         mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
         mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps**self.n_axis, 1, self.n_axis)
         scores = acqf(mesh)
