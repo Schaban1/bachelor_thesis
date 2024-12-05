@@ -44,8 +44,7 @@ class WebUI:
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
 
-        # TODO: Could be used for a save image function
-        self.save_path = f"{os.getcwd()}/prototype/output"
+        self.save_path = f"{os.getcwd()}/prototype/output/{self.session_id}"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
         self.num_images_saved = 0
@@ -217,14 +216,17 @@ class WebUI:
         self.user_profile_host_beta -= 1
     
     def on_save_button_click(self, image_display):
+        """
+        Saves the displayed image where the save button is located in the save_path.
+
+        Args:
+            image_display: The image display containing the image to save.
+        """
         image_to_save = image_display.source
-        save_path = f"{self.save_path}/{self.session_id}"
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
         file_name = f"image_{self.num_images_saved}.png"
-        image_to_save.save(f"{save_path}/{file_name}")
+        image_to_save.save(f"{self.save_path}/{file_name}")
         self.num_images_saved += 1
-        ngUI.notify(f"Image saved in {save_path}/{file_name}!")
+        ngUI.notify(f"Image saved in {self.save_path}/{file_name}!")
     
     async def on_submit_scores_button_click(self):
         """
