@@ -2,10 +2,11 @@ from abc import abstractmethod, ABC
 import numpy as np
 import torch
 from torch import Tensor
-from .utils import slerp, display_generated_points as visualize_recommendations
+from .utils import slerp
 from botorch.acquisition import UpperConfidenceBound
 from botorch.exceptions import InputDataWarning
 import warnings
+
 warnings.simplefilter("ignore", category=InputDataWarning)
 
 
@@ -25,7 +26,8 @@ class Recommender(ABC):  # ABC = Abstract Base Class
         These points are returned as recommendation.
     2. Single point generation with weighted axes:
         Some axes spanning the user space may convey more information than others.
-        Hence, highly influential axes should be weighted less than others to counteract this phenomenon.
+        Hence, axes should be weighted differently according to their influence.
+        There are two implementations: One where the points are on the surface of a sphere and one where they are not.
     3. Function-based generation:
         In this scenario, one doesn't want to optimize the position of the user profile (a point) in the suer profile
         space and use this position to generate new generations, but one chooses multiple points in fascinating
@@ -78,12 +80,19 @@ class SinglePointRecommender(Recommender):
 
 class SinglePointWeightedAxesRecommender(Recommender):
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+    def recommend_on_sphere(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+        """
+        Uses SLERP to interpolate between the user profile and the axes of the user space.
+        In this case, the points are on the surface of the sphere.
+        The generated points are interpolated between the user profile and one axes.
+        :param user_profile: Low-dimensional user profile.
+        :param n_recommendations: Number of recommendations to return.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations on the surface of the sphere.
+        """
         # hyperparameter
         radius = 1.0
 
-        # weights for influence of axes: integer between 0 and n_recommendations
-        # TODO: where to get them from?
+        # weights for influence of axes: random integer between 0 and n_recommendations
         weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))  # random weights for axes
 
         # one hot encoding for axes
@@ -98,50 +107,62 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
         return torch.stack(interpolated_points)
 
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+        """
+        Recommends embeddings based on the user profile, axes of the user space and the number of recommendations.
+        If points should be on the sphere, SLERP is used to interpolate between the user profile and the axes.
+        Otherwise, random weights are used to interpolate between the user profile and the axes.
+        :param user_profile: Low-dimensional user profile.
+        :param n_recommendations: Number of recommendations to return.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
+        """
+        on_sphere = False  # whether recommendations should be on the sphere or not
+        axes = torch.eye(user_profile.shape[0])
+
+        if on_sphere:  # usage of SLERP
+            return self.recommend_on_sphere(user_profile, n_recommendations)
+
+        matrix = torch.cat((axes, user_profile.unsqueeze(0)), dim=0)
+
+        # random weights for axes for each recommendation
+        weights = torch.rand(size=(n_recommendations, user_profile.shape[0] + 1))
+        weights /= torch.sum(weights, dim=1, keepdim=True)  # normalize weights
+
+        interpolated_points = [torch.from_numpy(
+            np.einsum('i,ij->ij', weight, matrix)).sum(axis=0)
+                               for weight in weights]
+
+        return torch.stack(interpolated_points)
+
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_steps, n_axis, bounds=(0,1)):
+    def __init__(self, n_steps, n_axis, bounds=(0, 1)):
         self.n_steps = n_steps
         self.n_axis = n_axis
         self.bounds = bounds
+        self.cand_indices = []
 
-    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta : float = 1) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta: float = 1) -> Tensor:
+        """
+        Recommends embeddings based on the user profile, the number of recommendations and the trade-off between
+        exploration and exploitation.
+        :param user_profile: Low-dimensional user profile.
+        :param n_recommendations: Number of recommendations to return.
+        :param beta: Trade-off between exploration and exploitation.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
+        """
         acqf = UpperConfidenceBound(user_profile, beta=beta)
         xx = torch.linspace(start=self.bounds[0], end=self.bounds[1], steps=self.n_steps)
         mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
-        mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps**self.n_axis, 1, self.n_axis)
+        mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps ** self.n_axis, 1, self.n_axis)
+
+        # Get the highest scoring candidates out of meshgrid
         scores = acqf(mesh)
-        candidate_indices = torch.topk(scores, k=n_recommendations)[1]
+        candidate_indices = torch.topk(scores, k=n_recommendations + len(self.cand_indices))[1]
+
+        # Remove indices that have already been sampled
+        candidate_indices = [i for i in candidate_indices if i not in self.cand_indices][:n_recommendations]
+
+        # Return most promising candidates
         candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
-        return candidates                
-
-
-
-
-
-if __name__ == '__main__':
-    dummy_user_profile = torch.tensor([1, 2, 3])  # torch.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-
-    # test single point recommender
-    single_recommender = SinglePointRecommender()
-    single_point_recommendations = single_recommender.recommend_embeddings(user_profile=dummy_user_profile,
-                                                                           n_recommendations=200)
-    if dummy_user_profile.shape[0] == 3:
-        visualize_recommendations.display_generated_points(single_point_recommendations,
-                                                           user_profile=dummy_user_profile)
-    print("single point", single_point_recommendations)
-
-    # test single point + weighted axes recommender
-    single_weighted_recommender = SinglePointWeightedAxesRecommender()
-    weighted_axes_recommendations = single_weighted_recommender.recommend_embeddings(user_profile=dummy_user_profile,
-                                                                                     n_recommendations=100)
-    if dummy_user_profile.shape[0] == 3:
-        visualize_recommendations.display_generated_points(weighted_axes_recommendations,
-                                                           user_profile=dummy_user_profile)
-    print("single point + weighted axes", weighted_axes_recommendations)
-
-    # TODO: test function-based recommender (Bayesian approach)
-    function_based_recommender = BayesianRecommender()
-    function_based_recommendations = function_based_recommender.recommend_embeddings(user_profile=dummy_user_profile,
-                                                                                     n_recommendations=100)
-    print("function_based_recommender", function_based_recommendations)
+        return candidates

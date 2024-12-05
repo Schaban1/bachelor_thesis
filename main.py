@@ -9,7 +9,7 @@ from omegaconf import DictConfig
 #@hydra.main(version_base=None, config_path="/home/phahn/repositories/project-multimodal-machine-learning-lab-wise24/config/", config_name="config")
 #def main(args):
 
-args = DictConfig({'path' : {'cache_dir' : './cache/'}, 'num_recommendations' : 1, 'port': 8080, 'random_seed' : 42})
+args = DictConfig({'path' : {'cache_dir' : './cache/'}, 'num_recommendations' : 5, 'port': 8080, 'random_seed' : 42, 'generator' : {'num_inference_steps' : 25}})
 seed_everything(args.random_seed)
 app = App(args=args)
 app.start()
