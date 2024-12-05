@@ -3,8 +3,10 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
 import torch
+from functools import partial
 import asyncio
 import threading
+import secrets
 
 from prototype.constants import RecommendationType, WebUIState
 from prototype.user_profile_host import UserProfileHost
@@ -15,15 +17,18 @@ class WebUI:
     is_initial_iteration = binding.BindableProperty()
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
+    user_prompt = binding.BindableProperty()
+    recommendation_type = binding.BindableProperty()
 
     """
     This class implements a interactive web user interface for an image generation system.
     """
     def __init__(self, args):
+        self.session_id = secrets.token_urlsafe(4)
         # Args of global config
         self.args = args
         # State variables
-        self.state = WebUIState.INIT_STATE
+        self.state = None
         self.is_initial_iteration = False
         self.is_main_loop_iteration = False
         self.is_generating = False
@@ -39,18 +44,17 @@ class WebUI:
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        # Image saving
+        self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
+        self.num_images_saved = 0
 
-        # TODO: Could be used for a save image function
-        self.save_path = f"{os.getcwd()}/prototype/output"
-        if not os.path.exists(self.save_path):
-            os.makedirs(self.save_path)
         self.queue_lock = threading.Lock()
 
     def run(self):
         """
         This function runs the Web UI indefinitely.
         """
-        self.update_state_variables()
+        self.change_state(WebUIState.INIT_STATE)
         self.build_userinterface()
     
     def change_state(self, new_state: WebUIState):
@@ -107,11 +111,20 @@ class WebUI:
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_main_loop_iteration', value=True):
             ngUI.label('Please rate these images based on your satisfaction from 0 to 10 using the sliders.').style('font-size: 200%;')
+            with ngUI.row().classes('mx-auto items-center'):
+                ngUI.label(f'Your selected recommendation type:').style('font-size: 150%; font-weight: bold;')
+                ngUI.label(self.recommendation_type).style('font-size: 150%;').bind_text_from(self, 'recommendation_type')
+            ngUI.label(f'Your initial prompt:').style('font-size: 150%; font-weight: bold;')
+            ngUI.label(self.user_prompt).style('font-size: 150%;').bind_text_from(self, 'user_prompt')
             for i in range(self.num_images_to_generate):
                 self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
+                with self.images_display[i]:
+                    ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                 self.scores_slider[i] = ngUI.slider(min=0, max=10, value=5, step=0.1)
                 ngUI.label().bind_text_from(self.scores_slider[i], 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
+            with ngUI.row().classes('w-full justify-end'):
+                ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
     
     def build_loading_spinner_userinterface(self):
         """
@@ -205,6 +218,21 @@ class WebUI:
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
         self.user_profile_host_beta -= 1
     
+    def on_save_button_click(self, image_display):
+        """
+        Saves the displayed image where the save button is located in the images save dir.
+
+        Args:
+            image_display: The image display containing the image to save.
+        """
+        image_to_save = image_display.source
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
+        file_name = f"image_{self.num_images_saved}.png"
+        image_to_save.save(f"{self.save_path}/{file_name}")
+        self.num_images_saved += 1
+        ngUI.notify(f"Image saved in {self.save_path}/{file_name}!")
+    
     async def on_submit_scores_button_click(self):
         """
         Updates the user profile with the user scores and generates the next images.
@@ -218,6 +246,14 @@ class WebUI:
         self.update_image_displays()
         self.reset_sliders()
         self.change_state(WebUIState.MAIN_STATE)
+    
+    def on_restart_process_button_click(self):
+        """
+        Restarts the process by starting with the initial iteration again.
+        """
+        self.change_state(WebUIState.INIT_STATE)
+        self.reset_sliders()
+        self.user_profile_host = None
     
     def get_webis_demo_template_html(self):
         """
