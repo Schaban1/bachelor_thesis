@@ -44,11 +44,10 @@ class WebUI:
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
-
+        # Image saving
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
-        if not os.path.exists(self.save_path):
-            os.makedirs(self.save_path)
         self.num_images_saved = 0
+
         self.queue_lock = threading.Lock()
 
     def run(self):
@@ -221,12 +220,14 @@ class WebUI:
     
     def on_save_button_click(self, image_display):
         """
-        Saves the displayed image where the save button is located in the save_path.
+        Saves the displayed image where the save button is located in the images save dir.
 
         Args:
             image_display: The image display containing the image to save.
         """
         image_to_save = image_display.source
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
         file_name = f"image_{self.num_images_saved}.png"
         image_to_save.save(f"{self.save_path}/{file_name}")
         self.num_images_saved += 1
