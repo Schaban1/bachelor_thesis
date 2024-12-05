@@ -104,14 +104,23 @@ class BayesianRecommender(Recommender):
         self.n_steps = n_steps
         self.n_axis = n_axis
         self.bounds = bounds
+        self.cand_indices = []
 
     def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta : float = 1) -> Tensor:
         acqf = UpperConfidenceBound(user_profile, beta=beta)
         xx = torch.linspace(start=self.bounds[0], end=self.bounds[1], steps=self.n_steps)
         mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
         mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps**self.n_axis, 1, self.n_axis)
+        
+
+        # Get highest scoring candidates out of meshgrid
         scores = acqf(mesh)
-        candidate_indices = torch.topk(scores, k=n_recommendations)[1]
+        candidate_indices = torch.topk(scores, k=n_recommendations+len(self.cand_indices))[1]
+
+        # Remove indices that have already been sampled
+        candidate_indices = [i for i in candidate_indices if i not in self.cand_indices][:n_recommendations]
+
+        # Return most promising candidates
         candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
         return candidates                
 
