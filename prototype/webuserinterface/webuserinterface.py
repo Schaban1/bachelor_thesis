@@ -24,7 +24,7 @@ class WebUI:
         # Args of global config
         self.args = args
         # State variables
-        self.state = WebUIState.INIT_STATE
+        self.state = None
         self.is_initial_iteration = False
         self.is_main_loop_iteration = False
         self.is_generating = False
@@ -51,7 +51,7 @@ class WebUI:
         """
         This function runs the Web UI indefinitely.
         """
-        self.update_state_variables()
+        self.change_state(WebUIState.INIT_STATE)
         self.build_userinterface()
     
     def change_state(self, new_state: WebUIState):
@@ -115,6 +115,8 @@ class WebUI:
                 self.scores_slider[i] = ngUI.slider(min=0, max=10, value=5, step=0.1)
                 ngUI.label().bind_text_from(self.scores_slider[i], 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
+            with ngUI.row().classes('w-full justify-end'):
+                ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
     
     def build_loading_spinner_userinterface(self):
         """
@@ -221,6 +223,14 @@ class WebUI:
         self.update_image_displays()
         self.reset_sliders()
         self.change_state(WebUIState.MAIN_STATE)
+    
+    def on_restart_process_button_click(self):
+        """
+        Restarts the process by starting with the initial iteration again.
+        """
+        self.change_state(WebUIState.INIT_STATE)
+        self.reset_sliders()
+        self.user_profile_host = None
     
     def get_webis_demo_template_html(self):
         """
