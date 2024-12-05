@@ -5,6 +5,7 @@ from PIL import Image
 import torch
 import asyncio
 import threading
+import secrets
 
 from prototype.constants import RecommendationType, WebUIState
 from prototype.user_profile_host import UserProfileHost
@@ -21,6 +22,7 @@ class WebUI:
     This class implements a interactive web user interface for an image generation system.
     """
     def __init__(self, args):
+        self.session_id = secrets.token_urlsafe(4)
         # Args of global config
         self.args = args
         # State variables
