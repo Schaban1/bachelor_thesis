@@ -3,6 +3,7 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
 import torch
+from functools import partial
 import asyncio
 import threading
 import secrets
@@ -47,6 +48,7 @@ class WebUI:
         self.save_path = f"{os.getcwd()}/prototype/output"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
+        self.num_images_saved = 0
         self.queue_lock = threading.Lock()
 
     def run(self):
@@ -114,6 +116,8 @@ class WebUI:
             ngUI.label(self.user_prompt).style('font-size: 150%;').bind_text_from(self, 'user_prompt')
             for i in range(self.num_images_to_generate):
                 self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
+                with self.images_display[i]:
+                    ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                 self.scores_slider[i] = ngUI.slider(min=0, max=10, value=5, step=0.1)
                 ngUI.label().bind_text_from(self.scores_slider[i], 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
@@ -211,6 +215,16 @@ class WebUI:
         normalized_scores = self.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
         self.user_profile_host_beta -= 1
+    
+    def on_save_button_click(self, image_display):
+        image_to_save = image_display.source
+        save_path = f"{self.save_path}/{self.session_id}"
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        file_name = f"image_{self.num_images_saved}.png"
+        image_to_save.save(f"{save_path}/{file_name}")
+        self.num_images_saved += 1
+        ngUI.notify(f"Image saved in {save_path}/{file_name}!")
     
     async def on_submit_scores_button_click(self):
         """
