@@ -18,7 +18,7 @@ class GeneratorBase(ABC):
 
 
 class Generator(GeneratorBase):
-    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', ):
+    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', num_inference_steps : int = 20):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
@@ -28,6 +28,7 @@ class Generator(GeneratorBase):
         """
         self.height = 512
         self.width = 512
+        self.num_inference_steps=num_inference_steps
         scheduler = LMSDiscreteScheduler(
             beta_start=0.00085,
             beta_end=0.012,
@@ -69,7 +70,7 @@ class Generator(GeneratorBase):
                 width=self.width,
                 num_images_per_prompt=1,
                 prompt_embeds=embedding,
-                num_inference_steps=20,
+                num_inference_steps=self.num_inference_steps,
                 guidance_scale=7,
                 latents=self.latents,
             ).images
@@ -79,7 +80,7 @@ class Generator(GeneratorBase):
             num_images_per_prompt=1,
             prompt_embeds=embedding[0],
             negative_prompt_embeds=embedding[1],
-            num_inference_steps=20,
+            num_inference_steps=self.num_inference_steps,
             guidance_scale=7,
             latents=self.latents,
         ).images
@@ -94,4 +95,3 @@ if __name__ == "__main__":
     img = gen.generate_image(embed[0])
     img[0].save("../output/3.png")
     print(img)
-
