@@ -18,6 +18,7 @@ class WebUI:
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
+    recommendation_type = binding.BindableProperty()
 
     """
     This class implements a interactive web user interface for an image generation system.
@@ -111,7 +112,10 @@ class WebUI:
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_main_loop_iteration', value=True):
             ngUI.label('Please rate these images based on your satisfaction from 0 to 10 using the sliders.').style('font-size: 200%;')
-            ngUI.label(f'Your initial prompt:').style('font-size: 150%;')
+            with ngUI.row().classes('mx-auto items-center'):
+                ngUI.label(f'Your selected recommendation type:').style('font-size: 150%; font-weight: bold;')
+                ngUI.label(self.recommendation_type).style('font-size: 150%;').bind_text_from(self, 'recommendation_type')
+            ngUI.label(f'Your initial prompt:').style('font-size: 150%; font-weight: bold;')
             ngUI.label(self.user_prompt).style('font-size: 150%;').bind_text_from(self, 'user_prompt')
             for i in range(self.num_images_to_generate):
                 self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
