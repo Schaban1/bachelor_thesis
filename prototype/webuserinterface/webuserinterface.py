@@ -44,7 +44,7 @@ class WebUI:
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
 
-        self.save_path = f"{os.getcwd()}/prototype/output/{self.session_id}"
+        self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
         self.num_images_saved = 0

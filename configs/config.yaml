@@ -10,6 +10,7 @@ num_recommendations: 5
 path:
   output_dir: ./output/
   cache_dir: ./cache/
+  images_save_dir: ./saved_images/
 
 hydra:
   run:

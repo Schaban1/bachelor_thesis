@@ -14,7 +14,10 @@ MMML_venv/
 # VSCode
 .vscode/
 
-# Output folder from the WebUI
+# Saved images from the Web UI
+saved_images/
+
+# Output folder from hydra
 output/
 
 # Cache dir for stable diffusion model
