@@ -26,7 +26,8 @@ class Recommender(ABC):  # ABC = Abstract Base Class
         These points are returned as recommendation.
     2. Single point generation with weighted axes:
         Some axes spanning the user space may convey more information than others.
-        Hence, highly influential axes should be weighted less than others to counteract this phenomenon.
+        Hence, axes should be weighted differently according to their influence.
+        There are two implementations: One where the points are on the surface of a sphere and one where they are not.
     3. Function-based generation:
         In this scenario, one doesn't want to optimize the position of the user profile (a point) in the suer profile
         space and use this position to generate new generations, but one chooses multiple points in fascinating
@@ -135,7 +136,7 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_steps, n_axis, bounds=(0,1)):
+    def __init__(self, n_steps, n_axis, bounds=(0, 1)):
         self.n_steps = n_steps
         self.n_axis = n_axis
         self.bounds = bounds
@@ -153,16 +154,15 @@ class BayesianRecommender(Recommender):
         acqf = UpperConfidenceBound(user_profile, beta=beta)
         xx = torch.linspace(start=self.bounds[0], end=self.bounds[1], steps=self.n_steps)
         mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
-        mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps**self.n_axis, 1, self.n_axis)
+        mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps ** self.n_axis, 1, self.n_axis)
 
-
-        # Get highest scoring candidates out of meshgrid
+        # Get the highest scoring candidates out of meshgrid
         scores = acqf(mesh)
-        candidate_indices = torch.topk(scores, k=n_recommendations+len(self.cand_indices))[1]
+        candidate_indices = torch.topk(scores, k=n_recommendations + len(self.cand_indices))[1]
 
         # Remove indices that have already been sampled
         candidate_indices = [i for i in candidate_indices if i not in self.cand_indices][:n_recommendations]
 
         # Return most promising candidates
         candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
-        return candidates                
+        return candidates
