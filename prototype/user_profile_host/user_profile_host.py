@@ -61,7 +61,7 @@ class UserProfileHost():
 
         # Some Bayesian Optimization Hyperparameters
         self.num_steps = 50
-        self.bounds = (-5,5)
+        self.bounds = (-3,3)
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:

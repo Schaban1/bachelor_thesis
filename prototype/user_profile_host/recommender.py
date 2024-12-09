@@ -141,8 +141,10 @@ class BayesianRecommender(Recommender):
         self.n_axis = n_axis
         self.bounds = bounds
         self.cand_indices = []
+        self.beta = 20
+        self.reduce_beta = True
 
-    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta: float = 1) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5) -> Tensor:
         """
         Recommends embeddings based on the user profile, the number of recommendations and the trade-off between
         exploration and exploitation.
@@ -151,7 +153,11 @@ class BayesianRecommender(Recommender):
         :param beta: Trade-off between exploration and exploitation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        acqf = UpperConfidenceBound(user_profile, beta=beta)
+
+        # Initialize the acquisition function
+        acqf = UpperConfidenceBound(user_profile, beta=self.beta)
+
+        # Create a mesh over the whole userspace
         xx = torch.linspace(start=self.bounds[0], end=self.bounds[1], steps=self.n_steps)
         mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
         mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps ** self.n_axis, 1, self.n_axis)
@@ -161,7 +167,14 @@ class BayesianRecommender(Recommender):
         candidate_indices = torch.topk(scores, k=n_recommendations + len(self.cand_indices))[1]
 
         # Remove indices that have already been sampled
-        candidate_indices = [i for i in candidate_indices if i not in self.cand_indices][:n_recommendations]
+        candidate_indices = [i.item() for i in candidate_indices if i not in self.cand_indices][:n_recommendations]
+
+        # Memorize newly sampled indices
+        self.cand_indices.extend(candidate_indices)
+
+        # Lower beta if settings require it
+        if self.reduce_beta:
+            self.beta -= 1
 
         # Return most promising candidates
         candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
