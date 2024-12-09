@@ -39,9 +39,10 @@ class UserProfileHost():
         if not add_ons:
             add_ons = [
                 'drawing, painting, funny, warm light', 
-                'realistic, colorful, 8k, trending on artstation', 
+                'realistic, colorful, 8k, highly detailed, trending on artstation', 
                 'futuristic, sci-fi, intergalactic, dark, hard light', 
-                'abstract, sketch, expressionism, creative, artistic'
+                'abstract, sketch, expressionism, creative, artistic',
+                'basic, minimalistic, few details, simple'
             ]
         if extend_original_prompt:
             for prompt in [original_prompt + ',' + add for add in add_ons]:
@@ -60,8 +61,8 @@ class UserProfileHost():
         self.user_profile = None
 
         # Some Bayesian Optimization Hyperparameters
-        self.num_steps = 50
-        self.bounds = (-3,3)
+        self.num_steps = 25
+        self.bounds = (0,5)
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
