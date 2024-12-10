@@ -1,5 +1,6 @@
 from prototype.app import App
 from prototype.utils import seed_everything
+import torch
 
 
 from omegaconf import DictConfig
@@ -9,10 +10,12 @@ from omegaconf import DictConfig
 #@hydra.main(version_base=None, config_path="/home/phahn/repositories/project-multimodal-machine-learning-lab-wise24/config/", config_name="config")
 #def main(args):
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
 args = DictConfig({
     'path' : {'cache_dir' : './cache/', 'images_save_dir': './saved_images/'}, 
     'num_recommendations' : 5, 
-    'port': 8080, 
+    'port': 8080,
+    'device': device,
     'random_seed' : 42, 
     'generator' : {'num_inference_steps' : 25}
 })

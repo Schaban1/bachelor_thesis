@@ -39,7 +39,7 @@ class WebUI:
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
         self.user_profile_host_beta = 20
-        self.generator = Generator(n_images=self.num_images_to_generate, cache_dir=self.args.path.cache_dir, num_inference_steps=self.args.generator.num_inference_steps)
+        self.generator = Generator(n_images=self.num_images_to_generate, cache_dir=self.args.path.cache_dir, num_inference_steps=self.args.generator.num_inference_steps, device=args.device)
         # Lists / UI components
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
@@ -120,7 +120,7 @@ class WebUI:
                 self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
                 with self.images_display[i]:
                     ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
-                self.scores_slider[i] = ngUI.slider(min=0, max=10, value=5, step=0.1)
+                self.scores_slider[i] = ngUI.slider(min=0, max=10, value=0, step=0.1)
                 ngUI.label().bind_text_from(self.scores_slider[i], 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):

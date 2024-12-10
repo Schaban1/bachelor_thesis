@@ -18,7 +18,7 @@ class GeneratorBase(ABC):
 
 
 class Generator(GeneratorBase):
-    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', num_inference_steps : int = 20):
+    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', num_inference_steps : int = 20, device='cpu'):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
@@ -43,7 +43,7 @@ class Generator(GeneratorBase):
             requires_safety_checker = False,
             cache_dir=cache_dir,
         )
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
         self.pipe.to(self.device)
         self.n_images = n_images
 

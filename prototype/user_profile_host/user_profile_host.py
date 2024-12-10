@@ -12,7 +12,7 @@ class UserProfileHost():
             self, 
             original_prompt : str, 
             add_ons : list = None,
-            extend_original_prompt : bool = False,
+            extend_original_prompt : bool = True,
             recommendation_type : str = RecommendationType.FUNCTION_BASED, 
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/'
@@ -38,10 +38,16 @@ class UserProfileHost():
         self.axis = []
         if not add_ons:
             add_ons = [
-                'drawing, painting, funny, warm light', 
-                'realistic, colorful, 8k, trending on artstation', 
-                'futuristic, sci-fi, intergalactic, dark, hard light', 
-                'abstract, sketch, expressionism, creative, artistic'
+                'a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art', 
+                'realistic, colorful, 8k, highly detailed, trending on artstation', 
+                'Extremely ultra-realistic photorealistic 3d, professional photography, natural lighting, volumetric lighting maximalist photo illustration 8k resolution detailed, elegant', 
+                'by vincent van gogh',
+                'flat, illustration, 4k',
+                'captured in a painting with unparalleled detail and resolution at 64k',
+                'Scratchy pen strokes, colored pen, blind contour, fisheye perspective close-up, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, minimalist realistic, anime proportions, distorted perspective'
+                'dramatic lighting, shot on leica, dark aesthetic',
+                'detailed scene, red, perfect face, intricately detailed photorealism, trending on artstation, neon lights, rainy day, ray-traced environment, vintage 90s anime artwork',
+                'in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel'
             ]
         if extend_original_prompt:
             for prompt in [original_prompt + ',' + add for add in add_ons]:
@@ -60,12 +66,11 @@ class UserProfileHost():
         self.user_profile = None
 
         # Some Bayesian Optimization Hyperparameters
-        self.num_steps = 50
-        self.bounds = (-5,5)
+        self.bounds = (0. , 2.)
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
-            self.recommender = BayesianRecommender(n_steps=self.num_steps, n_axis=self.num_axis, bounds=self.bounds)
+            self.recommender = BayesianRecommender(n_axis=self.num_axis, bounds=self.bounds)
             self.optimizer = GaussianProcessOptimizer()
         elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender()
@@ -88,9 +93,6 @@ class UserProfileHost():
         Returns
             clip_embeddings (Tensor): The respective clip embeddings.
         '''
-        # TODO (Paul): Find more PyTorch like implementation of these operations
-        #clip_embeddings = self.center + (user_embeddings @ self.axis)
-
         # r = n_rec
         # a = n_axis
         # t = n_tokens

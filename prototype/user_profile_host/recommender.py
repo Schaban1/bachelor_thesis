@@ -3,8 +3,15 @@ import numpy as np
 import torch
 from torch import Tensor
 from .utils import slerp
+
 from botorch.acquisition import UpperConfidenceBound
 from botorch.exceptions import InputDataWarning
+from botorch.optim import optimize_acqf
+
+from gpytorch.mlls import ExactMarginalLogLikelihood
+from botorch.fit import fit_gpytorch_mll
+from botorch.models import SingleTaskGP
+
 import warnings
 
 warnings.simplefilter("ignore", category=InputDataWarning)
@@ -136,33 +143,65 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_steps, n_axis, bounds=(0, 1)):
-        self.n_steps = n_steps
+    def __init__(self, n_axis, bounds=(0., 1.)):
         self.n_axis = n_axis
         self.bounds = bounds
         self.cand_indices = []
+        self.beta = 20
+        self.reduce_beta = True
 
-    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta: float = 1) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5) -> Tensor:
         """
         Recommends embeddings based on the user profile, the number of recommendations and the trade-off between
         exploration and exploitation.
-        :param user_profile: Low-dimensional user profile.
+        :param user_profile: Low-dimensional user profile containing embeddings and preferences.
         :param n_recommendations: Number of recommendations to return.
         :param beta: Trade-off between exploration and exploitation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        acqf = UpperConfidenceBound(user_profile, beta=beta)
-        xx = torch.linspace(start=self.bounds[0], end=self.bounds[1], steps=self.n_steps)
-        mesh = torch.meshgrid([xx for i in range(self.n_axis)], indexing="ij")
-        mesh = torch.stack(mesh, dim=-1).reshape(self.n_steps ** self.n_axis, 1, self.n_axis)
+        # Get embeddings and ratings from user profile
+        embeddings, preferences = user_profile
 
-        # Get the highest scoring candidates out of meshgrid
-        scores = acqf(mesh)
-        candidate_indices = torch.topk(scores, k=n_recommendations + len(self.cand_indices))[1]
+        # Normalize Embeddings
+        embeddings = (embeddings - self.bounds[0]) / self.bounds[1]
 
-        # Remove indices that have already been sampled
-        candidate_indices = [i for i in candidate_indices if i not in self.cand_indices][:n_recommendations]
+        # Change Preference shape
+        preferences = preferences.reshape(-1, 1)
+
+        # Define bounds for search space
+        bounds = torch.tensor([[0. for i in range(self.n_axis)], [1. for i in range(self.n_axis)]])
+
+        # Get new acquisitions step by step
+        for i in range(n_recommendations):
+            # Build a GP model
+            model = SingleTaskGP(train_X=embeddings, train_Y=preferences)
+            mll = ExactMarginalLogLikelihood(model.likelihood, model)
+            mll = fit_gpytorch_mll(mll)
+
+            # Initialize the acquisition function
+            acqf = UpperConfidenceBound(model=model, beta=self.beta, maximize=True)
+
+            # Get the highest scoring candidates out of meshgrid
+            candidate, score = optimize_acqf(
+                acq_function=acqf,
+                bounds=bounds,
+                q=1,
+                num_restarts=10,
+                raw_samples=512,  # used for intialization heuristic
+                options={"batch_limit": 5, "maxiter": 200},
+            )
+
+            # Extend data with new candidate to include this information in the next iteration
+            embeddings = torch.cat((embeddings, candidate))
+            preferences = torch.cat((preferences, score.reshape(1, 1)))
+
+        # Lower beta if settings require it
+        if self.reduce_beta:
+            self.beta -= 1
+
+        # Unnormalize embeddings
+        embeddings = embeddings * self.bounds[1] + self.bounds[0]
 
         # Return most promising candidates
-        candidates = mesh[candidate_indices].reshape(n_recommendations, self.n_axis)
+        candidates = embeddings[-n_recommendations:]
         return candidates
