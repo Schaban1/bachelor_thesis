@@ -120,7 +120,7 @@ class WebUI:
                 self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
                 with self.images_display[i]:
                     ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
-                self.scores_slider[i] = ngUI.slider(min=0, max=10, value=5, step=0.1)
+                self.scores_slider[i] = ngUI.slider(min=0, max=10, value=0, step=0.1)
                 ngUI.label().bind_text_from(self.scores_slider[i], 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
