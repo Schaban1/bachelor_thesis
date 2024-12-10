@@ -38,11 +38,11 @@ class UserProfileHost():
         self.axis = []
         if not add_ons:
             add_ons = [
-                'drawing, painting, funny, warm light', 
+                'drawing, painting, funny, warm light, beautiful', 
                 'realistic, colorful, 8k, highly detailed, trending on artstation', 
                 'futuristic, sci-fi, intergalactic, dark, hard light', 
                 'abstract, sketch, expressionism, creative, artistic',
-                'basic, minimalistic, few details, simple'
+                'basic, minimalistic, few details, simple, low features'
             ]
         if extend_original_prompt:
             for prompt in [original_prompt + ',' + add for add in add_ons]:
@@ -61,12 +61,11 @@ class UserProfileHost():
         self.user_profile = None
 
         # Some Bayesian Optimization Hyperparameters
-        self.num_steps = 25
-        self.bounds = (0,5)
+        self.bounds = (0. , 3.)
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
-            self.recommender = BayesianRecommender(n_steps=self.num_steps, n_axis=self.num_axis, bounds=self.bounds)
+            self.recommender = BayesianRecommender(n_axis=self.num_axis, bounds=self.bounds)
             self.optimizer = GaussianProcessOptimizer()
         elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender()
@@ -89,9 +88,6 @@ class UserProfileHost():
         Returns
             clip_embeddings (Tensor): The respective clip embeddings.
         '''
-        # TODO (Paul): Find more PyTorch like implementation of these operations
-        #clip_embeddings = self.center + (user_embeddings @ self.axis)
-
         # r = n_rec
         # a = n_axis
         # t = n_tokens

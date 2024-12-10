@@ -61,7 +61,5 @@ class GaussianProcessOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        user_profile = SingleTaskGP(train_X=embeddings, train_Y=preferences.reshape(-1, 1))
-        mll = ExactMarginalLogLikelihood(user_profile.likelihood, user_profile)
-        mll = fit_gpytorch_mll(mll)
-        return user_profile
+        
+        return (embeddings, preferences)
