@@ -18,7 +18,8 @@ class GeneratorBase(ABC):
 
 
 class Generator(GeneratorBase):
-    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', num_inference_steps : int = 20, device='cpu'):
+    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', 
+                 num_inference_steps : int = 20, device : str = 'cpu', random_latents : bool = False):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
@@ -28,6 +29,7 @@ class Generator(GeneratorBase):
         """
         self.height = 512
         self.width = 512
+        self.random_latents = random_latents
         self.num_inference_steps=num_inference_steps
         scheduler = LMSDiscreteScheduler(
             beta_start=0.00085,
@@ -65,6 +67,15 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
+
+        if self.random_latents:
+            latents = torch.randn(
+            (self.n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
+            device=self.device,
+            )
+        else:
+            latents = self.latents
+
         if type(embedding) != tuple:
             return self.pipe(height=self.height,
                 width=self.width,
@@ -72,7 +83,7 @@ class Generator(GeneratorBase):
                 prompt_embeds=embedding,
                 num_inference_steps=self.num_inference_steps,
                 guidance_scale=7,
-                latents=self.latents,
+                latents=latents,
             ).images
 
         return self.pipe(height=self.height,
@@ -82,7 +93,7 @@ class Generator(GeneratorBase):
             negative_prompt_embeds=embedding[1],
             num_inference_steps=self.num_inference_steps,
             guidance_scale=7,
-            latents=self.latents,
+            latents=latents,
         ).images
 
 

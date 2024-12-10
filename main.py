@@ -10,14 +10,14 @@ from omegaconf import DictConfig
 #@hydra.main(version_base=None, config_path="/home/phahn/repositories/project-multimodal-machine-learning-lab-wise24/config/", config_name="config")
 #def main(args):
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda" #if torch.cuda.is_available() else "cpu"
 args = DictConfig({
     'path' : {'cache_dir' : './cache/', 'images_save_dir': './saved_images/'}, 
-    'num_recommendations' : 5, 
+    'num_recommendations' : 3, 
     'port': 8080,
     'device': device,
     'random_seed' : 42, 
-    'generator' : {'num_inference_steps' : 25}
+    'generator' : {'num_inference_steps' : 2, 'random_latents' : False}
 })
 seed_everything(args.random_seed)
 app = App(args=args)
