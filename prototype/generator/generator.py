@@ -23,7 +23,8 @@ class Generator(GeneratorBase):
                  hf_model_name: str = "stable-diffusion-v1-5/stable-diffusion-v1-5",
                  cache_dir: str | None = '/cache/',
                  num_inference_steps: int = 20,
-                 batch_size: int | None = None, ):
+                 batch_size: int | None = None,
+                 device: str = "cpu"):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
@@ -33,6 +34,7 @@ class Generator(GeneratorBase):
             cache_dir: directory to download to model to
             num_inference_steps: number of denoising steps for the model to take
             batch_size: number of images that should be generated in a batch, lower means less vram needed
+            device: gpu or cpu that should be used to generate images
         """
         self.height = 512
         self.width = 512
@@ -51,7 +53,7 @@ class Generator(GeneratorBase):
             requires_safety_checker=False,
             cache_dir=cache_dir,
         )
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = device
         self.pipe.to(self.device)
         self.n_images = n_images
         self.batch_size = batch_size
