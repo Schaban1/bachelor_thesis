@@ -161,10 +161,15 @@ class BayesianRecommender(Recommender):
         """
         # Get embeddings and ratings from user profile
         embeddings, preferences = user_profile
+
+        # Normalize Embeddings
+        embeddings = (embeddings - self.bounds[0]) / self.bounds[1]
+
+        # Change Preference shape
         preferences = preferences.reshape(-1, 1)
 
         # Define bounds for search space
-        bounds = torch.tensor([[self.bounds[0] for i in range(self.n_axis)], [self.bounds[1] for i in range(self.n_axis)]])
+        bounds = torch.tensor([[0. for i in range(self.n_axis)], [1. for i in range(self.n_axis)]])
 
         # Get new acquisitions step by step
         for i in range(n_recommendations):
@@ -174,7 +179,7 @@ class BayesianRecommender(Recommender):
             mll = fit_gpytorch_mll(mll)
 
             # Initialize the acquisition function
-            acqf = UpperConfidenceBound(model, beta=self.beta)
+            acqf = UpperConfidenceBound(model=model, beta=self.beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
             candidate, score = optimize_acqf(
@@ -194,6 +199,9 @@ class BayesianRecommender(Recommender):
         if self.reduce_beta:
             self.beta -= 1
 
+        # Unnormalize embeddings
+        embeddings = embeddings * self.bounds[1] + self.bounds[0]
+
         # Return most promising candidates
-        candidates = embeddings[-n_recommendations:].reshape(n_recommendations, self.n_axis)
+        candidates = embeddings[-n_recommendations:]
         return candidates

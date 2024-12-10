@@ -43,7 +43,7 @@ class Generator(GeneratorBase):
             requires_safety_checker = False,
             cache_dir=cache_dir,
         )
-        self.device = device
+        self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
         self.pipe.to(self.device)
         self.n_images = n_images
 
