@@ -187,8 +187,8 @@ class WebUI:
             return
         self.change_state(WebUIState.GENERATING_STATE)
         ngUI.notify('Generating images...')
-        self.init_user_profile_host()
         loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.init_user_profile_host)
         await loop.run_in_executor(None, self.generate_images)
         self.update_image_displays()
         self.change_state(WebUIState.MAIN_STATE)
@@ -208,7 +208,7 @@ class WebUI:
         """
         Reset the value of the score sliders to the default value.
         """
-        [slider.set_value(5) for slider in self.scores_slider]
+        [slider.set_value(0) for slider in self.scores_slider]
     
     def update_user_profile(self):
         """
