@@ -15,7 +15,8 @@ class UserProfileHost():
             extend_original_prompt : bool = True,
             recommendation_type : str = RecommendationType.FUNCTION_BASED, 
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
-            cache_dir : str = './cache/'
+            cache_dir : str = './cache/',
+            n_latent_axis : int = 2
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -37,14 +38,12 @@ class UserProfileHost():
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
-        self.axis = []
+        self.embedding_axis = []
         if not add_ons:
             add_ons = [
                 'a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art', 
                 'realistic, colorful, 8k, highly detailed, trending on artstation', 
                 'Extremely ultra-realistic photorealistic 3d, professional photography, natural lighting, volumetric lighting maximalist photo illustration 8k resolution detailed, elegant', 
-                'by vincent van gogh',
-                'flat, illustration, 4k',
                 'captured in a painting with unparalleled detail and resolution at 64k',
                 'Scratchy pen strokes, colored pen, blind contour, fisheye perspective close-up, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, minimalist realistic, anime proportions, distorted perspective'
                 'dramatic lighting, shot on leica, dark aesthetic',
@@ -53,15 +52,14 @@ class UserProfileHost():
             ]
         if extend_original_prompt:
             for prompt in [original_prompt + ',' + add for add in add_ons]:
-                self.axis.append(self.clip_embedding(prompt))
+                self.embedding_axis.append(self.clip_embedding(prompt))
         else:
             for prompt in add_ons:
-                self.axis.append(self.clip_embedding(prompt))
+                self.embedding_axis.append(self.clip_embedding(prompt))
 
-        self.num_axis = len(self.axis) + 1
-        self.axis = torch.stack(self.axis)
-        self.latent_base = torch.randn((1, pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
-        self.latent_direction = torch.randn((1, pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device) - self.latent_base
+        self.embedding_axis = torch.stack(self.embedding_axis)
+        self.latent_axis = torch.randn((n_latent_axis, pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
+        self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
@@ -102,25 +100,17 @@ class UserProfileHost():
             clip_embeddings (Tensor): The respective clip embeddings.
         '''
 
-        latent_factors = user_embeddings[:,-1]
-        user_embeddings = user_embeddings[:,:-1]
+        latent_factors = user_embeddings[:,-self.latent_axis.shape[0]:]
+        user_embeddings = user_embeddings[:,:-self.latent_axis.shape[0]]
 
-        # r = n_rec
-        # a = n_axis
-        # t = n_tokens
-        # e = embedding_size
-        product = torch.einsum('ra,ate->rte', user_embeddings, self.axis)
+        # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
+        product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
         length = torch.linalg.vector_norm(self.center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
-        total = (self.center + product)
-        total = total / torch.linalg.vector_norm(total, ord=2, dim=-1, keepdim=True) * length
+        clip_embeddings = (self.center + product)
+        clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
-        # TODO (Find better implementation)
-        latents = []
-        for factor in latent_factors:
-            latent = self.latent_base + factor * self.latent_direction
-            latents.append(latent)
-        latents = torch.cat(latents)
-        return (total, latents)
+        latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
+        return (clip_embeddings, latents)
     
     def fit_user_profile(self, preferences: Tensor):
         '''

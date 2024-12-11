@@ -160,7 +160,9 @@ class WebUI:
             original_prompt=self.user_prompt,
             add_ons=None,
             recommendation_type=self.recommendation_type,
-            cache_dir=self.args.path.cache_dir
+            cache_dir=self.args.path.cache_dir,
+            n_latent_axis=self.args.recommender.n_latent_axis,
+            extend_original_prompt=self.args.recommender.extend_original_prompt
         )
     
     def generate_images(self):
