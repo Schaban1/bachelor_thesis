@@ -20,6 +20,9 @@ class UserProfileHost():
         # Some Clip Hyperparameters
         self.embedding_dim = 768
         self.n_clip_tokens = 77
+        self.height = 512
+        self.width = 512
+        self.device = 'cpu'
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         pipe = StableDiffusionPipeline.from_pretrained(
@@ -28,7 +31,6 @@ class UserProfileHost():
         )
         self.tokenizer = pipe.tokenizer
         self.text_encoder = pipe.text_encoder
-        pipe = None
         
         # Define the center of the user_space with the original prompt embedding
         self.center = self.clip_embedding(original_prompt)
@@ -55,8 +57,11 @@ class UserProfileHost():
         else:
             for prompt in add_ons:
                 self.axis.append(self.clip_embedding(prompt))
-        self.num_axis = len(self.axis)
+
+        self.num_axis = len(self.axis) + 1
         self.axis = torch.stack(self.axis)
+        self.latent_base = torch.randn((1, pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
+        self.latent_direction = torch.randn((1, pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device) - self.latent_base
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
@@ -65,8 +70,11 @@ class UserProfileHost():
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
 
+        # Remove Pipe to save memory
+        pipe = None
+
         # Some Bayesian Optimization Hyperparameters
-        self.bounds = (0. , 2.)
+        self.bounds = (0. , 1.)
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
@@ -93,6 +101,10 @@ class UserProfileHost():
         Returns
             clip_embeddings (Tensor): The respective clip embeddings.
         '''
+
+        latent_factors = user_embeddings[:,-1]
+        user_embeddings = user_embeddings[:,:-1]
+
         # r = n_rec
         # a = n_axis
         # t = n_tokens
@@ -101,8 +113,15 @@ class UserProfileHost():
         length = torch.linalg.vector_norm(self.center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
         total = (self.center + product)
         total = total / torch.linalg.vector_norm(total, ord=2, dim=-1, keepdim=True) * length
-        return total
 
+        # TODO (Find better implementation)
+        latents = []
+        for factor in latent_factors:
+            latent = self.latent_base + factor * self.latent_direction
+            latents.append(latent)
+        latents = torch.cat(latents)
+        return (total, latents)
+    
     def fit_user_profile(self, preferences: Tensor):
         '''
         This function initializes and fits a gaussian process for the available user preferences that can subsequently be used to 
@@ -158,5 +177,5 @@ class UserProfileHost():
             self.embeddings = user_space_embeddings
 
         # Transform embeddings from user_space to CLIP space
-        clip_embeddings = self.inv_transform(user_space_embeddings).cpu()
+        clip_embeddings = self.inv_transform(user_space_embeddings)
         return clip_embeddings

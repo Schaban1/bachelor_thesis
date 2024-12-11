@@ -67,42 +67,23 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
-
-        if self.random_latents:
-            latents = torch.randn(
-            (self.n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
-            device=self.device,
-            )
+        if type(embedding) == tuple:
+            latent = embedding[1]
+            embedding = embedding[0]
         else:
-            latents = self.latents
-
-        if type(embedding) != tuple:
-            return self.pipe(height=self.height,
-                width=self.width,
-                num_images_per_prompt=1,
-                prompt_embeds=embedding,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=7,
-                latents=latents,
-            ).images
+            if self.random_latents:
+                latent = torch.randn(
+                (self.n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
+                device=self.device,
+                )
+            else:
+                latent = self.latents
 
         return self.pipe(height=self.height,
             width=self.width,
             num_images_per_prompt=1,
-            prompt_embeds=embedding[0],
-            negative_prompt_embeds=embedding[1],
+            prompt_embeds=embedding,
             num_inference_steps=self.num_inference_steps,
             guidance_scale=7,
-            latents=latents,
+            latents=latent,
         ).images
-
-
-
-if __name__ == "__main__":
-    gen = Generator(n_images=1, cache_dir=None)
-    embed = gen.embed_prompt("A cinematic shot of a baby racoon wearing an intricate italian priest robe.")
-    print(embed[0].shape)
-    print(embed[1].shape)
-    img = gen.generate_image(embed[0])
-    img[0].save("../output/3.png")
-    print(img)
