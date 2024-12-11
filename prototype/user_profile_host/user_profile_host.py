@@ -24,7 +24,7 @@ class UserProfileHost():
         self.n_clip_tokens = 77
         self.height = 512
         self.width = 512
-        self.device = 'cpu'
+        self.device = 'cuda'
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:     
@@ -60,7 +60,7 @@ class UserProfileHost():
                 self.embedding_axis.append(self.clip_embedding(prompt))
 
         self.embedding_axis = torch.stack(self.embedding_axis)
-        self.latent_axis = torch.randn((n_latent_axis, pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
+        self.latent_axis = torch.randn((n_latent_axis, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
         self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
 
         # Placeholder for the already evaluated embeddings of the current user
@@ -69,9 +69,6 @@ class UserProfileHost():
 
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
-
-        # Remove Pipe to save memory
-        pipe = None
 
         # Some Bayesian Optimization Hyperparameters
         self.bounds = (0. , 1.)
@@ -101,6 +98,7 @@ class UserProfileHost():
         Returns
             clip_embeddings (Tensor): The respective clip embeddings.
         '''
+        user_embeddings = user_embeddings.to(self.device)
 
         latent_factors = user_embeddings[:,-self.latent_axis.shape[0]:]
         user_embeddings = user_embeddings[:,:-self.latent_axis.shape[0]]
@@ -112,7 +110,7 @@ class UserProfileHost():
         clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
         latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
-        return (clip_embeddings.cpu(), latents.cpu())
+        return (clip_embeddings, latents)
     
     def fit_user_profile(self, preferences: Tensor):
         '''
@@ -140,7 +138,7 @@ class UserProfileHost():
                             padding="max_length",
                             max_length=self.tokenizer.model_max_length,
                             truncation=True,
-                            return_tensors="pt",)
+                            return_tensors="pt",).to(self.device)
 
         prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0]
         return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)

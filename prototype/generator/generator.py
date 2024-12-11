@@ -19,7 +19,7 @@ class GeneratorBase(ABC):
 
 class Generator(GeneratorBase):
     def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', 
-                 num_inference_steps : int = 20, device : str = 'cpu', random_latents : bool = False):
+                 num_inference_steps : int = 20, device : str = 'cuda', random_latents : bool = False):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
@@ -68,8 +68,8 @@ class Generator(GeneratorBase):
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
         if type(embedding) == tuple:
-            latent = embedding[1]
-            embedding = embedding[0]
+            latent = embedding[1].to(self.device)
+            embedding = embedding[0].to(self.device)
         else:
             if self.random_latents:
                 latent = torch.randn(
