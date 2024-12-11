@@ -112,7 +112,7 @@ class UserProfileHost():
         clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
         latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
-        return (clip_embeddings, latents)
+        return (clip_embeddings.cpu(), latents.cpu())
     
     def fit_user_profile(self, preferences: Tensor):
         '''
