@@ -160,6 +160,7 @@ class WebUI:
             original_prompt=self.user_prompt,
             add_ons=None,
             recommendation_type=self.recommendation_type,
+            stable_dif_pipe=self.generator.pipe,
             cache_dir=self.args.path.cache_dir
         )
     

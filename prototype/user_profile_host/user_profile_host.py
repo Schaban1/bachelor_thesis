@@ -14,6 +14,7 @@ class UserProfileHost():
             add_ons : list = None,
             extend_original_prompt : bool = True,
             recommendation_type : str = RecommendationType.FUNCTION_BASED, 
+            stable_dif_pipe : StableDiffusionPipeline = None,
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/'
             ):
@@ -22,13 +23,13 @@ class UserProfileHost():
         self.n_clip_tokens = 77
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
-        pipe = StableDiffusionPipeline.from_pretrained(
-            pretrained_model_name_or_path=hf_model_name,
-            cache_dir=cache_dir
-        )
-        self.tokenizer = pipe.tokenizer
-        self.text_encoder = pipe.text_encoder
-        pipe = None
+        if not stable_dif_pipe:     
+            stable_dif_pipe = StableDiffusionPipeline.from_pretrained(
+                pretrained_model_name_or_path=hf_model_name,
+                cache_dir=cache_dir
+            )
+        self.tokenizer = stable_dif_pipe.tokenizer
+        self.text_encoder = stable_dif_pipe.text_encoder
         
         # Define the center of the user_space with the original prompt embedding
         self.center = self.clip_embedding(original_prompt)
