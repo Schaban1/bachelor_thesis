@@ -25,6 +25,7 @@ class UserProfileHost():
         self.height = 512
         self.width = 512
         self.device = 'cuda'
+        self.n_latent_axis = n_latent_axis
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:     
@@ -109,7 +110,7 @@ class UserProfileHost():
         clip_embeddings = (self.center + product)
         clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
-        latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
+        latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis) / self.n_latent_axis
         return (clip_embeddings, latents)
     
     def fit_user_profile(self, preferences: Tensor):
