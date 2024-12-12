@@ -25,6 +25,7 @@ class UserProfileHost():
         self.n_clip_tokens = 77
         self.height = 512
         self.width = 512
+        self.latent_space_length = 15.55
         self.device = 'cuda'
         self.n_latent_axis = n_latent_axis
 
@@ -51,7 +52,7 @@ class UserProfileHost():
                 'captured in a painting with unparalleled detail and resolution at 64k',
                 'Scratchy pen strokes, colored pen, blind contour, fisheye perspective close-up, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, minimalist realistic, anime proportions, distorted perspective'
                 'dramatic lighting, shot on leica, dark aesthetic',
-                'detailed scene, red, perfect face, intricately detailed photorealism, trending on artstation, neon lights, rainy day, ray-traced environment, vintage 90s anime artwork',
+                'detailed scene, red, intricately detailed photorealism, trending on artstation, neon lights, rainy day, ray-traced environment, vintage 90s anime artwork',
                 'in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel'
             ]
         if extend_original_prompt:
@@ -118,6 +119,7 @@ class UserProfileHost():
 
         if self.n_latent_axis:
             latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
+            latents = latents / torch.linalg.matrix_norm(latents, ord=2, dim=(-2, -1), keepdim=True) * self.latent_space_length
             return (clip_embeddings, latents)
         else:
             return clip_embeddings
