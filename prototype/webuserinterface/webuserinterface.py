@@ -161,10 +161,8 @@ class WebUI:
             add_ons=None,
             recommendation_type=self.recommendation_type,
             cache_dir=self.args.path.cache_dir,
-            n_latent_axis=self.args.recommender.n_latent_axis,
-            bounds=self.args.recommender.bounds,
-            extend_original_prompt=self.args.recommender.extend_original_prompt,
             stable_dif_pipe=self.generator.pipe,
+            **self.args.recommender
         )
     
     def generate_images(self):

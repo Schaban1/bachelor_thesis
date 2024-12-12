@@ -143,9 +143,12 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_axis, bounds=(0., 1.)):
-        self.n_axis = n_axis
-        self.bounds = bounds
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(0., 1.)):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
+        self.embedding_bounds = embedding_bounds
+        self.latent_bounds = latent_bounds
         self.cand_indices = []
         self.beta = 20
         self.reduce_beta = True
@@ -162,17 +165,17 @@ class BayesianRecommender(Recommender):
         # Get embeddings and ratings from user profile
         embeddings, preferences = user_profile
 
-        # Normalize Embeddings
-        embeddings = (embeddings - self.bounds[0]) / self.bounds[1]
-
         # Change Preference shape
         preferences = preferences.reshape(-1, 1)
 
         # Define bounds for search space
-        bounds = torch.tensor([[self.bounds[0] for i in range(self.n_axis)], [self.bounds[1] for i in range(self.n_axis)]])
+        bounds = torch.tensor([
+            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in range(self.n_latent_axis)], 
+            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in range(self.n_latent_axis)]
+        ])
 
         # Get new acquisitions step by step
-        for i in range(n_recommendations):
+        for _ in range(n_recommendations):
             # Build a GP model
             model = SingleTaskGP(train_X=embeddings, train_Y=preferences)
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
@@ -199,9 +202,6 @@ class BayesianRecommender(Recommender):
         # Lower beta if settings require it
         if self.reduce_beta:
             self.beta -= 1
-
-        # Unnormalize embeddings
-        embeddings = embeddings * self.bounds[1] + self.bounds[0]
 
         # Return most promising candidates
         candidates = embeddings[-n_recommendations:]

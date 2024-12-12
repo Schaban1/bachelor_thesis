@@ -17,8 +17,10 @@ class UserProfileHost():
             stable_dif_pipe : StableDiffusionPipeline = None,
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/',
+            n_embedding_axis : int = 8,
             n_latent_axis : int = 2,
-            bounds : tuple = (0., 1.)
+            embedding_bounds : tuple = (0., 1.),
+            latent_bounds : tuple = (1., 5.)
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -28,6 +30,7 @@ class UserProfileHost():
         self.latent_space_length = 15.55
         self.device = 'cuda'
         self.n_latent_axis = n_latent_axis
+        self.n_embedding_axis = n_embedding_axis
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:     
@@ -56,10 +59,10 @@ class UserProfileHost():
                 'in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel'
             ]
         if extend_original_prompt:
-            for prompt in [original_prompt + ',' + add for add in add_ons]:
+            for prompt in [original_prompt + ',' + add for add in add_ons][:n_embedding_axis]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
         else:
-            for prompt in add_ons:
+            for prompt in add_ons[:n_embedding_axis]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
 
         self.embedding_axis = torch.stack(self.embedding_axis)
@@ -78,11 +81,12 @@ class UserProfileHost():
         self.user_profile = None
 
         # Some Bayesian Optimization Hyperparameters
-        self.bounds = bounds
+        self.embedding_bounds = embedding_bounds
+        self.latent_bounds = latent_bounds
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
-            self.recommender = BayesianRecommender(n_axis=self.num_axis, bounds=self.bounds)
+            self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
             self.optimizer = NoOptimizer()
         elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender()
@@ -169,8 +173,9 @@ class UserProfileHost():
         if self.user_profile != None:
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
         else:
-            # The zeros ensure that the original prompt embedding is included
-            user_space_embeddings = torch.cat((torch.zeros(size=(1, self.num_axis)), torch.rand(size=(num_recommendations-1, self.num_axis))))*self.bounds[1]
+            # Start initially with some random embeddings
+            factor =  torch.cat((torch.ones(size=(num_recommendations, self.n_embedding_axis))*self.embedding_bounds[1], torch.ones(size=(num_recommendations, self.n_latent_axis)) * self.latent_bounds[1]), dim=1)
+            user_space_embeddings = torch.rand(size=(num_recommendations, self.num_axis)) * factor
         
         # Safe the user_space_embeddings
         if self.embeddings != None:
