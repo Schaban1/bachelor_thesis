@@ -17,7 +17,8 @@ class UserProfileHost():
             stable_dif_pipe : StableDiffusionPipeline = None,
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/',
-            n_latent_axis : int = 2
+            n_latent_axis : int = 2,
+            bounds : tuple = (0., 1.)
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -61,8 +62,12 @@ class UserProfileHost():
                 self.embedding_axis.append(self.clip_embedding(prompt))
 
         self.embedding_axis = torch.stack(self.embedding_axis)
-        self.latent_axis = torch.randn((n_latent_axis, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
-        self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
+        if n_latent_axis:
+            self.latent_center = torch.randn((1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
+            self.latent_axis = torch.randn((n_latent_axis, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
+            self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
+        else:
+            self.num_axis = self.embedding_axis.shape[0]
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
@@ -72,12 +77,12 @@ class UserProfileHost():
         self.user_profile = None
 
         # Some Bayesian Optimization Hyperparameters
-        self.bounds = (0. , 1.)
+        self.bounds = bounds
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
             self.recommender = BayesianRecommender(n_axis=self.num_axis, bounds=self.bounds)
-            self.optimizer = GaussianProcessOptimizer()
+            self.optimizer = NoOptimizer()
         elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender()
             self.optimizer = MaxPrefOptimizer()
@@ -101,8 +106,9 @@ class UserProfileHost():
         '''
         user_embeddings = user_embeddings.to(self.device)
 
-        latent_factors = user_embeddings[:,-self.latent_axis.shape[0]:]
-        user_embeddings = user_embeddings[:,:-self.latent_axis.shape[0]]
+        if self.n_latent_axis:
+            latent_factors = user_embeddings[:,-self.latent_axis.shape[0]:]
+            user_embeddings = user_embeddings[:,:-self.latent_axis.shape[0]]
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
         product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
@@ -110,8 +116,11 @@ class UserProfileHost():
         clip_embeddings = (self.center + product)
         clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
-        latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis) / self.n_latent_axis
-        return (clip_embeddings, latents)
+        if self.n_latent_axis:
+            latents = self.latent_center + torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis) / self.n_latent_axis
+            return (clip_embeddings, latents)
+        else:
+            return clip_embeddings
     
     def fit_user_profile(self, preferences: Tensor):
         '''

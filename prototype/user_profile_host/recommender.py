@@ -169,7 +169,7 @@ class BayesianRecommender(Recommender):
         preferences = preferences.reshape(-1, 1)
 
         # Define bounds for search space
-        bounds = torch.tensor([[0. for i in range(self.n_axis)], [1. for i in range(self.n_axis)]])
+        bounds = torch.tensor([[self.bounds[0] for i in range(self.n_axis)], [self.bounds[1] for i in range(self.n_axis)]])
 
         # Get new acquisitions step by step
         for i in range(n_recommendations):
@@ -182,7 +182,7 @@ class BayesianRecommender(Recommender):
             acqf = UpperConfidenceBound(model=model, beta=self.beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
-            candidate, score = optimize_acqf(
+            candidate, _ = optimize_acqf(
                 acq_function=acqf,
                 bounds=bounds,
                 q=1,
@@ -191,9 +191,10 @@ class BayesianRecommender(Recommender):
                 options={"batch_limit": 5, "maxiter": 200},
             )
 
-            # Extend data with new candidate to include this information in the next iteration
+            # Extend data with new candidate and predicted preference to include this information in the next iteration
+            pseudo_preference = model.mean_module(candidate).detach()
             embeddings = torch.cat((embeddings, candidate))
-            preferences = torch.cat((preferences, score.reshape(1, 1)))
+            preferences = torch.cat((preferences, pseudo_preference.reshape(1, 1)))
 
         # Lower beta if settings require it
         if self.reduce_beta:
