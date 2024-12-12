@@ -117,7 +117,7 @@ class UserProfileHost():
         clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
         if self.n_latent_axis:
-            latents = self.latent_center + torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis) / self.n_latent_axis
+            latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
             return (clip_embeddings, latents)
         else:
             return clip_embeddings

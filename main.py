@@ -17,7 +17,7 @@ args = DictConfig({
     'random_seed' : 42, 
     'generator' : {'num_inference_steps' : 25, 'random_latents' : False},
     'recommender' : {
-        'n_latent_axis' : 2,
+        'n_latent_axis' : 3,
         'extend_original_prompt' : True,
         'bounds' : (0., 1.)
     }
