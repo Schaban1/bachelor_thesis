@@ -122,7 +122,7 @@ class UserProfileHost():
         clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
         if self.n_latent_axis:
-            latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
+            latents = self.latent_center + torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
             latents = latents / torch.linalg.matrix_norm(latents, ord=2, dim=(-2, -1), keepdim=True) * self.latent_space_length
             return (clip_embeddings, latents)
         else:
@@ -174,8 +174,7 @@ class UserProfileHost():
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
         else:
             # Start initially with some random embeddings
-            factor =  torch.cat((torch.ones(size=(num_recommendations, self.n_embedding_axis))*self.embedding_bounds[1], torch.ones(size=(num_recommendations, self.n_latent_axis)) * self.latent_bounds[1]), dim=1)
-            user_space_embeddings = torch.rand(size=(num_recommendations, self.num_axis)) * factor
+            user_space_embeddings = torch.rand(size=(num_recommendations, self.num_axis))
         
         # Safe the user_space_embeddings
         if self.embeddings != None:

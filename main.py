@@ -19,9 +19,9 @@ args = DictConfig({
     'recommender' : {
         'extend_original_prompt' : True,
         'embedding_bounds' : (0., 1.),
-        'n_embedding_axis' : 5,
-        'latent_bounds' : (1, 5),
-        'n_latent_axis' : 5,
+        'n_embedding_axis' : 8,
+        'latent_bounds' : (0., 1.),
+        'n_latent_axis' : 2,
     }
 })
 seed_everything(args.random_seed)
