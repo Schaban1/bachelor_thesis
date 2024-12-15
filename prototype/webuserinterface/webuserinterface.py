@@ -25,6 +25,16 @@ class WebUI:
 
     @classmethod
     async def create(cls, args):
+        """
+        This method should be used instead of the __init__-method to create an object of the WebUI-class.
+        Usage: ui = await WebUI.create(...) inside an async function.
+
+        Args:
+            args: The config args as an omegaconf.DictConfig object.
+
+        Returns:
+            Created object of type WebUI.
+        """
         self = cls()
         self.session_id = secrets.token_urlsafe(4)
         # Args of global config
