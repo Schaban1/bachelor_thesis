@@ -61,7 +61,8 @@ class WebUI:
         )
 
         # Lists / UI components
-        self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.image_size = (256, 256)
+        self.images = [Image.new('RGB', self.image_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         # Image saving
@@ -138,7 +139,7 @@ class WebUI:
             ngUI.label(f'Your initial prompt:').style('font-size: 150%; font-weight: bold;')
             ngUI.label(self.user_prompt).style('font-size: 150%;').bind_text_from(self, 'user_prompt')
             for i in range(self.num_images_to_generate):
-                self.images_display[i] = ngUI.interactive_image(self.images[i]).classes('w-1028')
+                self.images_display[i] = ngUI.interactive_image(self.images[i]).style(f'width: {self.image_size[0]}px; height: {self.image_size[1]}px; object-fit: scale-down')
                 with self.images_display[i]:
                     ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                 self.scores_slider[i] = ngUI.slider(min=0, max=10, value=0, step=0.1)
