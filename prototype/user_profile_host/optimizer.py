@@ -52,8 +52,8 @@ class WeightedSumOptimizer:
         """
         user_profile = (preferences.reshape(-1) @ embeddings)/preferences.sum()
         return user_profile
-    
-class GaussianProcessOptimizer:
+
+class NoOptimizer:
 
     def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
         """
@@ -61,5 +61,4 @@ class GaussianProcessOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        
         return (embeddings, preferences)

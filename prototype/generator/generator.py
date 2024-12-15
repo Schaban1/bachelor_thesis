@@ -18,7 +18,8 @@ class GeneratorBase(ABC):
 
 
 class Generator(GeneratorBase):
-    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', num_inference_steps : int = 20, device='cpu'):
+    def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', 
+                 num_inference_steps : int = 20, device : str = 'cuda', random_latents : bool = False, guidance_scale : float = 7.):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
@@ -28,7 +29,9 @@ class Generator(GeneratorBase):
         """
         self.height = 512
         self.width = 512
+        self.random_latents = random_latents
         self.num_inference_steps=num_inference_steps
+        self.guidance_scale = guidance_scale
         scheduler = LMSDiscreteScheduler(
             beta_start=0.00085,
             beta_end=0.012,
@@ -53,7 +56,7 @@ class Generator(GeneratorBase):
         ).repeat(n_images, 1, 1, 1)
 
 
-    def generate_image(self, embedding: Tensor | tuple[Tensor, Tensor]) -> list[Image]:
+    def generate_image(self, embedding: Tensor | tuple[Tensor, Tensor], latents : Tensor = None) -> list[Image]:
         """
         Generates a list of image(s) from given embedding
 
@@ -65,33 +68,23 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
-        if type(embedding) != tuple:
-            return self.pipe(height=self.height,
-                width=self.width,
-                num_images_per_prompt=1,
-                prompt_embeds=embedding,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=7,
-                latents=self.latents,
-            ).images
+        embedding = embedding.to(self.device)
+        if latents != None:
+            latents = latents.to(self.device)
+        else:
+            if self.random_latents:
+                latents = torch.randn(
+                (self.n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
+                device=self.device,
+                )
+            else:
+                latents = self.latents
 
         return self.pipe(height=self.height,
             width=self.width,
             num_images_per_prompt=1,
-            prompt_embeds=embedding[0],
-            negative_prompt_embeds=embedding[1],
+            prompt_embeds=embedding,
             num_inference_steps=self.num_inference_steps,
-            guidance_scale=7,
-            latents=self.latents,
+            guidance_scale=self.guidance_scale,
+            latents=latents,
         ).images
-
-
-
-if __name__ == "__main__":
-    gen = Generator(n_images=1, cache_dir=None)
-    embed = gen.embed_prompt("A cinematic shot of a baby racoon wearing an intricate italian priest robe.")
-    print(embed[0].shape)
-    print(embed[1].shape)
-    img = gen.generate_image(embed[0])
-    img[0].save("../output/3.png")
-    print(img)
