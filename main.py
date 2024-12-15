@@ -16,17 +16,17 @@ args = DictConfig({
     'device': device,
     'random_seed' : 42, 
     'generator' : {
-        'num_inference_steps' : 25, 
+        'num_inference_steps' : 30, 
         'guidance_scale':8, 
         'random_latents' : False
     },
     'recommender' : {
         'extend_original_prompt' : True,
-        'embedding_bounds' : (0., 1.),
-        'n_embedding_axis' : 8,
-        'latent_bounds' : (0., 3.),
+        'embedding_bounds' : (-1., 1.),
+        'n_embedding_axis' : 10,
+        'latent_bounds' : (-1., 1.),
         'n_latent_axis' : 3,
-        'use_latent_center' : True
+        'use_latent_center' : False
     }
 })
 seed_everything(args.random_seed)

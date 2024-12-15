@@ -9,6 +9,7 @@ from botorch.exceptions import InputDataWarning
 from botorch.optim import optimize_acqf
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
+from gpytorch.means import ConstantMean, LinearMean
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
 
@@ -168,16 +169,24 @@ class BayesianRecommender(Recommender):
         # Change Preference shape
         preferences = preferences.reshape(-1, 1)
 
+        # Standardize embeddings
+        mean, std = torch.mean(embeddings, dim=0), torch.std(embeddings, dim=0)
+        embeddings_std = (embeddings - mean) / std
+
         # Define bounds for search space
         bounds = torch.tensor([
             [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in range(self.n_latent_axis)], 
             [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in range(self.n_latent_axis)]
         ])
 
+        # Standardize bounds
+        bounds_std = (bounds - mean) / std
+
         # Get new acquisitions step by step
         for _ in range(n_recommendations):
             # Build a GP model
-            model = SingleTaskGP(train_X=embeddings, train_Y=preferences)
+            mean_mod = ConstantMean() # LinearMean(input_size=embeddings_std.shape[-1])
+            model = SingleTaskGP(train_X=embeddings_std, train_Y=preferences, mean_module=mean_mod)
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             mll = fit_gpytorch_mll(mll)
 
@@ -187,7 +196,7 @@ class BayesianRecommender(Recommender):
             # Get the highest scoring candidates out of meshgrid
             candidate, _ = optimize_acqf(
                 acq_function=acqf,
-                bounds=bounds,
+                bounds=bounds_std,
                 q=1,
                 num_restarts=10,
                 raw_samples=512,  # used for intialization heuristic
@@ -195,8 +204,8 @@ class BayesianRecommender(Recommender):
             )
 
             # Extend data with new candidate and predicted preference to include this information in the next iteration
-            pseudo_preference = model.mean_module(candidate).detach()
-            embeddings = torch.cat((embeddings, candidate))
+            pseudo_preference = acqf._mean_and_sigma(X=candidate, compute_sigma=False)[0].detach()
+            embeddings_std = torch.cat((embeddings_std, candidate))
             preferences = torch.cat((preferences, pseudo_preference.reshape(1, 1)))
 
         # Lower beta if settings require it
@@ -204,5 +213,8 @@ class BayesianRecommender(Recommender):
             self.beta -= 1
 
         # Return most promising candidates
-        candidates = embeddings[-n_recommendations:]
+        candidates_std = embeddings_std[-n_recommendations:]
+
+        # Unstandardize and return them
+        candidates = candidates_std * std + mean
         return candidates

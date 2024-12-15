@@ -17,7 +17,7 @@ class UserProfileHost():
             stable_dif_pipe : StableDiffusionPipeline = None,
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/',
-            n_embedding_axis : int = 8,
+            n_embedding_axis : int = 10,
             n_latent_axis : int = 2,
             embedding_bounds : tuple = (0., 1.),
             latent_bounds : tuple = (1., 5.),
@@ -56,7 +56,9 @@ class UserProfileHost():
                 'Scratchy pen strokes, colored pen, blind contour, fisheye perspective close-up, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, minimalist realistic, anime proportions, distorted perspective',
                 'dramatic lighting, shot on leica, dark aesthetic',
                 'detailed scene, red, intricately detailed photorealism, trending on artstation, neon lights, rainy day, ray-traced environment, vintage 90s anime artwork',
-                'in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel'
+                'in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel',
+                'highly textured, genre-defining mixed media collage painting, fringe absurdism, award-winning halftone pattern illustration, simple flowing shapes, subtle shadows, paper texture, minimalist color scheme, inspired by zdzisław beksiński',
+                "full body, unreal, created by alberto seveso, ethereal, featuring an optical illusion, mystical, luminous, with twinkling lights, surreal, showcasing 3d fractals, high resolution, sharp details, soft, with a dreamy glow, translucent, water drops, in 8k resolution, resembling a nebula, beautiful, with a broken glass effect, without a background, stunning, representing something that doesn't even exist, a mythical being exuding energy, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, with a divine presence, unforgettable, impressive"
             ][:self.n_embedding_axis]
         if extend_original_prompt:
             for prompt in [original_prompt + ',' + add for add in add_ons]:
