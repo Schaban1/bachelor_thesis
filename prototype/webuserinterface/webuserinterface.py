@@ -23,9 +23,6 @@ class WebUI:
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
 
-    """
-    This class implements a interactive web user interface for an image generation system.
-    """
     def __init__(self, args):
         self.session_id = secrets.token_urlsafe(4)
         # Args of global config
@@ -42,8 +39,15 @@ class WebUI:
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
         self.user_profile_host_beta = 20
-        self.generator = Generator(n_images=self.num_images_to_generate, cache_dir=self.args.path.cache_dir, num_inference_steps=self.args.generator.num_inference_steps, 
-                                   device=args.device, random_latents=self.args.generator.random_latents, guidance_scale=self.args.generator.guidance_scale)
+        self.generator = Generator(
+            n_images=self.num_images_to_generate,
+            cache_dir=self.args.path.cache_dir,
+            num_inference_steps=self.args.generator.num_inference_steps,
+            device=self.args.device,
+            random_latents=self.args.generator.random_latents,
+            guidance_scale=self.args.generator.guidance_scale
+        )
+        
         # Lists / UI components
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
