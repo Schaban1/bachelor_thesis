@@ -33,7 +33,7 @@ class UserProfileHost():
         self.n_embedding_axis = n_embedding_axis
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
-        if not stable_dif_pipe:     
+        if not stable_dif_pipe:
             stable_dif_pipe = StableDiffusionPipeline.from_pretrained(
                 pretrained_model_name_or_path=hf_model_name,
                 cache_dir=cache_dir

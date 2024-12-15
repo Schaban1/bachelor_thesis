@@ -14,6 +14,9 @@ from prototype.generator.generator import Generator
 
 
 class WebUI:
+    """
+    This class implements a interactive web user interface for an image generation system.
+    """
     is_initial_iteration = binding.BindableProperty()
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
