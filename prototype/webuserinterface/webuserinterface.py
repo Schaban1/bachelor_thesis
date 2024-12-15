@@ -23,7 +23,9 @@ class WebUI:
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
 
-    def __init__(self, args):
+    @classmethod
+    async def create(cls, args):
+        self = cls()
         self.session_id = secrets.token_urlsafe(4)
         # Args of global config
         self.args = args
@@ -47,7 +49,7 @@ class WebUI:
             random_latents=self.args.generator.random_latents,
             guidance_scale=self.args.generator.guidance_scale
         )
-        
+
         # Lists / UI components
         self.images = [Image.new('RGB', (512, 512)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
@@ -57,6 +59,7 @@ class WebUI:
         self.num_images_saved = 0
 
         self.queue_lock = threading.Lock()
+        return self
 
     def run(self):
         """
