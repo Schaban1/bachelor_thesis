@@ -12,7 +12,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 args = DictConfig({
     'path' : {'cache_dir' : './cache/', 'images_save_dir': './saved_images/'}, 
     'num_recommendations' : 5, 
-    'port': 2048,
+    'port': 8080,
     'device': device,
     'random_seed' : 42, 
     'generator' : {
