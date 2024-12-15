@@ -25,7 +25,7 @@ args = DictConfig({
         'embedding_bounds' : (0., 1.),
         'n_embedding_axis' : 8,
         'latent_bounds' : (0., 3.),
-        'n_latent_axis' : 2,
+        'n_latent_axis' : 3,
         'use_latent_center' : True
     }
 })

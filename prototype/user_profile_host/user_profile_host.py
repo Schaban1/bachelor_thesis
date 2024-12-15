@@ -42,7 +42,7 @@ class UserProfileHost():
         self.text_encoder = stable_dif_pipe.text_encoder
         
         # Define the center of the user_space with the original prompt embedding
-        self.center = self.clip_embedding(original_prompt)
+        self.embedding_center = self.clip_embedding(original_prompt)
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
@@ -53,16 +53,16 @@ class UserProfileHost():
                 'realistic, colorful, 8k, highly detailed, trending on artstation', 
                 'Extremely ultra-realistic photorealistic 3d, professional photography, natural lighting, volumetric lighting maximalist photo illustration 8k resolution detailed, elegant', 
                 'captured in a painting with unparalleled detail and resolution at 64k',
-                'Scratchy pen strokes, colored pen, blind contour, fisheye perspective close-up, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, minimalist realistic, anime proportions, distorted perspective'
+                'Scratchy pen strokes, colored pen, blind contour, fisheye perspective close-up, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, minimalist realistic, anime proportions, distorted perspective',
                 'dramatic lighting, shot on leica, dark aesthetic',
                 'detailed scene, red, intricately detailed photorealism, trending on artstation, neon lights, rainy day, ray-traced environment, vintage 90s anime artwork',
                 'in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel'
-            ]
+            ][:self.n_embedding_axis]
         if extend_original_prompt:
-            for prompt in [original_prompt + ',' + add for add in add_ons][:n_embedding_axis]:
+            for prompt in [original_prompt + ',' + add for add in add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
         else:
-            for prompt in add_ons[:n_embedding_axis]:
+            for prompt in add_ons:
                 self.embedding_axis.append(self.clip_embedding(prompt))
 
         self.embedding_axis = torch.stack(self.embedding_axis)
@@ -115,8 +115,8 @@ class UserProfileHost():
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
         product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
-        length = torch.linalg.vector_norm(self.center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
-        clip_embeddings = (self.center + product)
+        length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
+        clip_embeddings = (self.embedding_center + product)
         clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
         latents = None
@@ -134,7 +134,7 @@ class UserProfileHost():
         Parameters:
             preferences (Tensor) : Preferences regarding the embeddings recommended last as real valued numbers.
         '''
-        # Initialize or extend the available user related data
+        # Initialize or extend the available user related data 
         if self.preferences == None:
             self.preferences = preferences
         else:
