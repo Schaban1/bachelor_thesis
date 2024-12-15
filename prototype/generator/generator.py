@@ -19,7 +19,7 @@ class GeneratorBase(ABC):
 
 class Generator(GeneratorBase):
     def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', 
-                 num_inference_steps : int = 20, device : str = 'cuda', random_latents : bool = False):
+                 num_inference_steps : int = 20, device : str = 'cuda', random_latents : bool = False, guidance_scale : float = 7.):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
@@ -31,6 +31,7 @@ class Generator(GeneratorBase):
         self.width = 512
         self.random_latents = random_latents
         self.num_inference_steps=num_inference_steps
+        self.guidance_scale = guidance_scale
         scheduler = LMSDiscreteScheduler(
             beta_start=0.00085,
             beta_end=0.012,
@@ -84,6 +85,6 @@ class Generator(GeneratorBase):
             num_images_per_prompt=1,
             prompt_embeds=embedding,
             num_inference_steps=self.num_inference_steps,
-            guidance_scale=7,
+            guidance_scale=self.guidance_scale,
             latents=latents,
         ).images
