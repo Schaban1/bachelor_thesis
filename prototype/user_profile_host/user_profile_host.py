@@ -20,7 +20,8 @@ class UserProfileHost():
             n_embedding_axis : int = 8,
             n_latent_axis : int = 2,
             embedding_bounds : tuple = (0., 1.),
-            latent_bounds : tuple = (1., 5.)
+            latent_bounds : tuple = (1., 5.),
+            use_latent_center: bool = True,
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -28,7 +29,6 @@ class UserProfileHost():
         self.height = 512
         self.width = 512
         self.latent_space_length = 15.55
-        self.device = 'cuda'
         self.n_latent_axis = n_latent_axis
         self.n_embedding_axis = n_embedding_axis
 
@@ -67,8 +67,8 @@ class UserProfileHost():
 
         self.embedding_axis = torch.stack(self.embedding_axis)
         if n_latent_axis:
-            self.latent_center = torch.randn((1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
-            self.latent_axis = torch.randn((n_latent_axis, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8), device=self.device)
+            self.latent_center = torch.randn((1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)) if use_latent_center else torch.zeros(size=(1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8))
+            self.latent_axis = torch.randn((n_latent_axis, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8))
             self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
         else:
             self.num_axis = self.embedding_axis.shape[0]
@@ -109,8 +109,6 @@ class UserProfileHost():
         Returns
             clip_embeddings (Tensor): The respective clip embeddings.
         '''
-        user_embeddings = user_embeddings.to(self.device)
-
         if self.n_latent_axis:
             latent_factors = user_embeddings[:,-self.latent_axis.shape[0]:]
             user_embeddings = user_embeddings[:,:-self.latent_axis.shape[0]]
@@ -121,12 +119,12 @@ class UserProfileHost():
         clip_embeddings = (self.center + product)
         clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
 
+        latents = None
         if self.n_latent_axis:
             latents = self.latent_center + torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
             latents = latents / torch.linalg.matrix_norm(latents, ord=2, dim=(-2, -1), keepdim=True) * self.latent_space_length
-            return (clip_embeddings, latents)
-        else:
-            return clip_embeddings
+
+        return clip_embeddings, latents
     
     def fit_user_profile(self, preferences: Tensor):
         '''
@@ -154,7 +152,7 @@ class UserProfileHost():
                             padding="max_length",
                             max_length=self.tokenizer.model_max_length,
                             truncation=True,
-                            return_tensors="pt",).to(self.device)
+                            return_tensors="pt",)
 
         prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0]
         return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
@@ -183,5 +181,5 @@ class UserProfileHost():
             self.embeddings = user_space_embeddings
 
         # Transform embeddings from user_space to CLIP space
-        clip_embeddings = self.inv_transform(user_space_embeddings)
-        return clip_embeddings
+        clip_embeddings, latents = self.inv_transform(user_space_embeddings)
+        return clip_embeddings, latents

@@ -55,7 +55,7 @@ class Generator(GeneratorBase):
         ).repeat(n_images, 1, 1, 1)
 
 
-    def generate_image(self, embedding: Tensor | tuple[Tensor, Tensor]) -> list[Image]:
+    def generate_image(self, embedding: Tensor | tuple[Tensor, Tensor], latents : Tensor = None) -> list[Image]:
         """
         Generates a list of image(s) from given embedding
 
@@ -67,17 +67,17 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
-        if type(embedding) == tuple:
-            latent = embedding[1].to(self.device)
-            embedding = embedding[0].to(self.device)
+        embedding = embedding.to(self.device)
+        if latents != None:
+            latents = latents.to(self.device)
         else:
             if self.random_latents:
-                latent = torch.randn(
+                latents = torch.randn(
                 (self.n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
                 device=self.device,
                 )
             else:
-                latent = self.latents
+                latents = self.latents
 
         return self.pipe(height=self.height,
             width=self.width,
@@ -85,5 +85,5 @@ class Generator(GeneratorBase):
             prompt_embeds=embedding,
             num_inference_steps=self.num_inference_steps,
             guidance_scale=7,
-            latents=latent,
+            latents=latents,
         ).images

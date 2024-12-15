@@ -171,8 +171,8 @@ class WebUI:
         images of the generator in self.images.
         """
         with self.queue_lock:
-            embeddings = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
-            self.images = self.generator.generate_image(embeddings)
+            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
+            self.images = self.generator.generate_image(embeddings, latents)
     
     def update_image_displays(self):
         """
