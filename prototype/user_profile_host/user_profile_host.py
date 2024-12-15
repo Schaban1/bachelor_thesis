@@ -152,9 +152,9 @@ class UserProfileHost():
                             padding="max_length",
                             max_length=self.tokenizer.model_max_length,
                             truncation=True,
-                            return_tensors="pt",)
+                            return_tensors="pt",).to(self.text_encoder.device)
 
-        prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0]
+        prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
         return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
 
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
