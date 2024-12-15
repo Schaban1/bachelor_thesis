@@ -155,12 +155,7 @@ class WebUI:
         """
         Builds the score buttons for an image.
         """
-        with ngUI.button_group().props('rounded'):
-            ngUI.button(text='😢').props('flat fab color=black').style('font-size: 200%; padding:0;')
-            ngUI.button(text='🙁').props('flat fab color=black').style('font-size: 200%; padding:0;')
-            ngUI.button(text='😐').props('flat fab color=black').style('font-size: 200%; padding:0;')
-            ngUI.button(text='😄').props('flat fab color=black').style('font-size: 200%; padding:0;')
-            ngUI.button(text='😍').props('flat fab color=black').style('font-size: 200%; padding:0;')
+        ngUI.toggle({0: '😢', 1: '🙁', 2: '😐', 3: '😄', 4: '😍'}, value=0).props('rounded')
     
     def build_loading_spinner_userinterface(self):
         """
