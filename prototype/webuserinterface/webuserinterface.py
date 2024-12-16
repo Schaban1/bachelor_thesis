@@ -55,8 +55,7 @@ class WebUI:
             n_images=self.num_images_to_generate,
             cache_dir=self.args.path.cache_dir,
             device=self.args.device,
-            **self.args.generator
-        
+            **self.args.generator        
         )
         # Lists / UI components
         self.image_size = (256, 256)

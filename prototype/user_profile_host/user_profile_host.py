@@ -33,7 +33,7 @@ class UserProfileHost():
         self.n_latent_axis = n_latent_axis
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
-        self.user_latent_center = use_latent_center
+        self.use_latent_center = use_latent_center
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:
