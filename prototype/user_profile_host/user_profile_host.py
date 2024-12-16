@@ -18,8 +18,9 @@ class UserProfileHost():
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/',
             n_embedding_axis : int = 10,
-            n_latent_axis : int = 2,
             embedding_bounds : tuple = (0., 1.),
+            use_embedding_center: bool = True,
+            n_latent_axis : int = 2,
             latent_bounds : tuple = (1., 5.),
             use_latent_center: bool = True,
             ):
@@ -31,6 +32,8 @@ class UserProfileHost():
         self.latent_space_length = 15.55
         self.n_latent_axis = n_latent_axis
         self.n_embedding_axis = n_embedding_axis
+        self.use_embedding_center = use_embedding_center
+        self.user_latent_center = use_latent_center
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:     
@@ -43,6 +46,9 @@ class UserProfileHost():
         
         # Define the center of the user_space with the original prompt embedding
         self.embedding_center = self.clip_embedding(original_prompt)
+        self.embedding_length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False)
+        if not use_latent_center:
+            self.embedding_center = torch.zeros(size=(1, self.n_clip_tokens, self.embedding_dim))
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
@@ -117,9 +123,9 @@ class UserProfileHost():
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
         product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
-        length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
+        embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
         clip_embeddings = (self.embedding_center + product)
-        clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
+        clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * embedding_length
 
         latents = None
         if self.n_latent_axis:
