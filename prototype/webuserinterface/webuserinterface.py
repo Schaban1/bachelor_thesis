@@ -65,6 +65,7 @@ class WebUI:
         self.scores_toggles = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.submit_button = None
         # Image saving
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
@@ -149,7 +150,7 @@ class WebUI:
                         self.scores_toggles[i] = ngUI.toggle({0: '😢', 1: '🙁', 2: '😐', 3: '😄', 4: '😍'}, value=0).props('rounded')
                         #self.scores_slider[i] = ngUI.slider(min=0, max=10, value=0, step=0.1)
                         #ngUI.label().bind_text_from(self.scores_slider[i], 'value')
-            ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
+            self.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
                 ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
     
@@ -176,6 +177,8 @@ class WebUI:
             self.on_number_keystroke(e.key.number)
         if e.key == 's' and e.action.keydown:
             self.on_save_button_click(self.images_display[self.active_image])
+        if e.key.enter and e.action.keydown:
+            self.submit_button.run_method('click')
     
     def update_active_image(self, idx):
         """
