@@ -61,6 +61,7 @@ class WebUI:
         self.image_display_size = (256, 256)
         self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.scores_toggles = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         # Image saving
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
@@ -141,18 +142,12 @@ class WebUI:
                         self.images_display[i] = ngUI.interactive_image(self.images[i]).style(f'width: {self.image_display_size[0]}px; height: {self.image_display_size[1]}px; object-fit: scale-down')
                         with self.images_display[i]:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
-                        self.build_score_buttons()
+                        self.scores_toggles[i] = ngUI.toggle({0: '😢', 1: '🙁', 2: '😐', 3: '😄', 4: '😍'}, value=0).props('rounded')
                         #self.scores_slider[i] = ngUI.slider(min=0, max=10, value=0, step=0.1)
                         #ngUI.label().bind_text_from(self.scores_slider[i], 'value')
             ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
                 ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
-    
-    def build_score_buttons(self):
-        """
-        Builds the score buttons for an image.
-        """
-        ngUI.toggle({0: '😢', 1: '🙁', 2: '😐', 3: '😄', 4: '😍'}, value=0).props('rounded')
     
     def build_loading_spinner_userinterface(self):
         """
@@ -223,7 +218,7 @@ class WebUI:
         self.update_image_displays()
         self.change_state(WebUIState.MAIN_STATE)
     
-    def get_scores(self):
+    def get_scores_slider(self):
         """
         Get the normalized scores provided by the user with the sliders.
 
@@ -234,17 +229,34 @@ class WebUI:
         normalized_scores = scores / 10
         return normalized_scores
     
+    def get_scores_toggles(self):
+        """
+        Get the normalized scores provided by the user with the emoji toggle buttons.
+
+        Returns:
+            The normalized scores as a one-dim tensor of shape (num_images_to_generate).
+        """
+        scores = torch.FloatTensor([toggle.value for toggle in self.scores_toggles])
+        normalized_scores = scores / 4
+        return normalized_scores
+    
     def reset_sliders(self):
         """
         Reset the value of the score sliders to the default value.
         """
         [slider.set_value(0) for slider in self.scores_slider]
     
+    def reset_toggles(self):
+        """
+        Reset the value of the score toggles to the default value.
+        """
+        [toggle.set_value(0) for toggle in self.scores_toggles]
+    
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
         """
-        normalized_scores = self.get_scores()
+        normalized_scores = self.get_scores_toggles()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
         self.user_profile_host_beta -= 1
     
@@ -274,7 +286,7 @@ class WebUI:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.generate_images)
         self.update_image_displays()
-        self.reset_sliders()
+        self.reset_toggles()
         self.change_state(WebUIState.MAIN_STATE)
     
     def on_restart_process_button_click(self):
@@ -282,7 +294,7 @@ class WebUI:
         Restarts the process by starting with the initial iteration again.
         """
         self.change_state(WebUIState.INIT_STATE)
-        self.reset_sliders()
+        self.reset_toggles()
         self.user_profile_host = None
     
     def get_webis_demo_template_html(self):
