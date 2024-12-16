@@ -192,7 +192,7 @@ class WebUI:
         if e.key.enter and e.action.keydown:
             self.submit_button.run_method('click')
     
-    def update_active_image(self, idx):
+    def update_active_image(self, idx=0):
         """
         Updates the active image and its visuals on the UI.
 
@@ -274,7 +274,7 @@ class WebUI:
         await loop.run_in_executor(None, self.generate_images)
         self.update_image_displays()
         self.change_state(WebUIState.MAIN_STATE)
-        self.update_active_image(0)
+        self.update_active_image()
         self.keyboard.active = True
     
     def get_scores_slider(self):
@@ -348,7 +348,7 @@ class WebUI:
         self.update_image_displays()
         self.reset_toggles()
         self.change_state(WebUIState.MAIN_STATE)
-        self.update_active_image(0)
+        self.update_active_image()
         self.keyboard.active = True
     
     def on_restart_process_button_click(self):
