@@ -134,8 +134,19 @@ class WebUI:
         """
         Builds the UI for the main loop iteration state.
         """
+        ngUI.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_main_loop_iteration', value=True):
-            ngUI.label('Please rate these images based on your satisfaction from 0 to 10 using the sliders.').style('font-size: 200%;')
+            with ngUI.row().classes('mx-auto items-center'):
+                ngUI.label('Please rate these images based on your satisfaction.').style('font-size: 200%;')
+                ngUI.button(icon='o_info', on_click=lambda: ngUI.notify(
+                    'Keyboard Controls:\n'
+                    'Left/Right arrow: Navigate through images\n'
+                    '1-5: Score current image\n'
+                    's: Save current image\n'
+                    'Enter: Submit scores',
+                    multi_line=True,
+                    classes='multi-line-notification'
+                )).props('flat fab color=black')
             with ngUI.row().classes('mx-auto items-center'):
                 ngUI.label(f'Your selected recommendation type:').style('font-size: 150%; font-weight: bold;')
                 ngUI.label(self.recommendation_type).style('font-size: 150%;').bind_text_from(self, 'recommendation_type')
@@ -150,6 +161,7 @@ class WebUI:
                         self.scores_toggles[i] = ngUI.toggle({0: '😢1', 1: '🙁2', 2: '😐3', 3: '😄4', 4: '😍5'}, value=0).props('rounded')
                         #self.scores_slider[i] = ngUI.slider(min=0, max=10, value=0, step=0.1)
                         #ngUI.label().bind_text_from(self.scores_slider[i], 'value')
+            ngUI.space()
             self.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
                 ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
