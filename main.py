@@ -13,6 +13,7 @@ args = DictConfig({
     'path' : {'cache_dir' : './cache/', 'images_save_dir': './saved_images/'}, 
     'num_recommendations' : 5, 
     'port': 8080,
+    'reconnect_timeout': 3,
     'device': device,
     'random_seed' : 42, 
     'generator' : {

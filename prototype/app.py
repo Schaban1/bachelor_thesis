@@ -34,6 +34,6 @@ class App:
         Start the application.
         """
         global global_args
-        ngUI.run(title='Image Generation System Demo', port=global_args.port)
+        ngUI.run(title='Image Generation System Demo', port=global_args.port, reconnect_timeout=global_args.reconnect_timeout)
         start()
     
