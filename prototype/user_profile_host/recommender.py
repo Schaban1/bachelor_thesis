@@ -93,6 +93,7 @@ class SinglePointRecommender(Recommender):
 
 
 class SinglePointWeightedAxesRecommender(Recommender):
+    # TODO: Changes made generated images too similar
 
     def __init__(self, embedding_bounds=(-1., 1.)):
         """
