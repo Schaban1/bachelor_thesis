@@ -47,7 +47,7 @@ class UserProfileHost():
         # Define the center of the user_space with the original prompt embedding
         self.embedding_center = self.clip_embedding(original_prompt)
         self.embedding_length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False)
-        if not use_latent_center:
+        if not self.use_embedding_center:
             self.embedding_center = torch.zeros(size=(1, self.n_clip_tokens, self.embedding_dim))
 
         # Generate axis to define the user profile space with extensions of the original user-promt
@@ -75,7 +75,7 @@ class UserProfileHost():
 
         self.embedding_axis = torch.stack(self.embedding_axis)
         if n_latent_axis:
-            self.latent_center = torch.randn((1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)) if use_latent_center else torch.zeros(size=(1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8))
+            self.latent_center = torch.randn((1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)) if self.use_latent_center else torch.zeros(size=(1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8))
             self.latent_axis = torch.randn((n_latent_axis, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8))
             self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
         else:
