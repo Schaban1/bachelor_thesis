@@ -54,6 +54,11 @@ class Recommender(ABC):  # ABC = Abstract Base Class
 
 
 class SinglePointRecommender(Recommender):
+    def __init__(self, embedding_bounds=(-1., 1.)):
+        """
+        :param embedding_bounds: Used to determine the radius used when embeddings lie on a sphere.
+        """
+        self.embedding_bounds = embedding_bounds
 
     def get_random_samples_on_n_sphere(self, n_dims: int = 10, radius: float = 1.0, n_samples: int = 5) -> Tensor:
         """
@@ -77,9 +82,10 @@ class SinglePointRecommender(Recommender):
         :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
             user_profile where n_dims is the dimensionality of the user_profile.
         """
+        radius = abs(self.embedding_bounds[0] - self.embedding_bounds[1]) / 2  # radius of sphere
 
         # recommendations on the surface of a sphere around the 0-center
-        zero_centered_generated_points = self.get_random_samples_on_n_sphere(n_dims=len(user_profile),
+        zero_centered_generated_points = self.get_random_samples_on_n_sphere(n_dims=len(user_profile), radius=radius,
                                                                              n_samples=n_recommendations)
 
         # move the points s.t. the user profile is the center
@@ -88,18 +94,23 @@ class SinglePointRecommender(Recommender):
 
 class SinglePointWeightedAxesRecommender(Recommender):
 
-    def recommend_on_sphere(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+    def __init__(self, embedding_bounds=(-1., 1.)):
+        """
+        :param embedding_bounds: Used to determine the reference points for the axes and the radius used when
+            embeddings lie on a sphere.
+        """
+        self.embedding_bounds = embedding_bounds
+
+    def recommend_on_sphere(self, user_profile: Tensor, n_recommendations: int = 5, radius: float = 1.0) -> Tensor:
         """
         Uses SLERP to interpolate between the user profile and the axes of the user space.
         In this case, the points are on the surface of the sphere.
         The generated points are interpolated between the user profile and one axes.
+        :param radius: Radius of the sphere.
         :param user_profile: Low-dimensional user profile.
         :param n_recommendations: Number of recommendations to return.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations on the surface of the sphere.
         """
-        # hyperparameter
-        radius = 1.0
-
         # weights for influence of axes: random integer between 0 and n_recommendations
         weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))  # random weights for axes
 
@@ -124,12 +135,15 @@ class SinglePointWeightedAxesRecommender(Recommender):
         :param n_recommendations: Number of recommendations to return.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
+        # hyperparameter
+        radius = abs(
+            self.embedding_bounds[0] - self.embedding_bounds[1]) / 2  # radius of sphere or reference points on axes
         on_sphere = False  # whether recommendations should be on the sphere or not
-        axes = torch.eye(user_profile.shape[0])
 
         if on_sphere:  # usage of SLERP
-            return self.recommend_on_sphere(user_profile, n_recommendations)
+            return self.recommend_on_sphere(user_profile, n_recommendations, radius=radius)
 
+        axes = torch.multiply(torch.eye(user_profile.shape[0]), radius)
         matrix = torch.cat((axes, user_profile.unsqueeze(0)), dim=0)
 
         # random weights for axes for each recommendation
@@ -175,8 +189,10 @@ class BayesianRecommender(Recommender):
 
         # Define bounds for search space
         bounds = torch.tensor([
-            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in range(self.n_latent_axis)], 
-            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in range(self.n_latent_axis)]
+            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in
+                                                                                range(self.n_latent_axis)],
+            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in
+                                                                                range(self.n_latent_axis)]
         ])
 
         # Standardize bounds
@@ -185,7 +201,7 @@ class BayesianRecommender(Recommender):
         # Get new acquisitions step by step
         for _ in range(n_recommendations):
             # Build a GP model
-            mean_mod = ConstantMean() # LinearMean(input_size=embeddings_std.shape[-1])
+            mean_mod = ConstantMean()  # LinearMean(input_size=embeddings_std.shape[-1])
             model = SingleTaskGP(train_X=embeddings_std, train_Y=preferences, mean_module=mean_mod)
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             mll = fit_gpytorch_mll(mll)
