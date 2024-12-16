@@ -24,7 +24,7 @@ args = DictConfig({
     'recommender' : {
         'extend_original_prompt' : True,
         'n_embedding_axis' : 10,
-        'embedding_bounds' : (0., 1.),
+        'embedding_bounds' : (-5. ,5.), #(0., 1.),
         'use_embedding_center' : True,
         'n_latent_axis' : 3,
         'latent_bounds' : (0., 1.),
