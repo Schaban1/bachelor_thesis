@@ -1,6 +1,7 @@
 import os
 from nicegui import ui as ngUI
 from nicegui import binding
+from nicegui.events import KeyEventArguments
 from PIL import Image
 import torch
 from functools import partial
@@ -62,12 +63,14 @@ class WebUI:
         self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_toggles = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.active_image = 0
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         # Image saving
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
 
         self.queue_lock = threading.Lock()
+        self.keyboard = None
         return self
 
     def run(self):
@@ -106,6 +109,7 @@ class WebUI:
         - Webis demo template bottom half/footer.
         """
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
+        self.keyboard = ngUI.keyboard(on_key=self.handle_key, active=False)
         with ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif'):
             ngUI.html(webis_template_top).classes('w-full')
             self.build_initial_userinterface()
@@ -156,6 +160,44 @@ class WebUI:
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_generating', value=True):
             ngUI.label('Generating images...').style('font-size: 200%;')
             ngUI.spinner(size='128px')
+    
+    def handle_key(self, e: KeyEventArguments):
+        """
+        Handles key events.
+
+        Args:
+            e: KeyEvent args.
+        """
+        if e.key.arrow_right and e.action.keydown:
+            self.update_active_image(self.active_image + 1)
+        if e.key.arrow_left and e.action.keydown:
+            self.update_active_image(self.active_image - 1)
+        if e.key in ['1', '2', '3', '4', '5'] and e.action.keydown:
+            self.on_number_keystroke(e.key.number)
+        if e.key == 's' and e.action.keydown:
+            self.on_save_button_click(self.images_display[self.active_image])
+    
+    def update_active_image(self, idx):
+        """
+        Updates the active image and its visuals on the UI.
+
+        Args:
+            idx: The image index of the new active image.
+        """
+        idx = idx % self.num_images_to_generate
+        self.images_display[self.active_image].style('border-color: transparent')
+        self.active_image = idx
+        self.images_display[idx].style('border-width: 4px; border-color: red')
+    
+    def on_number_keystroke(self, key):
+        """
+        Updates the score for the active image upon typing one of the valid number keys.
+
+        Args:
+            key: The number of the key typed.
+        """
+        self.scores_toggles[self.active_image].value = key - 1
+        self.update_active_image(self.active_image + 1)
     
     def on_user_prompt_input(self, new_user_prompt):
         """
@@ -217,6 +259,8 @@ class WebUI:
         await loop.run_in_executor(None, self.generate_images)
         self.update_image_displays()
         self.change_state(WebUIState.MAIN_STATE)
+        self.update_active_image(0)
+        self.keyboard.active = True
     
     def get_scores_slider(self):
         """
@@ -282,18 +326,22 @@ class WebUI:
         self.update_user_profile()
         ngUI.notify('Scores submitted!')
         self.change_state(WebUIState.GENERATING_STATE)
+        self.keyboard.active = False
         ngUI.notify('Generating new images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.generate_images)
         self.update_image_displays()
         self.reset_toggles()
         self.change_state(WebUIState.MAIN_STATE)
+        self.update_active_image(0)
+        self.keyboard.active = True
     
     def on_restart_process_button_click(self):
         """
         Restarts the process by starting with the initial iteration again.
         """
         self.change_state(WebUIState.INIT_STATE)
+        self.keyboard.active = False
         self.reset_toggles()
         self.user_profile_host = None
     
