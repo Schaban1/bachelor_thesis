@@ -55,16 +55,16 @@ class UserProfileHost():
         self.embedding_axis = []
         if not add_ons:
             add_ons = [
-                'a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art', 
-                'realistic, colorful, 8k, highly detailed, trending on artstation', 
-                'Extremely ultra-realistic photorealistic 3d, professional photography, natural lighting, volumetric lighting maximalist photo illustration 8k resolution detailed, elegant', 
-                'captured in a painting with unparalleled detail and resolution at 64k',
-                'Scratchy pen strokes, colored pen, blind contour, fisheye perspective close-up, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, minimalist realistic, anime proportions, distorted perspective',
-                'dramatic lighting, shot on leica, dark aesthetic',
-                'detailed scene, red, intricately detailed photorealism, trending on artstation, neon lights, rainy day, ray-traced environment, vintage 90s anime artwork',
-                'in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel',
-                'highly textured, genre-defining mixed media collage painting, fringe absurdism, award-winning halftone pattern illustration, simple flowing shapes, subtle shadows, paper texture, minimalist color scheme, inspired by zdzisław beksiński',
-                "full body, unreal, created by alberto seveso, ethereal, featuring an optical illusion, mystical, luminous, with twinkling lights, surreal, showcasing 3d fractals, high resolution, sharp details, soft, with a dreamy glow, translucent, water drops, in 8k resolution, resembling a nebula, beautiful, with a broken glass effect, without a background, stunning, representing something that doesn't even exist, a mythical being exuding energy, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, with a divine presence, unforgettable, impressive"
+                "beautiful, moody lighting, best quality, full body portrait, real picture, intricate details, depth of field, in a cold snowstorm, fujifilm xt3, outdoors, beautiful lighting, raw photo, 8k uhd, film grain, unreal engine 5, ray trace",
+                "in the style of liquid metal, vray tracing, raw character, 32k uhd, schlieren photography, conceptual portraiture, wet - on - wet blending",
+                "Detailed, vibrant illustration, full of plants, trees, by herge, in the style of tin-tin comics, vibrant colors, detailed, lots of people, sunny day, beautiful illustration",
+                "Sun profile, halftone pattern, editorial illustration of the memento morti, higly textured, genre defining mixed media collage painting, fringe absurdism, award winning halftone pattern illustration, simple flowing shapes, subtle shadows, paper texture, minimalist color scheme, inspired by zdzisław beksiński",
+                "3d illustration, in the style of fantasy, minimalistic, featuring multiple soft and rounded fractal, complex forms dressed as royal and glamorous in gold and white",
+                "Black, thin lines, all lines have the same mass and weight, continuity can be seen in the common flow of all lines, the lines occupy only the central part of the image, white background",
+                "a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art",
+                "A surreal picture, in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel, nyc explosion coverage",
+                "Realistic, red white and black, made of red coral, mahogany, black obsidian, bloodstone, tourmaline and gold, elegant, diamonds, gold, elegant, masterpiece, concept art, tectonic, gold shiny background, nikon photography, shot photography by wes anderson, kodak color, hd, 300mm",
+                "colored ink mikhail garmash, louis jover, victor cheleg, damien hirst, ivan aizovsky, claude joseph vernet, broken glass effect, no background, amazing, something that doesn’t even exist, mythical creature, energy, molecular, textures, shimmering and luminescent colors, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, three-dimensional light, auras, rays, vibrant colors, broken glass effect, no background, stunning, something that even doesn't exist, mythical being, energy, molecular, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, breathtaking beauty, volumetric light, auras, rays, vivid colors reflects"
             ][:self.n_embedding_axis]
         if extend_original_prompt:
             for prompt in [original_prompt + ',' + add for add in add_ons]:

@@ -11,14 +11,15 @@ from omegaconf import DictConfig
 device = "cuda" if torch.cuda.is_available() else "cpu"
 args = DictConfig({
     'path' : {'cache_dir' : './cache/', 'images_save_dir': './saved_images/'}, 
-    'num_recommendations' : 5, 
+    'num_recommendations' : 3, 
     'port': 2048,
     'device': device,
     'random_seed' : 42, 
     'generator' : {
-        'num_inference_steps' : 30, 
+        'num_inference_steps' : 3, 
         'guidance_scale': 7.5, 
-        'random_latents' : False
+        'random_latents' : False,
+        'use_negative_prompt' : True
     },
     'recommender' : {
         'extend_original_prompt' : True,
