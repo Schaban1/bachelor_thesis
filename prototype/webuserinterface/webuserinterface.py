@@ -155,7 +155,7 @@ class WebUI:
             with ngUI.row().classes('mx-auto items-center'):
                 for i in range(self.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
-                        self.images_display[i] = ngUI.interactive_image(self.images[i]).style(f'width: {self.image_display_size[0]}px; height: {self.image_display_size[1]}px; object-fit: scale-down')
+                        self.images_display[i] = ngUI.interactive_image(self.images[i]).style(f'width: {self.image_display_size[0]}px; height: {self.image_display_size[1]}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                         with self.images_display[i]:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.scores_toggles[i] = ngUI.toggle({0: '😢1', 1: '🙁2', 2: '😐3', 3: '😄4', 4: '😍5'}, value=0).props('rounded')
@@ -200,9 +200,9 @@ class WebUI:
             idx: The image index of the new active image.
         """
         idx = idx % self.num_images_to_generate
-        self.images_display[self.active_image].style('border-color: transparent')
+        self.images_display[self.active_image].style('border-color: lightgray')
         self.active_image = idx
-        self.images_display[idx].style('border-width: 4px; border-color: red')
+        self.images_display[idx].style('border-color: red')
     
     def on_number_keystroke(self, key):
         """
