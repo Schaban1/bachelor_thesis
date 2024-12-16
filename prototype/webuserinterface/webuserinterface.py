@@ -51,7 +51,13 @@ class WebUI:
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
         self.user_profile_host_beta = 20
-        self.generator = Generator(n_images=self.num_images_to_generate, cache_dir=self.args.path.cache_dir, device=args.device, **self.args.generator)
+        self.generator = Generator(
+            n_images=self.num_images_to_generate,
+            cache_dir=self.args.path.cache_dir,
+            device=self.args.device,
+            **self.args.generator
+        
+        )
         # Lists / UI components
         self.image_size = (256, 256)
         self.images = [Image.new('RGB', self.image_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
