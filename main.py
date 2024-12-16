@@ -17,15 +17,16 @@ args = DictConfig({
     'random_seed' : 42, 
     'generator' : {
         'num_inference_steps' : 30, 
-        'guidance_scale':8, 
+        'guidance_scale': 7.5, 
         'random_latents' : False
     },
     'recommender' : {
         'extend_original_prompt' : True,
-        'embedding_bounds' : (-1., 1.),
         'n_embedding_axis' : 10,
-        'latent_bounds' : (-1., 1.),
+        'embedding_bounds' : (-1., 1.),
+        'use_embedding_center' : True,
         'n_latent_axis' : 3,
+        'latent_bounds' : (-1., 1.),
         'use_latent_center' : False
     }
 })
