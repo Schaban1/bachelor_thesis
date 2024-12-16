@@ -19,7 +19,8 @@ class GeneratorBase(ABC):
 
 class Generator(GeneratorBase):
     def __init__(self, n_images=5, hf_model_name: str="stable-diffusion-v1-5/stable-diffusion-v1-5", cache_dir: str|None='/cache/', 
-                 num_inference_steps : int = 20, device : str = 'cuda', random_latents : bool = False, guidance_scale : float = 7.):
+                 num_inference_steps : int = 20, device : str = 'cuda', random_latents : bool = False, guidance_scale : float = 7.,
+                 use_negative_prompt : bool = False):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
@@ -55,6 +56,15 @@ class Generator(GeneratorBase):
             device=self.device,
         ).repeat(n_images, 1, 1, 1)
 
+        self.use_negative_prompt = use_negative_prompt
+        if self.use_negative_prompt:
+            negative_prompt = "lowres, error, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature, deformed, ugly, mutilated, disfigured, text, extra limbs, face cut, head cut, extra fingers, extra arms, poorly drawn face, mutation, bad proportions, cropped head, malformed limbs, mutated hands, fused fingers, long neck, illustration, painting, drawing, art, sketch,bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, worst quality, cropped, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, deformed, missing limb, bad hands, extra digits, extra fingers, not enough fingers, floating head, disembodied"
+            negative_prompt_tokens = self.pipe.tokenizer(negative_prompt,
+                                padding="max_length",
+                                max_length=self.pipe.tokenizer.model_max_length,
+                                truncation=True,
+                                return_tensors="pt",).to(self.pipe.text_encoder.device)
+            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0]
 
     def generate_image(self, embedding: Tensor | tuple[Tensor, Tensor], latents : Tensor = None) -> list[Image]:
         """
@@ -84,6 +94,7 @@ class Generator(GeneratorBase):
             width=self.width,
             num_images_per_prompt=1,
             prompt_embeds=embedding,
+            negative_prompt_embeds=self.negative_prompt_embeds.repeat(embedding.shape[0], 1, 1) if self.use_negative_prompt else None,
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
             latents=latents,

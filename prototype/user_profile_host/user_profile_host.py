@@ -18,8 +18,9 @@ class UserProfileHost():
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/',
             n_embedding_axis : int = 10,
-            n_latent_axis : int = 2,
             embedding_bounds : tuple = (0., 1.),
+            use_embedding_center: bool = True,
+            n_latent_axis : int = 2,
             latent_bounds : tuple = (1., 5.),
             use_latent_center: bool = True,
             ):
@@ -31,6 +32,8 @@ class UserProfileHost():
         self.latent_space_length = 15.55
         self.n_latent_axis = n_latent_axis
         self.n_embedding_axis = n_embedding_axis
+        self.use_embedding_center = use_embedding_center
+        self.user_latent_center = use_latent_center
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:
@@ -43,22 +46,25 @@ class UserProfileHost():
         
         # Define the center of the user_space with the original prompt embedding
         self.embedding_center = self.clip_embedding(original_prompt)
+        self.embedding_length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False)
+        if not self.use_embedding_center:
+            self.embedding_center = torch.zeros(size=(1, self.n_clip_tokens, self.embedding_dim))
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
         self.embedding_axis = []
         if not add_ons:
             add_ons = [
-                'a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art', 
-                'realistic, colorful, 8k, highly detailed, trending on artstation', 
-                'Extremely ultra-realistic photorealistic 3d, professional photography, natural lighting, volumetric lighting maximalist photo illustration 8k resolution detailed, elegant', 
-                'captured in a painting with unparalleled detail and resolution at 64k',
-                'Scratchy pen strokes, colored pen, blind contour, fisheye perspective close-up, stark hatch shaded sketchy scribbly, ink, strong angular shapes, woodcut shading, pen strokes, minimalist realistic, anime proportions, distorted perspective',
-                'dramatic lighting, shot on leica, dark aesthetic',
-                'detailed scene, red, intricately detailed photorealism, trending on artstation, neon lights, rainy day, ray-traced environment, vintage 90s anime artwork',
-                'in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel',
-                'highly textured, genre-defining mixed media collage painting, fringe absurdism, award-winning halftone pattern illustration, simple flowing shapes, subtle shadows, paper texture, minimalist color scheme, inspired by zdzisław beksiński',
-                "full body, unreal, created by alberto seveso, ethereal, featuring an optical illusion, mystical, luminous, with twinkling lights, surreal, showcasing 3d fractals, high resolution, sharp details, soft, with a dreamy glow, translucent, water drops, in 8k resolution, resembling a nebula, beautiful, with a broken glass effect, without a background, stunning, representing something that doesn't even exist, a mythical being exuding energy, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, with a divine presence, unforgettable, impressive"
+                "beautiful, moody lighting, best quality, full body portrait, real picture, intricate details, depth of field, in a cold snowstorm, fujifilm xt3, outdoors, beautiful lighting, raw photo, 8k uhd, film grain, unreal engine 5, ray trace",
+                "in the style of liquid metal, vray tracing, raw character, 32k uhd, schlieren photography, conceptual portraiture, wet - on - wet blending",
+                "Detailed, vibrant illustration, full of plants, trees, by herge, in the style of tin-tin comics, vibrant colors, detailed, lots of people, sunny day, beautiful illustration",
+                "Sun profile, halftone pattern, editorial illustration of the memento morti, higly textured, genre defining mixed media collage painting, fringe absurdism, award winning halftone pattern illustration, simple flowing shapes, subtle shadows, paper texture, minimalist color scheme, inspired by zdzisław beksiński",
+                "3d illustration, in the style of fantasy, minimalistic, featuring multiple soft and rounded fractal, complex forms dressed as royal and glamorous in gold and white",
+                "Black, thin lines, all lines have the same mass and weight, continuity can be seen in the common flow of all lines, the lines occupy only the central part of the image, white background",
+                "a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art",
+                "A surreal picture, in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel, nyc explosion coverage",
+                "Realistic, red white and black, made of red coral, mahogany, black obsidian, bloodstone, tourmaline and gold, elegant, diamonds, gold, elegant, masterpiece, concept art, tectonic, gold shiny background, nikon photography, shot photography by wes anderson, kodak color, hd, 300mm",
+                "colored ink mikhail garmash, louis jover, victor cheleg, damien hirst, ivan aizovsky, claude joseph vernet, broken glass effect, no background, amazing, something that doesn’t even exist, mythical creature, energy, molecular, textures, shimmering and luminescent colors, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, three-dimensional light, auras, rays, vibrant colors, broken glass effect, no background, stunning, something that even doesn't exist, mythical being, energy, molecular, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, breathtaking beauty, volumetric light, auras, rays, vivid colors reflects"
             ][:self.n_embedding_axis]
         if extend_original_prompt:
             for prompt in [original_prompt + ',' + add for add in add_ons]:
@@ -69,7 +75,7 @@ class UserProfileHost():
 
         self.embedding_axis = torch.stack(self.embedding_axis)
         if n_latent_axis:
-            self.latent_center = torch.randn((1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)) if use_latent_center else torch.zeros(size=(1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8))
+            self.latent_center = torch.randn((1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)) if self.use_latent_center else torch.zeros(size=(1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8))
             self.latent_axis = torch.randn((n_latent_axis, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8))
             self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
         else:
@@ -117,9 +123,9 @@ class UserProfileHost():
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
         product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
-        length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False).reshape((1, product.shape[1], 1))
+        embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
         clip_embeddings = (self.embedding_center + product)
-        clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * length
+        clip_embeddings = clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True) * embedding_length
 
         latents = None
         if self.n_latent_axis:
