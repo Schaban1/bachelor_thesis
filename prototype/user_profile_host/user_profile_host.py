@@ -88,7 +88,7 @@ class UserProfileHost():
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
 
-        # Some Bayesian Optimization Hyperparameters
+        # Some (Bayesian Optimization) Hyperparameters
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
 
@@ -97,10 +97,10 @@ class UserProfileHost():
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
             self.optimizer = NoOptimizer()
         elif recommendation_type == RecommendationType.POINT:
-            self.recommender = SinglePointRecommender()
+            self.recommender = SinglePointRecommender(embedding_bounds=self.embedding_bounds)
             self.optimizer = MaxPrefOptimizer()
         elif recommendation_type == RecommendationType.WEIGHTED_AXES:
-            self.recommender = SinglePointWeightedAxesRecommender()
+            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds)
             self.optimizer = WeightedSumOptimizer()
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
