@@ -58,8 +58,8 @@ class WebUI:
             **self.args.generator        
         )
         # Lists / UI components
-        self.image_size = (256, 256)
-        self.images = [Image.new('RGB', self.image_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.image_display_size = (256, 256)
+        self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         # Image saving
@@ -138,7 +138,7 @@ class WebUI:
             with ngUI.row().classes('mx-auto items-center'):
                 for i in range(self.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
-                        self.images_display[i] = ngUI.interactive_image(self.images[i]).style(f'width: {self.image_size[0]}px; height: {self.image_size[1]}px; object-fit: scale-down')
+                        self.images_display[i] = ngUI.interactive_image(self.images[i]).style(f'width: {self.image_display_size[0]}px; height: {self.image_display_size[1]}px; object-fit: scale-down')
                         with self.images_display[i]:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.build_score_buttons()
