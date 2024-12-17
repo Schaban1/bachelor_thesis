@@ -67,11 +67,11 @@ class Generator(GeneratorBase):
 
         self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
-        vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", cache_dir=cache_dir ,torch_dtype=torch.float16).to(self.device)
-        self.pipe.vae = vae
+        # vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", cache_dir=cache_dir ,torch_dtype=torch.float16).to(self.device)
+        # self.pipe.vae = vae
 
         self.pipe.to(self.device)
-        #self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
+        self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
         self.n_images = n_images
 
         self.latents = torch.randn(
@@ -80,6 +80,7 @@ class Generator(GeneratorBase):
         ).repeat(n_images, 1, 1, 1)
 
         self.use_negative_prompt = use_negative_prompt
+        self.negative_prompt_embeds = None
         if self.use_negative_prompt:
             negative_prompt = "lowres, error, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature, deformed, ugly, mutilated, disfigured, text, extra limbs, face cut, head cut, extra fingers, extra arms, poorly drawn face, mutation, bad proportions, cropped head, malformed limbs, mutated hands, fused fingers, long neck, illustration, painting, drawing, art, sketch,bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, worst quality, cropped, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, deformed, missing limb, bad hands, extra digits, extra fingers, not enough fingers, floating head, disembodied"
             negative_prompt_tokens = self.pipe.tokenizer(negative_prompt,
@@ -87,7 +88,7 @@ class Generator(GeneratorBase):
                                                          max_length=self.pipe.tokenizer.model_max_length,
                                                          truncation=True,
                                                          return_tensors="pt", ).to(self.pipe.text_encoder.device)
-            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0]
+            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(n_images, 1, 1)
 
     def generate_image(self, embeddings: Tensor | tuple[Tensor, Tensor], latents: Tensor = None) -> list[Image]:
         """
@@ -103,6 +104,7 @@ class Generator(GeneratorBase):
         """
         if embeddings.dtype == torch.float32:
             embeddings = embeddings.type(torch.float16)
+
         embeddings = embeddings.to(self.device)
         if latents != None:
             latents = latents.to(self.device)
@@ -117,7 +119,7 @@ class Generator(GeneratorBase):
                 latents = self.latents
 
         pos_prompt_embeds = embeddings[0] if isinstance(embeddings, tuple) else embeddings
-        neg_prompt_embeds = embeddings[1] if isinstance(embeddings, tuple) else None
+        neg_prompt_embeds = embeddings[1] if isinstance(embeddings, tuple) else self.negative_prompt_embeds
         num_embeddings = pos_prompt_embeds.shape[0]
         batch_steps = self.batch_size or num_embeddings
 
@@ -127,8 +129,7 @@ class Generator(GeneratorBase):
                                     width=self.width,
                                     num_images_per_prompt=1,
                                     prompt_embeds=pos_prompt_embeds[i:i + batch_steps],
-                                    negative_prompt_embeds=neg_prompt_embeds[
-                                                           i:i + batch_steps] if neg_prompt_embeds else None,
+                                    negative_prompt_embeds=neg_prompt_embeds[i:i + batch_steps] if neg_prompt_embeds is not None else None,
                                     num_inference_steps=self.num_inference_steps,
                                     guidance_scale=7,
                                     latents=latents[i:i + batch_steps],
@@ -138,12 +139,12 @@ class Generator(GeneratorBase):
 
 
 if __name__ == "__main__":
-    n_images = 1
+    n_images = 3
     gen = Generator(n_images=n_images,
                     batch_size=None,
                     cache_dir=None,
                     num_inference_steps=25,
-                    use_negative_prompt=True,
+                    use_negative_prompt=False,
                     random_latents=True)
     prompt = "A cinematic shot of a baby racoon wearing an intricate italian priest robe."
     prompt_tokens = gen.pipe.tokenizer(prompt,
