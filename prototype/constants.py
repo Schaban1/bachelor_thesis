@@ -10,3 +10,7 @@ class WebUIState(Enum):
     INIT_STATE = "Initial iteration"
     MAIN_STATE = "Main loop iteration"
     GENERATING_STATE = "Generating"
+
+class ScoreMode(Enum):
+    SLIDER = "slider"
+    EMOJI = "emoji"
