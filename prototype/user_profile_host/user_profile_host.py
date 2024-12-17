@@ -36,7 +36,7 @@ class UserProfileHost():
         self.use_latent_center = use_latent_center
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
-        if not stable_dif_pipe:     
+        if not stable_dif_pipe:
             stable_dif_pipe = StableDiffusionPipeline.from_pretrained(
                 pretrained_model_name_or_path=hf_model_name,
                 cache_dir=cache_dir
@@ -102,6 +102,9 @@ class UserProfileHost():
         elif recommendation_type == RecommendationType.WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds)
             self.optimizer = WeightedSumOptimizer()
+        elif recommendation_type == RecommendationType.RANDOM:
+            self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
+            self.optimizer = NoOptimizer()
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
 
@@ -179,8 +182,10 @@ class UserProfileHost():
         if self.user_profile != None:
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
         else:
-            # Start initially with some random embeddings
-            user_space_embeddings = torch.rand(size=(num_recommendations, self.num_axis))
+            # Start initially with some random embeddings and take into accound the bounds
+            rand_embedding_factors = torch.rand(size=(num_recommendations, self.n_embedding_axis)) * (self.embedding_bounds[1] - self.embedding_bounds[0]) + self.embedding_bounds[0]
+            rand_latent_factors = torch.rand(size=(num_recommendations, self.n_latent_axis)) * (self.latent_bounds[1] - self.latent_bounds[0]) + self.latent_bounds[0]
+            user_space_embeddings = torch.cat((rand_embedding_factors, rand_latent_factors), dim=1)
         
         # Safe the user_space_embeddings
         if self.embeddings != None:

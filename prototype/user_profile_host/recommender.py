@@ -53,6 +53,29 @@ class Recommender(ABC):  # ABC = Abstract Base Class
         pass
 
 
+class RandomRecommender(Recommender):
+    
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(0., 1.)):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
+        self.embedding_bounds = embedding_bounds
+        self.latent_bounds = latent_bounds
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+        """
+        :param user_profile: A point in the low-dimensional user profile space.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
+            user_profile where n_dims is the dimensionality of the user_profile.
+        """
+        # Return random recommendations
+        rand_embedding_factors = torch.rand(size=(n_recommendations, self.n_embedding_axis)) * (self.embedding_bounds[1] - self.embedding_bounds[0]) + self.embedding_bounds[0]
+        rand_latent_factors = torch.rand(size=(n_recommendations, self.n_latent_axis)) * (self.latent_bounds[1] - self.latent_bounds[0]) + self.latent_bounds[0]
+        user_space_embeddings = torch.cat((rand_embedding_factors, rand_latent_factors), dim=1)
+        return user_space_embeddings
+
+
 class SinglePointRecommender(Recommender):
     def __init__(self, embedding_bounds=(-1., 1.)):
         """
