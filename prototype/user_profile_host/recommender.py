@@ -95,12 +95,36 @@ class SinglePointRecommender(Recommender):
 class SinglePointWeightedAxesRecommender(Recommender):
     # TODO: Changes made generated images too similar
 
-    def __init__(self, embedding_bounds=(-1., 1.)):
+    def __init__(self, n_embedding_axis: int, n_latent_axis: int, embedding_bounds=(0., 1.), latent_bounds=(0., 1.),
+                 exploration_factor: float = 1.0, on_sphere: bool = False):
         """
-        :param embedding_bounds: Used to determine the reference points for the axes and the radius used when
-            embeddings lie on a sphere.
+        :param n_embedding_axis: Number of axes in the embedding space.
+        :param n_latent_axis: Number of axes in the latent space.
+        :param latent_bounds: Bounds for the latent space.
+        :param embedding_bounds: Bounds for the embedding space. The lower bound should not be smaller than 0, because
+            experimental evaluation led to the findings that negative bounds produce noisy generated images.
+        :param exploration_factor: Must be in [0, 1]. Determines factor multiplied to the chosen distance from the user
+            profile, i.e. the magnitude of area searched. Values closer to 0 lead to smaller areas searched.
+        :param on_sphere: Whether the recommendations should be on the surface of a sphere or not. By default, False.
+            Experimental evaluation led to the findings that the generated images are too similar when the points are on
+            the surface of a sphere.
         """
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
         self.embedding_bounds = embedding_bounds
+        self.latent_bounds = latent_bounds
+        self.exploration_factor = exploration_factor    # TODO: decrease radius with higher iteration
+        self.on_sphere = on_sphere
+        # Define bounds for search space
+        self.bounds = torch.tensor([
+            # lower bounds (1, n_axis)
+            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in
+                                                                                range(self.n_latent_axis)],
+            # upper bounds (1, n_axis)
+            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in
+                                                                                range(self.n_latent_axis)]
+        ])
 
     def recommend_on_sphere(self, user_profile: Tensor, n_recommendations: int = 5, radius: float = 1.0) -> Tensor:
         """
@@ -136,26 +160,24 @@ class SinglePointWeightedAxesRecommender(Recommender):
         :param n_recommendations: Number of recommendations to return.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        # hyperparameter
-        radius = abs(
-            self.embedding_bounds[0] - self.embedding_bounds[1]) / 2  # radius of sphere or reference points on axes
-        on_sphere = False  # whether recommendations should be on the sphere or not
+        # whether recommendations should be on the sphere or not
+        if self.on_sphere:  # usage of SLERP
+            return self.recommend_on_sphere(user_profile, n_recommendations, radius=self.exploration_factor)
 
-        if on_sphere:  # usage of SLERP
-            return self.recommend_on_sphere(user_profile, n_recommendations, radius=radius)
+        axes = torch.eye(user_profile.shape[0])
 
-        axes = torch.multiply(torch.eye(user_profile.shape[0]), radius)
-        matrix = torch.cat((axes, user_profile.unsqueeze(0)), dim=0)
+        # distance of embedding bounds to user profile to find range to sample from
+        lower_sampling_ranges = self.bounds[0] - user_profile
+        upper_sampling_ranges = self.bounds[1] - user_profile
 
-        # random weights for axes for each recommendation
-        weights = torch.rand(size=(n_recommendations, user_profile.shape[0] + 1))
-        weights /= torch.sum(weights, dim=1, keepdim=True)  # normalize weights
+        # random weights for axes for each recommendation in bounds
+        weights = torch.rand(size=(n_recommendations, user_profile.shape[0]))  # in [0, 1]
+        # scale to bounds to ranges & scale with exploration factor
+        weights = (self.exploration_factor *
+                   (weights * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
 
-        interpolated_points = [torch.from_numpy(
-            np.einsum('i,ij->ij', weight, matrix)).sum(axis=0)
-                               for weight in weights]
-
-        return torch.stack(interpolated_points)
+        # interpolate between user profile and axes, user user_profile as reference point
+        return user_profile + weights @ axes
 
 
 class BayesianRecommender(Recommender):
