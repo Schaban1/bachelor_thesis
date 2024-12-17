@@ -1,11 +1,28 @@
 defaults:
   - _self_
 
-port: 8080
+num_recommendations : 5
+port: 2020
+reconnect_timeout: 3
+score_mode: emoji
+device: cuda
+image_display_size : [256, 256]
+random_seed : 42
 
-random_seed: 42
+generator:
+  num_inference_steps : 30
+  guidance_scale: 7.5
+  random_latents : Fals
+  use_negative_prompt : False
 
-num_recommendations: 5
+recommender:
+  extend_original_prompt : True
+  n_embedding_axis : 10
+  embedding_bounds : [0., 1.]
+  use_embedding_center : True
+  n_latent_axis : 3
+  latent_bounds : [0., 1.]
+  use_latent_center : True
 
 path:
   output_dir: ./output/
