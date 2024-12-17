@@ -1,8 +1,6 @@
 from prototype.app import App
 from prototype.utils import seed_everything
 import torch
-
-
 from omegaconf import DictConfig
 
 #TODO (Discuss) How to combine hydra and multi processing?
@@ -15,9 +13,25 @@ args = DictConfig({
     'path' : {'cache_dir' : './cache/', 'images_save_dir': './saved_images/'}, 
     'num_recommendations' : 5, 
     'port': 8080,
+    'reconnect_timeout': 3,
+    'score_mode': 'emoji',
     'device': device,
     'random_seed' : 42, 
-    'generator' : {'num_inference_steps' : 25}
+    'generator' : {
+        'num_inference_steps' : 30, 
+        'guidance_scale': 7.5, 
+        'random_latents' : False,
+        'use_negative_prompt' : False
+    },
+    'recommender' : {
+        'extend_original_prompt' : True,
+        'n_embedding_axis' : 10,
+        'embedding_bounds' : (0., 1.),
+        'use_embedding_center' : True,
+        'n_latent_axis' : 3,
+        'latent_bounds' : (0., 1.),
+        'use_latent_center' : True
+    }
 })
 seed_everything(args.random_seed)
 app = App(args=args)

@@ -9,6 +9,7 @@ from botorch.exceptions import InputDataWarning
 from botorch.optim import optimize_acqf
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
+from gpytorch.means import ConstantMean, LinearMean
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
 
@@ -50,6 +51,29 @@ class Recommender(ABC):  # ABC = Abstract Base Class
         :return: A tensor of recommendations, i.e. n_recommendations many low-dimensional embeddings.
         """
         pass
+
+
+class RandomRecommender(Recommender):
+    
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(0., 1.)):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
+        self.embedding_bounds = embedding_bounds
+        self.latent_bounds = latent_bounds
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+        """
+        :param user_profile: A point in the low-dimensional user profile space.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
+            user_profile where n_dims is the dimensionality of the user_profile.
+        """
+        # Return random recommendations
+        rand_embedding_factors = torch.rand(size=(n_recommendations, self.n_embedding_axis)) * (self.embedding_bounds[1] - self.embedding_bounds[0]) + self.embedding_bounds[0]
+        rand_latent_factors = torch.rand(size=(n_recommendations, self.n_latent_axis)) * (self.latent_bounds[1] - self.latent_bounds[0]) + self.latent_bounds[0]
+        user_space_embeddings = torch.cat((rand_embedding_factors, rand_latent_factors), dim=1)
+        return user_space_embeddings
 
 
 class SinglePointRecommender(Recommender):
@@ -143,9 +167,12 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_axis, bounds=(0., 1.)):
-        self.n_axis = n_axis
-        self.bounds = bounds
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(0., 1.)):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
+        self.embedding_bounds = embedding_bounds
+        self.latent_bounds = latent_bounds
         self.cand_indices = []
         self.beta = 20
         self.reduce_beta = True
@@ -161,39 +188,56 @@ class BayesianRecommender(Recommender):
         """
         # Get embeddings and ratings from user profile
         embeddings, preferences = user_profile
+
+        # Change Preference shape
         preferences = preferences.reshape(-1, 1)
 
+        # Standardize embeddings
+        mean, std = torch.mean(embeddings, dim=0), torch.std(embeddings, dim=0)
+        embeddings_std = (embeddings - mean) / std
+
         # Define bounds for search space
-        bounds = torch.tensor([[self.bounds[0] for i in range(self.n_axis)], [self.bounds[1] for i in range(self.n_axis)]])
+        bounds = torch.tensor([
+            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in range(self.n_latent_axis)], 
+            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in range(self.n_latent_axis)]
+        ])
+
+        # Standardize bounds
+        bounds_std = (bounds - mean) / std
 
         # Get new acquisitions step by step
-        for i in range(n_recommendations):
+        for _ in range(n_recommendations):
             # Build a GP model
-            model = SingleTaskGP(train_X=embeddings, train_Y=preferences)
+            mean_mod = ConstantMean() # LinearMean(input_size=embeddings_std.shape[-1])
+            model = SingleTaskGP(train_X=embeddings_std, train_Y=preferences, mean_module=mean_mod)
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             mll = fit_gpytorch_mll(mll)
 
             # Initialize the acquisition function
-            acqf = UpperConfidenceBound(model, beta=self.beta)
+            acqf = UpperConfidenceBound(model=model, beta=self.beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
-            candidate, score = optimize_acqf(
+            candidate, _ = optimize_acqf(
                 acq_function=acqf,
-                bounds=bounds,
+                bounds=bounds_std,
                 q=1,
                 num_restarts=10,
                 raw_samples=512,  # used for intialization heuristic
                 options={"batch_limit": 5, "maxiter": 200},
             )
 
-            # Extend data with new candidate to include this information in the next iteration
-            embeddings = torch.cat((embeddings, candidate))
-            preferences = torch.cat((preferences, score.reshape(1, 1)))
+            # Extend data with new candidate and predicted preference to include this information in the next iteration
+            pseudo_preference = acqf._mean_and_sigma(X=candidate, compute_sigma=False)[0].detach()
+            embeddings_std = torch.cat((embeddings_std, candidate))
+            preferences = torch.cat((preferences, pseudo_preference.reshape(1, 1)))
 
         # Lower beta if settings require it
         if self.reduce_beta:
             self.beta -= 1
 
         # Return most promising candidates
-        candidates = embeddings[-n_recommendations:].reshape(n_recommendations, self.n_axis)
+        candidates_std = embeddings_std[-n_recommendations:]
+
+        # Unstandardize and return them
+        candidates = candidates_std * std + mean
         return candidates
