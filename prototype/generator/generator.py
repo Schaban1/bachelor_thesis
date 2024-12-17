@@ -131,7 +131,7 @@ class Generator(GeneratorBase):
                                     prompt_embeds=pos_prompt_embeds[i:i + batch_steps],
                                     negative_prompt_embeds=neg_prompt_embeds[i:i + batch_steps] if neg_prompt_embeds is not None else None,
                                     num_inference_steps=self.num_inference_steps,
-                                    guidance_scale=7,
+                                    guidance_scale=self.guidance_scale,
                                     latents=latents[i:i + batch_steps],
                                     ).images
                           )
