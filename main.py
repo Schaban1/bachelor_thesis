@@ -16,6 +16,7 @@ args = DictConfig({
     'reconnect_timeout': 3,
     'score_mode': 'emoji',
     'device': device,
+    'image_display_size' : (256, 256),
     'random_seed' : 42, 
     'generator' : {
         'num_inference_steps' : 30, 
