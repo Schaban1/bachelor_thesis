@@ -14,7 +14,7 @@ args = DictConfig({
     'num_recommendations' : 5, 
     'port': 8080,
     'reconnect_timeout': 3,
-    'score_mode': 'slider',
+    'score_mode': 'emoji',
     'device': device,
     'random_seed' : 42, 
     'generator' : {
