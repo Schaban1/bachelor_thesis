@@ -1,5 +1,7 @@
 defaults:
   - _self_
+  - override hydra/hydra_logging: disabled  
+  - override hydra/job_logging: disabled
 
 num_recommendations : 5
 port: 2020
@@ -28,7 +30,3 @@ path:
   output_dir: ./output/
   cache_dir: ./cache/
   images_save_dir: ./saved_images/
-
-hydra:
-  run:
-    dir: ${path.output_dir}

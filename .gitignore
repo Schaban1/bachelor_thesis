@@ -19,6 +19,7 @@ saved_images/
 
 # Output folder from hydra
 output/
+outputs/
 
 # Cache dir for stable diffusion model
 cache/
