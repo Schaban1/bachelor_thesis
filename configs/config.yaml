@@ -19,7 +19,7 @@ generator:
 
 recommender:
   extend_original_prompt : True
-  n_embedding_axis : 10
+  n_embedding_axis : 13
   embedding_bounds : [0., 1.]
   use_embedding_center : True
   n_latent_axis : 3

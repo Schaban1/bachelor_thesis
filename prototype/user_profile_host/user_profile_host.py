@@ -65,6 +65,9 @@ class UserProfileHost():
                 "A surreal picture, in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel, nyc explosion coverage",
                 "Realistic, red white and black, made of red coral, mahogany, black obsidian, bloodstone, tourmaline and gold, elegant, diamonds, gold, elegant, masterpiece, concept art, tectonic, gold shiny background, nikon photography, shot photography by wes anderson, kodak color, hd, 300mm",
                 "colored ink mikhail garmash, louis jover, victor cheleg, damien hirst, ivan aizovsky, claude joseph vernet, broken glass effect, no background, amazing, something that doesn’t even exist, mythical creature, energy, molecular, textures, shimmering and luminescent colors, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, three-dimensional light, auras, rays, vibrant colors, broken glass effect, no background, stunning, something that even doesn't exist, mythical being, energy, molecular, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, breathtaking beauty, volumetric light, auras, rays, vivid colors reflects"
+                "shot on leica, shadowplay, gorgeous lighting, subtle pastel hues, 8k, pretty freckles",
+                "behind windwow, rainy, black and white photography surreal art blurry minimalistic",
+                "at full height, is working on a beautiful design project, creating design projects, a beautiful workspace, aesthetics, correct proportions realism ultra high quality, real photo"
             ][:self.n_embedding_axis]
         if extend_original_prompt:
             for prompt in [original_prompt + ',' + add for add in add_ons]:
