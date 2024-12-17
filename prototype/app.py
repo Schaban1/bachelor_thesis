@@ -5,13 +5,13 @@ from prototype.webuserinterface import WebUI
 global_args = None
 
 @ngUI.page('/demo')
-def start_demo_instance():
+async def start_demo_instance():
     """
     Creates a new instance of the WebUI and runs it.
     This instance is private with the user and not shared.
     """
     global global_args
-    ui = WebUI(global_args)
+    ui = await WebUI.create(global_args)
     ui.run()
 
 @ngUI.page('/')
@@ -34,6 +34,6 @@ class App:
         Start the application.
         """
         global global_args
-        ngUI.run(title='Image Generation System Demo', port=global_args.port)
+        ngUI.run(title='Image Generation System Demo', port=global_args.port, reconnect_timeout=global_args.reconnect_timeout)
         start()
     
