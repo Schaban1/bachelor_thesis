@@ -238,9 +238,10 @@ class UserProfileHost():
             #tbc.
             return self.user_profile, self.embeddings, self.preferences # Placeholder
         elif algorithm == 'tsne':
-            tsne = TSNE(random_state=42).fit(self.embeddings)
-            low_d_embeddings = tsne.transform(self.embeddings)
-            low_d_user_profile = tsne.transform(self.user_profile)
+            matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+            transformed_embeddings = TSNE(random_state=42).fit_transform(matrix)
+            low_d_user_profile = transformed_embeddings[0]
+            low_d_embeddings = transformed_embeddings[1:]
             return low_d_user_profile, low_d_embeddings, self.preferences
         else:
             raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
