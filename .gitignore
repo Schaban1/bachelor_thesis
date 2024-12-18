@@ -7,6 +7,7 @@ __pycache__/
 .venv
 venv/
 MMML_venv/
+MMML_venv11/
 
 # JetBrains
 .idea/
