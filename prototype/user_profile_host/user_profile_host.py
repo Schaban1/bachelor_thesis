@@ -199,3 +199,24 @@ class UserProfileHost():
         # Transform embeddings from user_space to CLIP space
         clip_embeddings, latents = self.inv_transform(user_space_embeddings)
         return clip_embeddings, latents
+    
+    def plotting_utils(self, algorithm : str = 'pca'):
+        '''
+        This function creates a reduction of the user embeddings into a two dimensional space so we can plot the embedding space and the respective images in
+        our application.
+        Paramters:
+            algorithm (str) : Defines, which algorithm to use for the reduction.
+        Returns:
+            2D-user_profile (Tensor) : The user profile on which we base our recommendations on. 
+            2D-user_embeddings (Tensor) : Two dimensional reduction of the embeddings that resulted in the previously generated images
+            Preferences (Tensor) : The respective preferences as a number between 0 and 1.
+        '''
+
+        if self.num_axis == 2:
+            return self.user_profile, self.embeddings, self.preferences
+        elif algorithm == 'pca':
+            return self.user_profile, self.embeddings, self.preferences # Placeholder
+        elif algorithm == 'tsne':
+            return self.user_profile, self.embeddings, self.preferences # Placeholder
+        else:
+            raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
