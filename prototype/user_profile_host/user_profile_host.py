@@ -17,12 +17,12 @@ class UserProfileHost():
             stable_dif_pipe : StableDiffusionPipeline = None,
             hf_model_name : str ="stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir : str = './cache/',
-            n_embedding_axis : int = 10,
+            n_embedding_axis : int = 13,
             embedding_bounds : tuple = (0., 1.),
             use_embedding_center: bool = True,
-            n_latent_axis : int = 2,
-            latent_bounds : tuple = (1., 5.),
-            use_latent_center: bool = True,
+            n_latent_axis : int = 3,
+            latent_bounds : tuple = (-1., 1.),
+            use_latent_center: bool = False,
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
