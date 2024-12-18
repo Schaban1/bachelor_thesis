@@ -38,9 +38,12 @@ class WebUI:
             Created object of type WebUI.
         """
         self = cls()
+        loading_label = ngUI.label("Starting session...")
+        await ngUI.context.client.connected()
         # Args of global config
         self.args = args
         seed_everything(self.args.random_seed)
+        self.queue_lock = threading.Lock()
         # Generate id for this session
         self.session_id = secrets.token_urlsafe(4)
         # State variables
@@ -58,12 +61,9 @@ class WebUI:
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
         self.user_profile_host_beta = self.args.user_profile_host.beta
-        self.generator = Generator(
-            n_images=self.num_images_to_generate,
-            cache_dir=self.args.path.cache_dir,
-            device=self.args.device,
-            **self.args.generator        
-        )
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.init_generator)
+
         # Lists / UI components
         self.image_display_size = tuple(self.args.image_display_size)
         self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
@@ -76,8 +76,10 @@ class WebUI:
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
 
-        self.queue_lock = threading.Lock()
         self.keyboard = None
+        # Remove loading label
+        loading_label.delete()
+        loading_label = None
         return self
 
     def run(self):
@@ -119,6 +121,19 @@ class WebUI:
             self.reset_scorers = self.reset_emoji_toggles
         else:
             print(f"Unknown score mode: {self.score_mode}")
+    
+    def init_generator(self):
+        """
+        Initializes the generator and performs a warm-start.
+        """
+        self.generator = Generator(
+            n_images=self.num_images_to_generate,
+            cache_dir=self.args.path.cache_dir,
+            device=self.args.device,
+            **self.args.generator        
+        )
+        with self.queue_lock:
+            self.generator.generate_image(torch.zeros(1, 77, 768))
     
     def build_userinterface(self):
         """
