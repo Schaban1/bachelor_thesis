@@ -26,7 +26,8 @@ class UserProfileHost():
             latent_bounds : tuple = (-1., 1.),
             use_latent_center : bool = False,
             n_recommendations : int = 5,
-            ema_alpha : float = 0.2
+            ema_alpha : float = 0.5,
+            weighted_axis_exploration_factor : float = 0.5
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -114,13 +115,15 @@ class UserProfileHost():
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
-                                                                  latent_bounds=self.latent_bounds)
+                                                                  latent_bounds=self.latent_bounds,
+                                                                  exploration_factor=weighted_axis_exploration_factor)
             self.optimizer = WeightedSumOptimizer()
         elif recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
-                                                                  latent_bounds=self.latent_bounds)
+                                                                  latent_bounds=self.latent_bounds,
+                                                                  exploration_factor=weighted_axis_exploration_factor)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
         elif recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
