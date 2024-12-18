@@ -22,7 +22,8 @@ class UserProfileHost():
             use_embedding_center: bool = True,
             n_latent_axis : int = 3,
             latent_bounds : tuple = (-1., 1.),
-            use_latent_center: bool = False,
+            use_latent_center : bool = False,
+            n_recommendations : int = 5
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -34,6 +35,7 @@ class UserProfileHost():
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
         self.use_latent_center = use_latent_center
+        self.n_recommendations = n_recommendations
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:
@@ -91,22 +93,36 @@ class UserProfileHost():
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
 
-        # Some Bayesian Optimization Hyperparameters
+        # Some (Bayesian Optimization) Hyperparameters
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
-            self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
+            self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                   n_latent_axis=self.n_latent_axis,
+                                                   embedding_bounds=self.embedding_bounds,
+                                                   latent_bounds=latent_bounds)
             self.optimizer = NoOptimizer()
         elif recommendation_type == RecommendationType.POINT:
-            self.recommender = SinglePointRecommender()
+            self.recommender = SinglePointRecommender(embedding_bounds=self.embedding_bounds)
             self.optimizer = MaxPrefOptimizer()
         elif recommendation_type == RecommendationType.WEIGHTED_AXES:
-            self.recommender = SinglePointWeightedAxesRecommender()
+            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
+                                                                  n_embedding_axis=self.n_embedding_axis,
+                                                                  n_latent_axis=self.n_latent_axis,
+                                                                  latent_bounds=self.latent_bounds)
             self.optimizer = WeightedSumOptimizer()
+        elif recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
+            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
+                                                                  n_embedding_axis=self.n_embedding_axis,
+                                                                  n_latent_axis=self.n_latent_axis,
+                                                                  latent_bounds=self.latent_bounds)
+            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=0.2)
         elif recommendation_type == RecommendationType.RANDOM:
-            self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
+            self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                 n_latent_axis=self.n_latent_axis,
+                                                 embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
             self.optimizer = NoOptimizer()
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
