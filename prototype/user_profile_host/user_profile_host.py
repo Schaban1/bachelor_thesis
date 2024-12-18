@@ -94,16 +94,24 @@ class UserProfileHost():
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
-            self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
+            self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                   n_latent_axis=self.n_latent_axis,
+                                                   embedding_bounds=self.embedding_bounds,
+                                                   latent_bounds=latent_bounds)
             self.optimizer = NoOptimizer()
         elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender(embedding_bounds=self.embedding_bounds)
             self.optimizer = MaxPrefOptimizer()
         elif recommendation_type == RecommendationType.WEIGHTED_AXES:
-            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds)
+            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
+                                                                  n_embedding_axis=self.n_embedding_axis,
+                                                                  n_latent_axis=self.n_latent_axis,
+                                                                  latent_bounds=self.latent_bounds)
             self.optimizer = WeightedSumOptimizer()
         elif recommendation_type == RecommendationType.RANDOM:
-            self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
+            self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                 n_latent_axis=self.n_latent_axis,
+                                                 embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
             self.optimizer = NoOptimizer()
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
