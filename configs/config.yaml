@@ -14,7 +14,7 @@ random_seed : 42
 generator:
   num_inference_steps : 30
   guidance_scale: 7.5
-  random_latents : Fals
+  random_latents : False
   use_negative_prompt : False
 
 recommender:
