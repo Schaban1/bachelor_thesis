@@ -12,6 +12,7 @@ import secrets
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
+from prototype.utils import seed_everything
 
 
 class WebUI:
@@ -37,9 +38,11 @@ class WebUI:
             Created object of type WebUI.
         """
         self = cls()
-        self.session_id = secrets.token_urlsafe(4)
         # Args of global config
         self.args = args
+        seed_everything(self.args.random_seed)
+        # Generate id for this session
+        self.session_id = secrets.token_urlsafe(4)
         # State variables
         self.state = None
         self.is_initial_iteration = False
