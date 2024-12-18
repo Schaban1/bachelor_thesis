@@ -1,5 +1,7 @@
 import torch
 from torch import Tensor
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 from .recommender import *
 from .optimizer import *
@@ -215,8 +217,14 @@ class UserProfileHost():
         if self.num_axis == 2:
             return self.user_profile, self.embeddings, self.preferences
         elif algorithm == 'pca':
+            pca = PCA(n_components=2)
+            pca.fit(self.embeddings)
+            #tbc.
             return self.user_profile, self.embeddings, self.preferences # Placeholder
         elif algorithm == 'tsne':
-            return self.user_profile, self.embeddings, self.preferences # Placeholder
+            tsne = TSNE(random_state=42).fit(self.embeddings)
+            low_d_embeddings = tsne.transform(self.embeddings)
+            low_d_user_profile = tsne.transform(self.user_profile)
+            return low_d_user_profile, low_d_embeddings, self.preferences
         else:
             raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
