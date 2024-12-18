@@ -24,7 +24,8 @@ class UserProfileHost():
             use_embedding_center: bool = True,
             n_latent_axis : int = 3,
             latent_bounds : tuple = (-1., 1.),
-            use_latent_center: bool = False,
+            use_latent_center : bool = False,
+            n_recommendations : int = 5
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -36,6 +37,7 @@ class UserProfileHost():
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
         self.use_latent_center = use_latent_center
+        self.n_recommendations = n_recommendations
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:
@@ -113,6 +115,12 @@ class UserProfileHost():
                                                                   n_latent_axis=self.n_latent_axis,
                                                                   latent_bounds=self.latent_bounds)
             self.optimizer = WeightedSumOptimizer()
+        elif recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
+            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
+                                                                  n_embedding_axis=self.n_embedding_axis,
+                                                                  n_latent_axis=self.n_latent_axis,
+                                                                  latent_bounds=self.latent_bounds)
+            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=0.2)
         elif recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                  n_latent_axis=self.n_latent_axis,

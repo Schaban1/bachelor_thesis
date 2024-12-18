@@ -52,6 +52,27 @@ class WeightedSumOptimizer:
         """
         user_profile = (preferences.reshape(-1) @ embeddings)/preferences.sum()
         return user_profile
+    
+class EMAWeightedSumOptimizer:
+    def __init__(self, n_recommendations : int = 5, alpha : int = 0.2):
+        self.user_profile = None
+        self.n_recommendations = n_recommendations
+        self.alpha = alpha
+
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+        """
+        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
+        :param preferences: The scores of the current user concerning the (user-space) embeddings.
+        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
+        """
+        if self.user_profile == None:
+            self.user_profile = (preferences.reshape(-1) @ embeddings)/preferences.sum()
+        else:
+            new_embeddings, new_preferences = embeddings[-self.n_recommendations:], preferences[-self.n_recommendations:]
+            new_user_profile = (new_preferences.reshape(-1) @ new_embeddings)/new_preferences.sum()
+            self.user_profile = self.alpha * new_user_profile + (1 - self.alpha) * self.user_profile
+
+        return self.user_profile
 
 class NoOptimizer:
 
