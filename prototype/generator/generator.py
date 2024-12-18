@@ -71,7 +71,7 @@ class Generator(GeneratorBase):
         # self.pipe.vae = vae
 
         self.pipe.to(self.device)
-        self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
+        #self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
         self.n_images = n_images
 
         self.latents = torch.randn(
