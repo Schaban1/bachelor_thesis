@@ -62,7 +62,7 @@ class WebUI:
             **self.args.generator        
         )
         # Lists / UI components
-        self.image_display_size = args.image_display_size
+        self.image_display_size = self.args.image_display_size
         self.images = [Image.new('RGB', tuple(self.image_display_size)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_toggles = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
