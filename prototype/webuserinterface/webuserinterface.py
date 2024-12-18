@@ -12,6 +12,7 @@ import secrets
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
+from prototype.utils import seed_everything
 
 
 class WebUI:
@@ -37,9 +38,14 @@ class WebUI:
             Created object of type WebUI.
         """
         self = cls()
-        self.session_id = secrets.token_urlsafe(4)
+        loading_label = ngUI.label("Starting session...")
+        await ngUI.context.client.connected()
         # Args of global config
         self.args = args
+        seed_everything(self.args.random_seed)
+        self.queue_lock = threading.Lock()
+        # Generate id for this session
+        self.session_id = secrets.token_urlsafe(4)
         # State variables
         self.state = None
         self.is_initial_iteration = False
@@ -54,16 +60,13 @@ class WebUI:
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        self.user_profile_host_beta = 20
-        self.generator = Generator(
-            n_images=self.num_images_to_generate,
-            cache_dir=self.args.path.cache_dir,
-            device=self.args.device,
-            **self.args.generator        
-        )
+        self.user_profile_host_beta = self.args.user_profile_host.beta
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.init_generator)
+
         # Lists / UI components
-        self.image_display_size = args.image_display_size
-        self.images = [Image.new('RGB', tuple(self.image_display_size)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.image_display_size = tuple(self.args.image_display_size)
+        self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.scores_toggles = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
@@ -73,8 +76,10 @@ class WebUI:
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
 
-        self.queue_lock = threading.Lock()
         self.keyboard = None
+        # Remove loading label
+        loading_label.delete()
+        loading_label = None
         return self
 
     def run(self):
@@ -116,6 +121,19 @@ class WebUI:
             self.reset_scorers = self.reset_emoji_toggles
         else:
             print(f"Unknown score mode: {self.score_mode}")
+    
+    def init_generator(self):
+        """
+        Initializes the generator and performs a warm-start.
+        """
+        self.generator = Generator(
+            n_images=self.num_images_to_generate,
+            cache_dir=self.args.path.cache_dir,
+            device=self.args.device,
+            **self.args.generator        
+        )
+        with self.queue_lock:
+            self.generator.generate_image(torch.zeros(1, 77, 768))
     
     def build_userinterface(self):
         """
@@ -222,12 +240,12 @@ class WebUI:
                 self.update_active_image(self.active_image + 1)
             if e.key.arrow_left and e.action.keydown:
                 self.update_active_image(self.active_image - 1)
-            if e.key in ['1', '2', '3', '4', '5'] and e.action.keydown:
-                self.on_number_keystroke(e.key.number)
             if e.key == 's' and e.action.keydown:
                 self.on_save_button_click(self.images_display[self.active_image])
             if e.key.enter and e.action.keydown:
                 self.submit_button.run_method('click')
+            if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
+                self.on_number_keystroke(e.key.number)
     
     def update_active_image(self, idx=0):
         """
@@ -280,7 +298,7 @@ class WebUI:
             recommendation_type=self.recommendation_type,
             cache_dir=self.args.path.cache_dir,
             stable_dif_pipe=self.generator.pipe,
-            n_recommendations=self.args.n_recommendations,
+            n_recommendations=self.num_images_to_generate,
             **self.args.recommender
         )
     
@@ -398,6 +416,7 @@ class WebUI:
         self.keyboard.active = False
         self.reset_scorers()
         self.user_profile_host = None
+        seed_everything(self.args.random_seed)
     
     def get_webis_demo_template_html(self):
         """
