@@ -25,7 +25,8 @@ class UserProfileHost():
             n_latent_axis : int = 3,
             latent_bounds : tuple = (-1., 1.),
             use_latent_center : bool = False,
-            n_recommendations : int = 5
+            n_recommendations : int = 5,
+            ema_alpha : float = 0.2
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -120,7 +121,7 @@ class UserProfileHost():
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
                                                                   latent_bounds=self.latent_bounds)
-            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=0.2)
+            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
         elif recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                  n_latent_axis=self.n_latent_axis,
@@ -165,6 +166,8 @@ class UserProfileHost():
 
         Parameters:
             preferences (Tensor) : Preferences regarding the embeddings recommended last as real valued numbers.
+        Returns:
+            user_profile (Variable) : The fittet user profile depending on the optimizer.
         '''
         # Initialize or extend the available user related data 
         if self.preferences == None:
@@ -172,6 +175,8 @@ class UserProfileHost():
         else:
             self.preferences = torch.cat((self.preferences, preferences))
         self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences)
+
+        return self.user_profile
 
     def clip_embedding(self, prompt : str):
         '''
