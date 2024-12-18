@@ -62,7 +62,7 @@ class Generator(GeneratorBase):
             safety_checker=None,
             requires_safety_checker=False,
             cache_dir=cache_dir,
-            torch_dtype=torch.float16
+            #torch_dtype=torch.float16
         )
 
         self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
@@ -71,12 +71,12 @@ class Generator(GeneratorBase):
         # self.pipe.vae = vae
 
         self.pipe.to(self.device)
-        self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
+        #self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
         self.n_images = n_images
 
         self.latents = torch.randn(
             (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
-            device=self.device, dtype=torch.float16
+            device=self.device,# dtype=torch.float16
         ).repeat(n_images, 1, 1, 1)
 
         self.use_negative_prompt = use_negative_prompt
@@ -102,18 +102,18 @@ class Generator(GeneratorBase):
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
-        if embeddings.dtype == torch.float32:
-            embeddings = embeddings.type(torch.float16)
+        # if embeddings.dtype == torch.float32:
+        #     embeddings = embeddings.type(torch.float16)
 
         embeddings = embeddings.to(self.device)
         if latents != None:
             latents = latents.to(self.device)
-            latents = latents.type(torch.float16)
+            #latents = latents.type(torch.float16)
         else:
             if self.random_latents:
                 latents = torch.randn(
                     (self.n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
-                    device=self.device, dtype=torch.float16
+                    device=self.device,# dtype=torch.float16
                 )
             else:
                 latents = self.latents
