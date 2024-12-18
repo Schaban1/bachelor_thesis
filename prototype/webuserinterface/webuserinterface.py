@@ -298,7 +298,7 @@ class WebUI:
             recommendation_type=self.recommendation_type,
             cache_dir=self.args.path.cache_dir,
             stable_dif_pipe=self.generator.pipe,
-            n_recommendations=self.args.n_recommendations,
+            n_recommendations=self.num_images_to_generate,
             **self.args.recommender
         )
     
