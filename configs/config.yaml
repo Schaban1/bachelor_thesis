@@ -26,6 +26,9 @@ recommender:
   latent_bounds : [-1., 1.]
   use_latent_center : False
 
+user_profile_host:
+  beta: 20
+
 path:
   output_dir: ./output/
   cache_dir: ./cache/

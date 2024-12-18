@@ -54,7 +54,7 @@ class WebUI:
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        self.user_profile_host_beta = 20
+        self.user_profile_host_beta = self.args.user_profile_host.beta
         self.generator = Generator(
             n_images=self.num_images_to_generate,
             cache_dir=self.args.path.cache_dir,
