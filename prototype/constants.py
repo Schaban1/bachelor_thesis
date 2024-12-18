@@ -4,6 +4,7 @@ class RecommendationType(Enum):
     RANDOM = "Random Recommendations"
     POINT = "Single point generation"
     WEIGHTED_AXES = "Single point generation with weighted axes"
+    EMA_WEIGHTED_AXES = "Single point generation with weighted axes using exponential moving average"
     FUNCTION_BASED = "Function-based generation"
 
 class WebUIState(Enum):
