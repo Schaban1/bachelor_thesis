@@ -116,7 +116,6 @@ class SinglePointRecommender(Recommender):
 
 
 class SinglePointWeightedAxesRecommender(Recommender):
-    # TODO: Changes made generated images too similar
 
     def __init__(self, n_embedding_axis: int, n_latent_axis: int, embedding_bounds=(0., 1.), latent_bounds=(0., 1.),
                  exploration_factor: float = 1.0, on_sphere: bool = False):
