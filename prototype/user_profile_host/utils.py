@@ -37,7 +37,7 @@ def slerp(v0, v1, num, t0=0, t1=1):
 
     return v3
 
-def display_generated_points(generated_points: Tensor, user_profile: Tensor):
+def display_generated_points(generated_points: Tensor, user_profile: Tensor, x_bounds=(-1, 1), y_bounds=(-1, 1), z_bounds=(-1, 1)):
     """
     Display the generated points in a 3D plot. The points are assumed to be in 3D.
     :param generated_points: Tensor of shape (n_points, 3) containing the generated points.
@@ -45,6 +45,9 @@ def display_generated_points(generated_points: Tensor, user_profile: Tensor):
     """
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
+    ax.set_xlim(x_bounds)
+    ax.set_ylim(y_bounds)
+    ax.set_zlim(z_bounds)
 
     for point in generated_points:
         ax.scatter(point[0], point[1], point[2])
