@@ -400,6 +400,7 @@ class WebUI:
         self.keyboard.active = False
         self.reset_scorers()
         self.user_profile_host = None
+        seed_everything(self.args.random_seed)
     
     def get_webis_demo_template_html(self):
         """
