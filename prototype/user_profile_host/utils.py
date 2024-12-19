@@ -60,3 +60,30 @@ def display_generated_points(generated_points: Tensor, user_profile: Tensor, x_b
 
     plt.title("Generated points on surface of sphere")
     plt.show()
+
+
+def display_generated_points_user_profile_2d(low_d_embeddings: Tensor, low_d_user_profile: Tensor, preferences: Tensor,
+                                             compression_technique: str = "PCA", save_path: str = None):
+    """
+    Display the generated points in a 2D plot. The points are assumed to be in 2D.
+    :param low_d_embeddings: Tensor of shape (n_points, 2) containing the generated points,
+        i.e. points must be two-dimensional.
+    :param low_d_user_profile: The user profile in 2D.
+    :param preferences: (n_points,) preferences of the user concerning the generated points.
+    :param compression_technique: The technique used to compress the points to 2D. Either "PCA" or "t-SNE".
+    :param save_path: The path to save the plot to. Has to be a string and include "/" at the end. Default is None,
+        hence, image is not saved.
+    :return: -
+    """
+    cmap = plt.get_cmap('coolwarm')
+    fig = plt.figure(figsize=(6, 5))
+    p = plt.scatter(low_d_embeddings[:, 0], low_d_embeddings[:, 1], c=preferences, cmap=cmap)
+    plt.colorbar(mappable=p)
+    plt.scatter(low_d_user_profile[0], low_d_user_profile[1], c='black', s=150, marker='+', linewidth=3.5,
+                label='User Profile')
+    plt.legend()
+    plt.title("Generated points up to now compressed to 2D using " + compression_technique)
+    if save_path is not None:
+        plt.savefig(save_path + f"generated_points_compressed_using_{compression_technique}.svg",
+                    dpi=300, bbox_inches='tight', format='svg')
+    plt.show()
