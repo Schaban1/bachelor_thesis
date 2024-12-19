@@ -240,16 +240,17 @@ class UserProfileHost():
 
         if self.num_axis == 2:
             return self.user_profile, self.embeddings, self.preferences
-        elif algorithm == 'pca':
-            pca = PCA(n_components=2)
-            pca.fit(self.embeddings)
-            #tbc.
-            return self.user_profile, self.embeddings, self.preferences # Placeholder
-        elif algorithm == 'tsne':
+
+        else:
             matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
-            transformed_embeddings = TSNE(random_state=42).fit_transform(matrix)
+            if algorithm == 'pca':
+                pca = PCA(n_components=2)
+                transformed_embeddings = pca.fit_transform(matrix)
+            elif algorithm == 'tsne':
+                transformed_embeddings = TSNE(random_state=42).fit_transform(matrix)
+            else:
+                raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
+
             low_d_user_profile = transformed_embeddings[0]
             low_d_embeddings = transformed_embeddings[1:]
             return low_d_user_profile, low_d_embeddings, self.preferences
-        else:
-            raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
