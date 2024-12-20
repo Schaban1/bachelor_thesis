@@ -3,7 +3,7 @@ defaults:
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled
 
-num_recommendations : 5
+num_recommendations : 6
 port: 2020
 reconnect_timeout: 3
 score_mode: emoji
@@ -12,7 +12,7 @@ image_display_size : [256, 256]
 random_seed : 42
 
 generator:
-  num_inference_steps : 30
+  num_inference_steps : 25
   guidance_scale: 7.5
   random_latents : False
   use_negative_prompt : False

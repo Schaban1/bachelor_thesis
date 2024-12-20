@@ -55,7 +55,7 @@ class Recommender(ABC):  # ABC = Abstract Base Class
 
 class RandomRecommender(Recommender):
     
-    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(0., 1.)):
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.)):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
@@ -70,9 +70,16 @@ class RandomRecommender(Recommender):
             user_profile where n_dims is the dimensionality of the user_profile.
         """
         # Return random recommendations
-        rand_embedding_factors = torch.rand(size=(n_recommendations, self.n_embedding_axis)) * (self.embedding_bounds[1] - self.embedding_bounds[0]) + self.embedding_bounds[0]
-        rand_latent_factors = torch.rand(size=(n_recommendations, self.n_latent_axis)) * (self.latent_bounds[1] - self.latent_bounds[0]) + self.latent_bounds[0]
-        user_space_embeddings = torch.cat((rand_embedding_factors, rand_latent_factors), dim=1)
+        embed_alpha = torch.ones(self.n_embedding_axis)
+        embed_distribution = torch.distributions.dirichlet.Dirichlet(embed_alpha)
+        embeddings = embed_distribution.sample(sample_shape=(n_recommendations,))
+
+        latent_alpha = torch.ones(self.n_latent_axis)
+        latent_distribution = torch.distributions.dirichlet.Dirichlet(latent_alpha)
+        latents = latent_distribution.sample(sample_shape=(n_recommendations,))
+        latents = latents * (torch.randint(low=0, high=2, size=(latents.shape[0],)) * 2 - 1)
+
+        user_space_embeddings = torch.cat((embeddings, latents), dim=1)
         return user_space_embeddings
 
 
@@ -203,14 +210,14 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.), n_points_per_axis : int = 3):
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.), n_points_per_axis : int = 3, beta : float = 20):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
         self.cand_indices = []
-        self.beta = 20
+        self.beta = beta
         self.reduce_beta = True
         self.n_points_per_axis = n_points_per_axis
 
@@ -246,13 +253,13 @@ class BayesianRecommender(Recommender):
         mask = embed_grid_sum <= 1
 
         # Get the corresponding z values
-        z_grid = 1 - embed_grid_sum
+        final_embed_vector = 1 - embed_grid_sum
 
         # Apply the mask to filter out points outside the region 0 <= x + y + z <= 1
         embed_grid = embed_grid[mask]
         latent_grid = latent_grid[mask]
-        z_grid = z_grid[mask]
-        search_space = torch.cat((embed_grid, z_grid.reshape(-1, 1), latent_grid), dim=-1)
+        final_embed_vector = final_embed_vector[mask]
+        search_space = torch.cat((embed_grid, final_embed_vector.reshape(-1, 1), latent_grid), dim=-1)
 
         # Standardize search space
         search_space = (search_space - mean) / std
@@ -271,7 +278,7 @@ class BayesianRecommender(Recommender):
             # Get the highest scoring candidates out of meshgrid
             scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
             candidate_idx = torch.argmax(scores)
-            candidate = search_space[candidate_idx]
+            candidate = search_space[candidate_idx].reshape(1, -1)
 
             # Extend data with new candidate and predicted preference to include this information in the next iteration
             pseudo_preference = acqf._mean_and_sigma(X=candidate, compute_sigma=False)[0].detach()
