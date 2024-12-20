@@ -202,9 +202,7 @@ class UserProfileHost():
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations)
         else:
             # Start initially with some random embeddings and take into accound the bounds
-            rand_embedding_factors = torch.rand(size=(num_recommendations, self.n_embedding_axis)) * (self.embedding_bounds[1] - self.embedding_bounds[0]) + self.embedding_bounds[0]
-            rand_latent_factors = torch.rand(size=(num_recommendations, self.n_latent_axis)) * (self.latent_bounds[1] - self.latent_bounds[0]) + self.latent_bounds[0]
-            user_space_embeddings = torch.cat((rand_embedding_factors, rand_latent_factors), dim=1)
+            user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds).recommend_embeddings(None, self.n_recommendations)
         
         # Safe the user_space_embeddings
         if self.embeddings != None:

@@ -77,7 +77,8 @@ class RandomRecommender(Recommender):
         latent_alpha = torch.ones(self.n_latent_axis)
         latent_distribution = torch.distributions.dirichlet.Dirichlet(latent_alpha)
         latents = latent_distribution.sample(sample_shape=(n_recommendations,))
-        latents = latents * (torch.randint(low=0, high=2, size=(latents.shape[0],)) * 2 - 1)
+        factor = (torch.randint(low=0, high=2, size=(latents.shape[0],1)) * 2 - 1).expand(latents.shape[0], self.n_latent_axis)
+        latents = latents * factor
 
         user_space_embeddings = torch.cat((embeddings, latents), dim=1)
         return user_space_embeddings
