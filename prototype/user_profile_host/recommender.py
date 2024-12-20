@@ -269,7 +269,7 @@ class BayesianRecommender(Recommender):
             acqf = UpperConfidenceBound(model=model, beta=self.beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
-            scores = acqf(search_space)
+            scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
             candidate_idx = torch.argmax(scores)
             candidate = search_space[candidate_idx]
 
