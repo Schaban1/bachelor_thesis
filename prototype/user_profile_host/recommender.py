@@ -203,7 +203,7 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.)):
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.), n_points_per_axis : int = 3):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
@@ -212,6 +212,7 @@ class BayesianRecommender(Recommender):
         self.cand_indices = []
         self.beta = 20
         self.reduce_beta = True
+        self.n_points_per_axis = n_points_per_axis
 
     def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5) -> Tensor:
         """
@@ -232,16 +233,29 @@ class BayesianRecommender(Recommender):
         mean, std = torch.mean(embeddings, dim=0), torch.std(embeddings, dim=0)
         embeddings_std = (embeddings - mean) / std
 
-        # Define bounds for search space
-        bounds = torch.tensor([
-            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in
-                                                                                range(self.n_latent_axis)],
-            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in
-                                                                                range(self.n_latent_axis)]
-        ])
+        # Build search space and filter for embeddings that are on a sphere in CLIP space
+        x_embed = torch.linspace(self.embedding_bounds[0], self.embedding_bounds[1], self.n_points_per_axis)
+        x_latent = torch.linspace(self.latent_bounds[0], self.latent_bounds[1], self.n_points_per_axis)
+        vectors = torch.meshgrid([x_embed for i in range(self.n_embedding_axis - 1)] + [x_latent for i in range(self.n_latent_axis)], indexing='ij')
+        vectors = [v.flatten() for v in vectors]
+        embed_grid = torch.stack(vectors[:self.n_embedding_axis-1], dim=1)
+        latent_grid = torch.stack(vectors[self.n_embedding_axis-1:], dim=1)
+        embed_grid_sum = torch.sum(embed_grid, dim=1)
 
-        # Standardize bounds
-        bounds_std = (bounds - mean) / std
+        # Mask out the points where x + y > 1 to ensure they lie on the plane x + y + z = 1
+        mask = embed_grid_sum <= 1
+
+        # Get the corresponding z values
+        z_grid = 1 - embed_grid_sum
+
+        # Apply the mask to filter out points outside the region 0 <= x + y + z <= 1
+        embed_grid = embed_grid[mask]
+        latent_grid = latent_grid[mask]
+        z_grid = z_grid[mask]
+        search_space = torch.cat((embed_grid, z_grid.reshape(-1, 1), latent_grid), dim=-1)
+
+        # Standardize search space
+        search_space = (search_space - mean) / std
 
         # Get new acquisitions step by step
         for _ in range(n_recommendations):
@@ -255,14 +269,9 @@ class BayesianRecommender(Recommender):
             acqf = UpperConfidenceBound(model=model, beta=self.beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
-            candidate, _ = optimize_acqf(
-                acq_function=acqf,
-                bounds=bounds_std,
-                q=1,
-                num_restarts=10,
-                raw_samples=512,  # used for intialization heuristic
-                options={"batch_limit": 5, "maxiter": 200},
-            )
+            scores = acqf(search_space)
+            candidate_idx = torch.argmax(scores)
+            candidate = search_space[candidate_idx]
 
             # Extend data with new candidate and predicted preference to include this information in the next iteration
             pseudo_preference = acqf._mean_and_sigma(X=candidate, compute_sigma=False)[0].detach()
