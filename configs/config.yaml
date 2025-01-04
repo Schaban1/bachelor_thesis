@@ -4,7 +4,7 @@ defaults:
   - override hydra/job_logging: disabled
 
 num_recommendations : 5
-port: 2020
+port: 8080
 reconnect_timeout: 3
 score_mode: emoji
 device: cuda
