@@ -155,6 +155,7 @@ class WebUI:
             self.build_initial_userinterface()
             self.build_main_loop_userinterface()
             self.build_loading_spinner_userinterface()
+            self.build_plot_userinterface()
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
     
@@ -175,6 +176,8 @@ class WebUI:
         """
         ngUI.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_main_loop_iteration', value=True):
+            with ngUI.row().classes('w-full justify-end'):
+                ngUI.button('Interactive plot', on_click=self.on_show_interactive_plot_button_click)
             with ngUI.row().classes('mx-auto items-center'):
                 ngUI.label('Please rate these images based on your satisfaction.').style('font-size: 200%;')
                 if self.score_mode == ScoreMode.EMOJI.value:
@@ -203,6 +206,14 @@ class WebUI:
             self.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
                 ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
+    
+    def build_plot_userinterface(self):
+        """
+        Builds the UI for the interactive plot state.
+        """
+        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_interactive_plot', value=True):
+            ngUI.button('Back', on_click=self.on_back_to_main_loop_button_click)
+            # TODO: Plot UI
     
     def build_slider(self, idx):
         """
@@ -420,6 +431,20 @@ class WebUI:
         self.reset_scorers()
         self.user_profile_host = None
         seed_everything(self.args.random_seed)
+    
+    def on_show_interactive_plot_button_click(self):
+        """
+        Shows the interactive plot screen.
+        """
+        self.change_state(WebUIState.PLOT_STATE)
+        self.keyboard.active = False
+    
+    def on_back_to_main_loop_button_click(self):
+        """
+        Returns to the 'Main Loop' screen.
+        """
+        self.change_state(WebUIState.MAIN_STATE)
+        self.keyboard.active = True
     
     def get_webis_demo_template_html(self):
         """
