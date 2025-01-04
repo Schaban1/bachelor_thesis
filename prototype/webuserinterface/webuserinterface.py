@@ -22,6 +22,7 @@ class WebUI:
     is_initial_iteration = binding.BindableProperty()
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
+    is_interactive_plot = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
 
@@ -51,6 +52,7 @@ class WebUI:
         self.is_initial_iteration = False
         self.is_main_loop_iteration = False
         self.is_generating = False
+        self.is_interactive_plot = False
         # Provided by the user / system
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.POINT
@@ -106,6 +108,7 @@ class WebUI:
         self.is_initial_iteration = self.state == WebUIState.INIT_STATE
         self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
         self.is_generating = self.state == WebUIState.GENERATING_STATE
+        self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
     
     def init_score_mode(self):
         """
