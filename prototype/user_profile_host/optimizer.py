@@ -50,6 +50,8 @@ class WeightedSumOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
+        if torch.count_nonzero(preferences) == 0:
+            return embeddings[-1]
         user_profile = (preferences.reshape(-1) @ embeddings)/preferences.sum()
         return user_profile
     
