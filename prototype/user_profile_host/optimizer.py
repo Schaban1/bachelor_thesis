@@ -62,18 +62,32 @@ class EMAWeightedSumOptimizer:
         self.n_recommendations = n_recommendations
         self.alpha = alpha
 
+    def return_if_all_zero_preferences(self, preferences: Tensor, embeddings: Tensor):
+        """
+        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
+        :param preferences: The scores of the current user concerning the (user-space) embeddings.
+        :return: Boolean indicating if only zeros in preferences and the user profile as any embedding to avoid
+        generating black images.
+        """
+        return (torch.count_nonzero(preferences) == 0), embeddings[-1]
+
     def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
+        # if only zeros in preferences, black images are generated
+        all_zero_preferences, user_profile = self.return_if_all_zero_preferences(preferences, embeddings)
+
         if self.user_profile == None:
-            self.user_profile = (preferences.reshape(-1) @ embeddings)/preferences.sum()
+            self.user_profile = user_profile if all_zero_preferences \
+                else (preferences.reshape(-1) @ embeddings) / preferences.sum()
         else:
             new_embeddings, new_preferences = embeddings[-self.n_recommendations:], preferences[-self.n_recommendations:]
             new_user_profile = (new_preferences.reshape(-1) @ new_embeddings)/new_preferences.sum()
-            self.user_profile = self.alpha * new_user_profile + (1 - self.alpha) * self.user_profile
+            self.user_profile = user_profile if all_zero_preferences else (
+                    self.alpha * new_user_profile + (1 - self.alpha) * self.user_profile)
 
         return self.user_profile
 
