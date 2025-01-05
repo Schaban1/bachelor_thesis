@@ -160,7 +160,7 @@ class UserProfileHost():
         latents = None
         if self.n_latent_axis:
             latents = self.latent_center + torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
-            latents = torch.nan_to_num(latents)
+            latents = torch.nan_to_num(latents, nan=1.0)
             latents = (latents / torch.linalg.matrix_norm(latents, ord=2, dim=(-2, -1), keepdim=True)
                        * self.latent_space_length)
 
