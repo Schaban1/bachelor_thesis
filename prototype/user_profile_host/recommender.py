@@ -225,7 +225,7 @@ class BayesianRecommender(Recommender):
 
     def build_search_space(self):
         if self.search_space_type == 'dirichlet':
-            n_samples = max(min((self.n_embedding_axis + self.n_latent_axis) * 5**((self.n_embedding_axis + self.n_latent_axis) // 2), 1000), 5000000)
+            n_samples = min(max((self.n_embedding_axis + self.n_latent_axis) * 5**((self.n_embedding_axis + self.n_latent_axis) // 2), 1000), 5000000)
             alpha = torch.ones(self.n_embedding_axis + self.n_latent_axis)
             dist = torch.distributions.dirichlet.Dirichlet(alpha)
             factor = torch.cat((torch.ones(n_samples, self.n_embedding_axis), (torch.randint(low=0, high=2, size=(n_samples,self.n_latent_axis)) * 2 - 1)), dim=1)
