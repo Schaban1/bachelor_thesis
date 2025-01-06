@@ -23,7 +23,8 @@ class UserProfileHost():
             n_latent_axis : int = 3,
             latent_bounds : tuple = (-1., 1.),
             use_latent_center : bool = False,
-            n_recommendations : int = 5
+            n_recommendations : int = 5,
+            search_space_type: str = 'dirichlet'
             ):
         # Some Clip Hyperparameters
         self.embedding_dim = 768
@@ -102,7 +103,8 @@ class UserProfileHost():
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
-                                                   latent_bounds=latent_bounds)
+                                                   latent_bounds=latent_bounds,
+                                                   search_space_type=search_space_type)
             self.optimizer = NoOptimizer()
         elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender(embedding_bounds=self.embedding_bounds)
