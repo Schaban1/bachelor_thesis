@@ -211,7 +211,7 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.), n_points_per_axis : int = 3, beta : float = 20):
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.), n_points_per_axis : int = 3, beta : float = 20, search_space_type : str = 'dirichlet'):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
@@ -221,6 +221,41 @@ class BayesianRecommender(Recommender):
         self.beta = beta
         self.reduce_beta = True
         self.n_points_per_axis = n_points_per_axis
+        self.search_space_type = search_space_type
+
+    def build_search_space(self):
+        if self.search_space_type == 'dirichlet':
+            n_samples = (self.n_embedding_axis + self.n_latent_axis) * 100
+            alpha = torch.ones(self.n_embedding_axis + self.n_latent_axis)
+            dist = torch.distributions.dirichlet.Dirichlet(alpha)
+            factor = torch.cat((torch.ones(search_space.shape[0], self.n_embedding_axis), (torch.randint(low=0, high=2, size=(search_space.shape[0],self.n_latent_axis)) * 2 - 1)), dim=1)
+            search_space = dist.sample(sample_shape=(n_samples,)) * factor
+            return search_space
+        
+        elif self.search_space_type == 'linspace':
+            # Build search space and filter for embeddings that are on a sphere in CLIP space
+            x_embed = torch.linspace(self.embedding_bounds[0], self.embedding_bounds[1], self.n_points_per_axis)
+            x_latent = torch.linspace(self.latent_bounds[0], self.latent_bounds[1], self.n_points_per_axis)
+            vectors = torch.meshgrid([x_embed for i in range(self.n_embedding_axis - 1)] + [x_latent for i in range(self.n_latent_axis)], indexing='ij')
+            vectors = [v.flatten() for v in vectors]
+            embed_grid = torch.stack(vectors[:self.n_embedding_axis-1], dim=1)
+            latent_grid = torch.stack(vectors[self.n_embedding_axis-1:], dim=1)
+            embed_grid_sum = torch.sum(embed_grid, dim=1)
+
+            # Mask out the points where x + y > 1 to ensure they lie on the plane x + y + z = 1
+            mask = embed_grid_sum <= 1
+
+            # Get the corresponding z values
+            final_embed_vector = 1 - embed_grid_sum
+
+            # Apply the mask to filter out points outside the region 0 <= x + y + z <= 1
+            embed_grid = embed_grid[mask]
+            latent_grid = latent_grid[mask]
+            final_embed_vector = final_embed_vector[mask]
+            search_space = torch.cat((embed_grid, final_embed_vector.reshape(-1, 1), latent_grid), dim=-1)
+            return search_space
+        else:
+            raise NotImplementedError('Invalid Search Space.')
 
     def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5) -> Tensor:
         """
@@ -241,26 +276,8 @@ class BayesianRecommender(Recommender):
         mean, std = torch.mean(embeddings, dim=0), torch.std(embeddings, dim=0)
         embeddings_std = (embeddings - mean) / std
 
-        # Build search space and filter for embeddings that are on a sphere in CLIP space
-        x_embed = torch.linspace(self.embedding_bounds[0], self.embedding_bounds[1], self.n_points_per_axis)
-        x_latent = torch.linspace(self.latent_bounds[0], self.latent_bounds[1], self.n_points_per_axis)
-        vectors = torch.meshgrid([x_embed for i in range(self.n_embedding_axis - 1)] + [x_latent for i in range(self.n_latent_axis)], indexing='ij')
-        vectors = [v.flatten() for v in vectors]
-        embed_grid = torch.stack(vectors[:self.n_embedding_axis-1], dim=1)
-        latent_grid = torch.stack(vectors[self.n_embedding_axis-1:], dim=1)
-        embed_grid_sum = torch.sum(embed_grid, dim=1)
-
-        # Mask out the points where x + y > 1 to ensure they lie on the plane x + y + z = 1
-        mask = embed_grid_sum <= 1
-
-        # Get the corresponding z values
-        final_embed_vector = 1 - embed_grid_sum
-
-        # Apply the mask to filter out points outside the region 0 <= x + y + z <= 1
-        embed_grid = embed_grid[mask]
-        latent_grid = latent_grid[mask]
-        final_embed_vector = final_embed_vector[mask]
-        search_space = torch.cat((embed_grid, final_embed_vector.reshape(-1, 1), latent_grid), dim=-1)
+        # Build a search space for the BO to look in
+        search_space = self.build_search_space()
 
         # Standardize search space
         search_space = (search_space - mean) / std
