@@ -209,7 +209,8 @@ class UserProfileHost():
 
         Parameters:
             num_recommendations (int): Defines the number of embeddings that will be returned for user evaluation.
-            beta (float): Defines the trade-off between exploration and exploitation when using the BayesRecommender.
+            beta (float): Defines the trade-off between exploration and exploitation when using the BayesRecommender
+            or the weighted axes Recommender.
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
@@ -217,7 +218,7 @@ class UserProfileHost():
         if self.user_profile != None:
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations, beta=beta)
         else:
-            # Start initially with some random embeddings and take into accound the bounds
+            # Start initially with some random embeddings and take into account the bounds
             user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds).recommend_embeddings(None, self.n_recommendations)
         
         # Safe the user_space_embeddings
