@@ -213,15 +213,16 @@ class SinglePointWeightedAxesRecommender(Recommender):
         upper_sampling_ranges = self.bounds[1] - user_profile
 
         # OLD: random weights for axes for each recommendation in bounds
-        # weights = torch.rand(size=(n_recommendations, self.n_axis))  # in [0, 1]
+        weights = torch.rand(size=(n_recommendations, self.n_axis))  # in [0, 1]
 
-        alpha = torch.ones(self.n_axis)  # Concentration parameter (uniform)
-        distribution = torch.distributions.dirichlet.Dirichlet(alpha)
-        weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
+        # FIXME: generates noise images
+        # alpha = torch.ones(self.n_axis)  # Concentration parameter (uniform)
+        # distribution = torch.distributions.dirichlet.Dirichlet(alpha)
+        # weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
 
         # scale to bounds to ranges & scale with exploration factor
         weights = (exploration_factor *
-                   (weights_dirichlet * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
+                   (weights * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
 
         # interpolate between user profile and axes, user user_profile as reference point
         return user_profile + weights @ axes
