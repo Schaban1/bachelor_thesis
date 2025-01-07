@@ -41,7 +41,7 @@ class MainLoopUI(UIComponent):
                         self.webUI.images_display[i] = ngUI.interactive_image(self.webUI.images[i]).style(f'width: {self.webUI.image_display_size[0]}px; height: {self.webUI.image_display_size[1]}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                         with self.webUI.images_display[i]:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
-                        self.webUI.build_scorer(i)
+                        self.webUI.scorer.build_scorer(i)
             ngUI.space()
             ngUI.number(label='Next beta', value=self.webUI.user_profile_host_beta, min=0, precision=0, step=1, on_change=self.on_next_beta_input, validation={'Needs to be a number!': lambda value: isinstance(value, (int, float)), 'Needs to be a positive number!': lambda value: value >= 0}).bind_value_from(self.webUI, 'user_profile_host_beta')
             ngUI.space()
@@ -92,7 +92,7 @@ class MainLoopUI(UIComponent):
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
         self.webUI.update_image_displays()
-        self.webUI.reset_scorers()
+        self.webUI.scorer.reset_scorers()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.update_active_image()
         self.webUI.keyboard.active = True
@@ -103,6 +103,6 @@ class MainLoopUI(UIComponent):
         """
         self.webUI.change_state(WebUIState.INIT_STATE)
         self.webUI.keyboard.active = False
-        self.webUI.reset_scorers()
+        self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
         seed_everything(self.webUI.args.random_seed)

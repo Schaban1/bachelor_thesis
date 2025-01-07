@@ -11,7 +11,7 @@ from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
 from prototype.utils import seed_everything
-from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI
+from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer
 
 
 class WebUI:
@@ -58,7 +58,7 @@ class WebUI:
         self.recommendation_type = RecommendationType.POINT
         self.num_images_to_generate = self.args.num_recommendations
         self.score_mode = self.args.score_mode
-        self.init_score_mode()
+        self.scorer = Scorer(self)
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
@@ -70,9 +70,7 @@ class WebUI:
         self.image_display_size = tuple(self.args.image_display_size)
         self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
-        self.scores_toggles = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
-        self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.submit_button = None
         # Image saving
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
@@ -110,21 +108,6 @@ class WebUI:
         self.is_generating = self.state == WebUIState.GENERATING_STATE
         self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
     
-    def init_score_mode(self):
-        """
-        Registers some functions based on the current self.score_mode.
-        """
-        if self.score_mode == ScoreMode.SLIDER.value:
-            self.build_scorer = self.build_slider
-            self.get_scores = self.get_scores_slider
-            self.reset_scorers = self.reset_sliders
-        elif self.score_mode == ScoreMode.EMOJI.value:
-            self.build_scorer = self.build_emoji_toggle
-            self.get_scores = self.get_scores_emoji_toggles
-            self.reset_scorers = self.reset_emoji_toggles
-        else:
-            print(f"Unknown score mode: {self.score_mode}")
-    
     def init_generator(self):
         """
         Initializes the generator and performs a warm-start.
@@ -158,25 +141,6 @@ class WebUI:
             PlotUI(self)
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
-    
-    def build_slider(self, idx):
-        """
-        Registers a slider object at position idx.
-
-        Args:
-            idx: The index of the slider.
-        """
-        self.scores_slider[idx] = ngUI.slider(min=0, max=10, value=0, step=0.1)
-        ngUI.label().bind_text_from(self.scores_slider[idx], 'value')
-    
-    def build_emoji_toggle(self, idx):
-        """
-        Registers a toggle object at position idx.
-
-        Args:
-            idx: The index of the toggle object.
-        """
-        self.scores_toggles[idx] = ngUI.toggle({0: '😢1', 1: '🙁2', 2: '😐3', 3: '😄4', 4: '😍5'}, value=0).props('rounded')
     
     def handle_key(self, e: KeyEventArguments):
         """
@@ -217,7 +181,7 @@ class WebUI:
         Args:
             key: The number of the key typed.
         """
-        self.scores_toggles[self.active_image].value = key - 1
+        self.scorer.scores_toggles[self.active_image].value = key - 1
         self.update_active_image(self.active_image + 1)
     
     def init_user_profile_host(self):
@@ -249,45 +213,11 @@ class WebUI:
         """
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
     
-    def get_scores_slider(self):
-        """
-        Get the normalized scores provided by the user with the sliders.
-
-        Returns:
-            The normalized scores as a one-dim tensor of shape (num_images_to_generate).
-        """
-        scores = torch.FloatTensor([slider.value for slider in self.scores_slider])
-        normalized_scores = scores / 10
-        return normalized_scores
-    
-    def get_scores_emoji_toggles(self):
-        """
-        Get the normalized scores provided by the user with the emoji toggle buttons.
-
-        Returns:
-            The normalized scores as a one-dim tensor of shape (num_images_to_generate).
-        """
-        scores = torch.FloatTensor([toggle.value for toggle in self.scores_toggles])
-        normalized_scores = scores / 4
-        return normalized_scores
-    
-    def reset_sliders(self):
-        """
-        Reset the value of the score sliders to the default value.
-        """
-        [slider.set_value(0) for slider in self.scores_slider]
-    
-    def reset_emoji_toggles(self):
-        """
-        Reset the value of the score toggles to the default value.
-        """
-        [toggle.set_value(0) for toggle in self.scores_toggles]
-    
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
         """
-        normalized_scores = self.get_scores()
+        normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
         self.user_profile_host_beta -= 1
     
