@@ -190,7 +190,7 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
         return torch.stack(interpolated_points)
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
         Recommends embeddings based on the user profile, axes of the user space and the number of recommendations.
         If points should be on the sphere, SLERP is used to interpolate between the user profile and the axes.
@@ -201,7 +201,7 @@ class SinglePointWeightedAxesRecommender(Recommender):
             or the weighted axes Recommender.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        exploration_factor = beta if beta else self.exploration_factor
+        exploration_factor = self.exploration_factor# beta if beta else self.exploration_factor
         # whether recommendations should be on the sphere or not
         if self.on_sphere:  # usage of SLERP
             return self.recommend_on_sphere(user_profile, n_recommendations, radius=exploration_factor)
