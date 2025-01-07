@@ -89,6 +89,7 @@ class WebUI:
         self.change_state(WebUIState.INIT_STATE)
         self.build_userinterface()
     
+    # <---------- Updating State ---------->
     def change_state(self, new_state: WebUIState):
         """
         Updates the current state of the Web UI.
@@ -108,19 +109,8 @@ class WebUI:
         self.is_generating = self.state == WebUIState.GENERATING_STATE
         self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
     
-    def init_generator(self):
-        """
-        Initializes the generator and performs a warm-start.
-        """
-        self.generator = Generator(
-            n_images=self.num_images_to_generate,
-            cache_dir=self.args.path.cache_dir,
-            device=self.args.device,
-            **self.args.generator        
-        )
-        with self.queue_lock:
-            self.generator.generate_image(torch.zeros(1, 77, 768))
-    
+    # <------------------------------------>
+    # <---------- Building UI ---------->
     def build_userinterface(self):
         """
         Builds the complete user interface using NiceGUI.
@@ -142,6 +132,37 @@ class WebUI:
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
     
+    # <--------------------------------->
+    # <---------- Initialize other non-UI components ---------->
+    def init_generator(self):
+        """
+        Initializes the generator and performs a warm-start.
+        """
+        self.generator = Generator(
+            n_images=self.num_images_to_generate,
+            cache_dir=self.args.path.cache_dir,
+            device=self.args.device,
+            **self.args.generator        
+        )
+        with self.queue_lock:
+            self.generator.generate_image(torch.zeros(1, 77, 768))
+    
+    def init_user_profile_host(self):
+        """
+        Initializes the user profile host with the initial user prompt.
+        """
+        self.user_profile_host = UserProfileHost(
+            original_prompt=self.user_prompt,
+            add_ons=None,
+            recommendation_type=self.recommendation_type,
+            cache_dir=self.args.path.cache_dir,
+            stable_dif_pipe=self.generator.pipe,
+            n_recommendations=self.num_images_to_generate,
+            **self.args.recommender
+        )
+    
+    # <------------------------------------------------------->
+    # <---------- Keyboard controls ---------->
     def handle_key(self, e: KeyEventArguments):
         """
         Handles key events.
@@ -184,20 +205,8 @@ class WebUI:
         self.scorer.scores_toggles[self.active_image].value = key - 1
         self.update_active_image(self.active_image + 1)
     
-    def init_user_profile_host(self):
-        """
-        Initializes the user profile host with the initial user prompt.
-        """
-        self.user_profile_host = UserProfileHost(
-            original_prompt=self.user_prompt,
-            add_ons=None,
-            recommendation_type=self.recommendation_type,
-            cache_dir=self.args.path.cache_dir,
-            stable_dif_pipe=self.generator.pipe,
-            n_recommendations=self.num_images_to_generate,
-            **self.args.recommender
-        )
-    
+    # <--------------------------------------->
+    # <---------- Image generation & User profile ---------->
     def generate_images(self):
         """
         Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated 
@@ -221,6 +230,8 @@ class WebUI:
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
         self.user_profile_host_beta -= 1
     
+    # <----------------------------------------------------->
+    # <---------- Misc. ---------->
     def get_webis_demo_template_html(self):
         """
         Returns the webis html template for demo web applications.
@@ -233,3 +244,5 @@ class WebUI:
         with open("./prototype/resources/webis_template_bottom.html") as f:
             webis_template_bottom = f.read()
         return webis_template_top, webis_template_bottom
+    
+    # <--------------------------->
