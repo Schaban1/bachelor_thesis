@@ -212,11 +212,16 @@ class SinglePointWeightedAxesRecommender(Recommender):
         lower_sampling_ranges = self.bounds[0] - user_profile
         upper_sampling_ranges = self.bounds[1] - user_profile
 
-        # random weights for axes for each recommendation in bounds
-        weights = torch.rand(size=(n_recommendations, user_profile.shape[0]))  # in [0, 1]
+        # OLD: random weights for axes for each recommendation in bounds
+        # weights = torch.rand(size=(n_recommendations, self.n_axis))  # in [0, 1]
+
+        alpha = torch.ones(self.n_axis)  # Concentration parameter (uniform)
+        distribution = torch.distributions.dirichlet.Dirichlet(alpha)
+        weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
+
         # scale to bounds to ranges & scale with exploration factor
         weights = (exploration_factor *
-                   (weights * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
+                   (weights_dirichlet * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
 
         # interpolate between user profile and axes, user user_profile as reference point
         return user_profile + weights @ axes
@@ -238,9 +243,8 @@ class BayesianRecommender(Recommender):
 
     def build_search_space(self):
         if self.search_space_type == 'dirichlet':
-            n_samples = min(max((self.n_embedding_axis + self.n_latent_axis) *
-                                5**((self.n_embedding_axis + self.n_latent_axis) // 2), 1000), 5000000)
-            alpha = torch.ones(self.n_embedding_axis + self.n_latent_axis)
+            n_samples = min(max(self.n_axis * 5**(self.n_axis // 2), 1000), 5000000)
+            alpha = torch.ones(self.n_axis)
             dist = torch.distributions.dirichlet.Dirichlet(alpha)
             factor = torch.cat((torch.ones(n_samples, self.n_embedding_axis),
                                 (torch.randint(low=0, high=2, size=(n_samples,self.n_latent_axis)) * 2 - 1)), dim=1)
