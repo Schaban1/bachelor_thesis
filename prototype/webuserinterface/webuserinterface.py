@@ -1,10 +1,8 @@
-import os
 from nicegui import ui as ngUI
 from nicegui import binding
 from nicegui.events import KeyEventArguments
 from PIL import Image
 import torch
-from functools import partial
 import asyncio
 import threading
 import secrets
@@ -13,10 +11,7 @@ from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
 from prototype.utils import seed_everything
-from prototype.webuserinterface.components.initial_iteration_ui import InitialIterationUI
-from prototype.webuserinterface.components.main_loop_ui import MainLoopUI
-from prototype.webuserinterface.components.loading_spinner_ui import LoadingSpinnerUI
-from prototype.webuserinterface.components.plot_ui import PlotUI
+from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI
 
 
 class WebUI:
