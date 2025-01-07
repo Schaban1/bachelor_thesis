@@ -25,6 +25,7 @@ class WebUI:
     is_interactive_plot = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
+    user_profile_host_beta = binding.BindableProperty()
 
     @classmethod
     async def create(cls, args):
@@ -203,7 +204,7 @@ class WebUI:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.build_scorer(i)
             ngUI.space()
-            ngUI.number(label='Next beta', value=self.user_profile_host_beta, min=0, precision=0, step=1, validation={'Needs to be a number!': lambda value: isinstance(value, (int, float)), 'Needs to be a positive number!': lambda value: value >= 0})
+            ngUI.number(label='Next beta', value=self.user_profile_host_beta, min=0, precision=0, step=1, on_change=self.on_next_beta_input, validation={'Needs to be a number!': lambda value: isinstance(value, (int, float)), 'Needs to be a positive number!': lambda value: value >= 0}).bind_value_from(self, 'user_profile_host_beta')
             ngUI.space()
             self.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
@@ -433,6 +434,15 @@ class WebUI:
         self.reset_scorers()
         self.user_profile_host = None
         seed_everything(self.args.random_seed)
+    
+    def on_next_beta_input(self, new_next_beta):
+        """
+        Updates the user_profile_host_beta class variable on input in the number field.
+
+        Args:
+            new_next_beta: Input of the number field in the main loop iteration state.
+        """
+        self.user_profile_host_beta = new_next_beta.value
     
     def on_show_interactive_plot_button_click(self):
         """
