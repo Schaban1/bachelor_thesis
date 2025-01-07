@@ -5,6 +5,9 @@ from prototype.constants import WebUIState
 
 
 class PlotUI(UIComponent):
+    """
+    Contains the code for the interactive plot UI.
+    """
 
     def build_userinterface(self):
         """

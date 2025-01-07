@@ -9,6 +9,9 @@ from prototype.utils import seed_everything
 
 
 class MainLoopUI(UIComponent):
+    """
+    Contains the code for the main loop UI.
+    """
 
     def build_userinterface(self):
         """

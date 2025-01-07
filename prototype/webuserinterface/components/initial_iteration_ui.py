@@ -6,6 +6,9 @@ from prototype.constants import RecommendationType, WebUIState
 
 
 class InitialIterationUI(UIComponent):
+    """
+    Contains the code for the initial iteration UI.
+    """
     
     def build_userinterface(self):
         """

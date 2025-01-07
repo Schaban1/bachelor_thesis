@@ -4,6 +4,9 @@ from prototype.webuserinterface.components.ui_component import UIComponent
 
 
 class LoadingSpinnerUI(UIComponent):
+    """
+    Contains the code for the loading spinner UI.
+    """
 
     def build_userinterface(self):
         """
