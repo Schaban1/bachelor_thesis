@@ -44,7 +44,7 @@ class Recommender(ABC):  # ABC = Abstract Base Class
     """
 
     @abstractmethod
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
         """
         :param user_profile: Encodes the user profile in the low-dimensional user profile space. Randomly initialized.
         :param n_recommendations: Number of recommendations to return. By default, 5.
@@ -62,7 +62,7 @@ class RandomRecommender(Recommender):
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
         """
         :param user_profile: A point in the low-dimensional user profile space.
         :param n_recommendations: Number of recommendations to return. By default, 5.
@@ -106,7 +106,7 @@ class SinglePointRecommender(Recommender):
 
         return torch.from_numpy(radius / np.sqrt(np.sum(x ** 2, 1, keepdims=True)) * x).float()
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
         """
         :param user_profile: A point in the low-dimensional user profile space.
         :param n_recommendations: Number of recommendations to return. By default, 5.
@@ -181,7 +181,7 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
         return torch.stack(interpolated_points)
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
         """
         Recommends embeddings based on the user profile, axes of the user space and the number of recommendations.
         If points should be on the sphere, SLERP is used to interpolate between the user profile and the axes.
@@ -192,7 +192,7 @@ class SinglePointWeightedAxesRecommender(Recommender):
         """
         # whether recommendations should be on the sphere or not
         if self.on_sphere:  # usage of SLERP
-            return self.recommend_on_sphere(user_profile, n_recommendations, radius=self.exploration_factor)
+            return self.recommend_on_sphere(user_profile, n_recommendations, radius=self.exploration_factor) #TODO @Klara: Could use beta for exploration factor
 
         axes = torch.eye(user_profile.shape[0])
 
@@ -257,7 +257,7 @@ class BayesianRecommender(Recommender):
         else:
             raise NotImplementedError('Invalid Search Space.')
 
-    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta : float = None) -> Tensor:
         """
         Recommends embeddings based on the user profile, the number of recommendations and the trade-off between
         exploration and exploitation.
@@ -291,7 +291,7 @@ class BayesianRecommender(Recommender):
             mll = fit_gpytorch_mll(mll)
 
             # Initialize the acquisition function
-            acqf = UpperConfidenceBound(model=model, beta=self.beta, maximize=True)
+            acqf = UpperConfidenceBound(model=model, beta=self.beta if not beta else beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
             scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
