@@ -203,6 +203,8 @@ class WebUI:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.build_scorer(i)
             ngUI.space()
+            ngUI.number(label='Next beta', value=self.user_profile_host_beta, min=0, precision=0, step=1, validation={'Needs to be a number!': lambda value: isinstance(value, (int, float)), 'Needs to be a positive number!': lambda value: value >= 0})
+            ngUI.space()
             self.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
                 ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
