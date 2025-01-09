@@ -18,13 +18,20 @@ class WebUI:
     """
     This class implements a interactive web user interface for an image generation system.
     """
+    session_id = binding.BindableProperty()
+    state = binding.BindableProperty()
     is_initial_iteration = binding.BindableProperty()
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
     is_interactive_plot = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
+    num_images_to_generate = binding.BindableProperty()
+    score_mode = binding.BindableProperty()
     user_profile_host_beta = binding.BindableProperty()
+    image_display_size = binding.BindableProperty()
+    active_image = binding.BindableProperty()
+    save_path = binding.BindableProperty()
 
     @classmethod
     async def create(cls, args):
@@ -76,7 +83,7 @@ class WebUI:
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
 
-        self.debug_menu = DebugMenu()
+        self.debug_menu = DebugMenu(self)
 
         self.keyboard = None
         # Remove loading label
@@ -174,7 +181,7 @@ class WebUI:
         """
         if e.key.f9 and e.action.keydown:
             self.debug_menu.toggle_visibility()
-        if self.score_mode == ScoreMode.EMOJI.value and self.state == WebUIState.MAIN_STATE.value:
+        if self.score_mode == ScoreMode.EMOJI.value and self.state == WebUIState.MAIN_STATE:
             if e.key.arrow_right and e.action.keydown:
                 self.update_active_image(self.active_image + 1)
             if e.key.arrow_left and e.action.keydown:

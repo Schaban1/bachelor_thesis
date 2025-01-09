@@ -15,29 +15,11 @@ class InitialIterationUI(UIComponent):
         Builds the UI for the initial iteration state.
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_initial_iteration', value=True):
-            ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input, validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100")
+            ngUI.input(label='Your prompt:', validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100").bind_value(self.webUI, 'user_prompt')
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.select({t: t.value for t in RecommendationType}, value=RecommendationType.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
+            ngUI.select({t: t.value for t in RecommendationType}, value=RecommendationType.POINT).props('popup-content-class="max-w-[200px]"').bind_value(self.webUI, 'recommendation_type')
             ngUI.space().classes('w-full h-[2vh]')
             ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
-    
-    def on_user_prompt_input(self, new_user_prompt):
-        """
-        Updates the user_prompt class variable on input in the text field.
-
-        Args:
-            new_user_prompt: Input of the text field in the initial iteration state.
-        """
-        self.webUI.user_prompt = new_user_prompt.value
-    
-    def on_recommendation_type_select(self, new_recommendation_type):
-        """
-        Updates the recommendation_type class variable on selection in the select menu.
-
-        Args:
-            new_recommendation_type: Selection of the select menu in the initial iteration state.
-        """
-        self.webUI.recommendation_type = new_recommendation_type.value
     
     async def on_generate_images_button_click(self):
         """

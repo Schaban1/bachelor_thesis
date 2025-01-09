@@ -46,7 +46,7 @@ class MainLoopUI(UIComponent):
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.webUI.scorer.build_scorer(i)
             ngUI.space()
-            ngUI.number(label='Next beta', value=self.webUI.user_profile_host_beta, min=0, precision=0, step=1, on_change=self.on_next_beta_input, validation={'Needs to be a number!': lambda value: isinstance(value, (int, float)), 'Needs to be a positive number!': lambda value: value >= 0}).bind_value_from(self.webUI, 'user_profile_host_beta')
+            ngUI.number(label='Next beta', min=0, precision=0, step=1, validation={'Needs to be a number!': lambda value: isinstance(value, (int, float)), 'Needs to be a positive number!': lambda value: value >= 0}).bind_value(self.webUI, 'user_profile_host_beta')
             ngUI.space()
             self.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
@@ -72,15 +72,6 @@ class MainLoopUI(UIComponent):
         image_to_save.save(f"{self.webUI.save_path}/{file_name}")
         self.webUI.num_images_saved += 1
         ngUI.notify(f"Image saved in {self.webUI.save_path}/{file_name}!")
-    
-    def on_next_beta_input(self, new_next_beta):
-        """
-        Updates the user_profile_host_beta class variable on input in the number field.
-
-        Args:
-            new_next_beta: Input of the number field in the main loop iteration state.
-        """
-        self.webUI.user_profile_host_beta = new_next_beta.value
     
     async def on_submit_scores_button_click(self):
         """
