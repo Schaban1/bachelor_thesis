@@ -225,7 +225,7 @@ class BayesianRecommender(Recommender):
 
     def build_search_space(self):
         if self.search_space_type == 'dirichlet':
-            n_samples = min(max((self.n_embedding_axis + self.n_latent_axis) * 5**((self.n_embedding_axis + self.n_latent_axis) // 2), 1000), 5000000)
+            n_samples = min(max((self.n_embedding_axis + self.n_latent_axis) * 5**((self.n_embedding_axis + self.n_latent_axis) // 2), 1000), 500000)
             alpha = torch.ones(self.n_embedding_axis + self.n_latent_axis)
             dist = torch.distributions.dirichlet.Dirichlet(alpha)
             factor = torch.cat((torch.ones(n_samples, self.n_embedding_axis), (torch.randint(low=0, high=2, size=(n_samples,self.n_latent_axis)) * 2 - 1)), dim=1)
@@ -313,3 +313,35 @@ class BayesianRecommender(Recommender):
         # Unstandardize and return them
         candidates = candidates_std * std + mean
         return candidates
+    
+
+    def heat_map_values(self, user_profile: Tensor, user_space: Tensor, beta : float = None):
+        # Get embeddings and ratings from user profile
+        embeddings, preferences = user_profile
+
+        # Change Preference shape
+        preferences = preferences.reshape(-1, 1)
+
+        # Standardize embeddings
+        mean, std = torch.mean(embeddings, dim=0), torch.std(embeddings, dim=0)
+        embeddings_std = (embeddings - mean) / std
+
+        # Build a search space for the BO to look in
+        search_space = user_space
+
+        # Standardize search space
+        search_space = (search_space - mean) / std
+
+        # Build a GP model
+        mean_mod = ConstantMean()  # LinearMean(input_size=embeddings_std.shape[-1])
+        model = SingleTaskGP(train_X=embeddings_std, train_Y=preferences, mean_module=mean_mod)
+        mll = ExactMarginalLogLikelihood(model.likelihood, model)
+        mll = fit_gpytorch_mll(mll)
+
+        # Initialize the acquisition function
+        acqf = UpperConfidenceBound(model=model, beta=self.beta if not beta else beta, maximize=True)
+
+        # Get the highest scoring candidates out of meshgrid
+        scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1])).detach()
+
+        return scores

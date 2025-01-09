@@ -28,6 +28,7 @@ class UserProfileHost():
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
             weighted_axis_exploration_factor: float = 0.5,
+            bo_beta: int = 20,
             search_space_type: str = 'dirichlet'
     ):
         # Some Clip Hyperparameters
@@ -41,6 +42,7 @@ class UserProfileHost():
         self.use_embedding_center = use_embedding_center
         self.use_latent_center = use_latent_center
         self.n_recommendations = n_recommendations
+        self.recommendation_type = recommendation_type
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not stable_dif_pipe:
@@ -111,7 +113,8 @@ class UserProfileHost():
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
                                                    latent_bounds=latent_bounds,
-                                                   search_space_type=search_space_type)
+                                                   search_space_type=search_space_type,
+                                                   beta=bo_beta)
             self.optimizer = NoOptimizer()
         elif recommendation_type == RecommendationType.POINT:
             self.recommender = SinglePointRecommender(embedding_bounds=self.embedding_bounds)
@@ -247,15 +250,30 @@ class UserProfileHost():
             return self.user_profile, self.embeddings, self.preferences
 
         else:
-            matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
-            if algorithm == 'pca':
-                pca = PCA(n_components=2)
-                transformed_embeddings = pca.fit_transform(matrix)
-            elif algorithm == 'tsne':
-                transformed_embeddings = TSNE(random_state=42).fit_transform(matrix)
-            else:
-                raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
+            # Check for GP-User Embedding
+            if self.recommendation_type == RecommendationType.FUNCTION_BASED:
+                matrix = self.embeddings
+                pca = PCA(n_components=2).fit(matrix)
+                transformed_embeddings = pca.transform(matrix)
 
-            low_d_user_profile = transformed_embeddings[0]
-            low_d_embeddings = transformed_embeddings[1:]
-            return low_d_user_profile, low_d_embeddings, self.preferences
+                # Retrieve scores for heatmap
+                grid_x, grid_y = torch.meshgrid(torch.linspace(-1, 1, 200), torch.linspace(-1, 1, 200), indexing='ij')
+                low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
+                user_space = pca.inverse_transform(low_d_user_space).float()
+                scores = self.recommender.heat_map_values(user_profile=self.user_profile, user_space=user_space).reshape(grid_x.shape)                
+                
+                return (grid_x, grid_y, scores), transformed_embeddings, self.preferences
+
+            else:
+                matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+                if algorithm == 'pca':
+                    pca = PCA(n_components=2)
+                    transformed_embeddings = pca.fit_transform(matrix)
+                elif algorithm == 'tsne':
+                    transformed_embeddings = TSNE(random_state=42).fit_transform(matrix)
+                else:
+                    raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
+
+                low_d_user_profile = transformed_embeddings[0]
+                low_d_embeddings = transformed_embeddings[1:]
+                return low_d_user_profile, low_d_embeddings, self.preferences
