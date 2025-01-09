@@ -54,4 +54,3 @@ class InitialIterationUI(UIComponent):
         self.webUI.update_image_displays()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.update_active_image()
-        self.webUI.keyboard.active = True

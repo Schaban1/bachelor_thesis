@@ -11,7 +11,7 @@ from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
 from prototype.utils import seed_everything
-from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer
+from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer, DebugMenu
 
 
 class WebUI:
@@ -76,6 +76,8 @@ class WebUI:
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
 
+        self.debug_menu = DebugMenu()
+
         self.keyboard = None
         # Remove loading label
         loading_label.delete()
@@ -122,7 +124,7 @@ class WebUI:
         - Webis demo template bottom half/footer.
         """
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
-        self.keyboard = ngUI.keyboard(on_key=self.handle_key, active=False)
+        self.keyboard = ngUI.keyboard(on_key=self.handle_key)
         with ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif'):
             ngUI.html(webis_template_top).classes('w-full')
             InitialIterationUI(self)
@@ -170,7 +172,9 @@ class WebUI:
         Args:
             e: KeyEvent args.
         """
-        if self.score_mode == ScoreMode.EMOJI.value:
+        if e.key.f9 and e.action.keydown:
+            self.debug_menu.toggle_visibility()
+        if self.score_mode == ScoreMode.EMOJI.value and self.state == WebUIState.MAIN_STATE.value:
             if e.key.arrow_right and e.action.keydown:
                 self.update_active_image(self.active_image + 1)
             if e.key.arrow_left and e.action.keydown:

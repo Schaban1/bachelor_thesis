@@ -57,7 +57,6 @@ class MainLoopUI(UIComponent):
         Shows the interactive plot screen.
         """
         self.webUI.change_state(WebUIState.PLOT_STATE)
-        self.webUI.keyboard.active = False
     
     def on_save_button_click(self, image_display):
         """
@@ -90,7 +89,6 @@ class MainLoopUI(UIComponent):
         self.webUI.update_user_profile()
         ngUI.notify('Scores submitted!')
         self.webUI.change_state(WebUIState.GENERATING_STATE)
-        self.webUI.keyboard.active = False
         ngUI.notify('Generating new images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
@@ -98,14 +96,12 @@ class MainLoopUI(UIComponent):
         self.webUI.scorer.reset_scorers()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.update_active_image()
-        self.webUI.keyboard.active = True
     
     def on_restart_process_button_click(self):
         """
         Restarts the process by starting with the initial iteration again.
         """
         self.webUI.change_state(WebUIState.INIT_STATE)
-        self.webUI.keyboard.active = False
         self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
         seed_everything(self.webUI.args.random_seed)
