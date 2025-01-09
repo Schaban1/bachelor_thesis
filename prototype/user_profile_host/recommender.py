@@ -32,11 +32,15 @@ class Recommender(ABC):  # ABC = Abstract Base Class
     1. Single point generation:
         Multiple random points on a sphere surface around the current user profile are generated.
         These points are returned as recommendation.
+        The SinglePoint Recommender is supposed to recommend points around a (high confidence) user profile.
+        However, if the user profile is bad or the user wants to explore the space,this recommender is not suitable.
     2. Single point generation with weighted axes:
         Some axes spanning the user space may convey more information than others.
         Hence, axes should be weighted differently according to their influence.
         There are two implementations: One where the points are on the surface of a sphere and one where they are not.
-    3. Function-based generation:
+    3. Random generation:
+        Random points in the user space are generated.
+    4. Function-based generation:
         In this scenario, one doesn't want to optimize the position of the user profile (a point) in the suer profile
         space and use this position to generate new generations, but one chooses multiple points in fascinating
         regions of the user sspace and requests feedback of the user to "learn" the space.
@@ -62,10 +66,11 @@ class RandomRecommender(Recommender):
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, betabeta : float = None) -> Tensor:
         """
         :param user_profile: A point in the low-dimensional user profile space.
         :param n_recommendations: Number of recommendations to return. By default, 5.
+        beta (float): Not used in this recommender.
         :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
             user_profile where n_dims is the dimensionality of the user_profile.
         """
@@ -87,6 +92,9 @@ class RandomRecommender(Recommender):
 class SinglePointRecommender(Recommender):
     def __init__(self, embedding_bounds=(-1., 1.)):
         """
+        The SinglePoint Recommender is supposed to recommend points around a (high confidence) user profile.
+        However, if the user profile is bad or the user wants to explore the space,this recommender is not suitable.
+
         :param embedding_bounds: Used to determine the radius used when embeddings lie on a sphere.
         """
         self.embedding_bounds = embedding_bounds
@@ -110,6 +118,7 @@ class SinglePointRecommender(Recommender):
         """
         :param user_profile: A point in the low-dimensional user profile space.
         :param n_recommendations: Number of recommendations to return. By default, 5.
+        :param beta: Not used in this recommender.
         :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
             user_profile where n_dims is the dimensionality of the user_profile.
         """
@@ -181,18 +190,21 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
         return torch.stack(interpolated_points)
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
         Recommends embeddings based on the user profile, axes of the user space and the number of recommendations.
         If points should be on the sphere, SLERP is used to interpolate between the user profile and the axes.
         Otherwise, random weights are used to interpolate between the user profile and the axes.
         :param user_profile: Low-dimensional user profile.
         :param n_recommendations: Number of recommendations to return.
+        :param beta: Defines the trade-off between exploration and exploitation when using the BayesRecommender
+            or the weighted axes Recommender.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
+        exploration_factor = self.exploration_factor# beta if beta else self.exploration_factor
         # whether recommendations should be on the sphere or not
         if self.on_sphere:  # usage of SLERP
-            return self.recommend_on_sphere(user_profile, n_recommendations, radius=self.exploration_factor) #TODO @Klara: Could use beta for exploration factor
+            return self.recommend_on_sphere(user_profile, n_recommendations, radius=exploration_factor)
 
         axes = torch.eye(user_profile.shape[0])
 
@@ -200,18 +212,25 @@ class SinglePointWeightedAxesRecommender(Recommender):
         lower_sampling_ranges = self.bounds[0] - user_profile
         upper_sampling_ranges = self.bounds[1] - user_profile
 
-        # random weights for axes for each recommendation in bounds
-        weights = torch.rand(size=(n_recommendations, user_profile.shape[0]))  # in [0, 1]
+        # OLD: random weights for axes for each recommendation in bounds
+        weights = torch.rand(size=(n_recommendations, self.n_axis))  # in [0, 1]
+
+        # FIXME: generates noise images
+        alpha = torch.ones(self.n_axis)  # Concentration parameter (uniform)
+        distribution = torch.distributions.dirichlet.Dirichlet(alpha)
+        weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
+
         # scale to bounds to ranges & scale with exploration factor
-        weights = (self.exploration_factor *
-                   (weights * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
+        weights = (exploration_factor *
+                   (weights_dirichlet * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
 
         # interpolate between user profile and axes, user user_profile as reference point
         return user_profile + weights @ axes
 
 
 class BayesianRecommender(Recommender):
-    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.), n_points_per_axis : int = 3, beta : float = 20, search_space_type : str = 'dirichlet'):
+    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.),
+                 n_points_per_axis: int = 3, beta: float = 20, search_space_type : str = 'dirichlet'):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
@@ -225,10 +244,11 @@ class BayesianRecommender(Recommender):
 
     def build_search_space(self):
         if self.search_space_type == 'dirichlet':
-            n_samples = min(max((self.n_embedding_axis + self.n_latent_axis) * 5**((self.n_embedding_axis + self.n_latent_axis) // 2), 1000), 500000)
-            alpha = torch.ones(self.n_embedding_axis + self.n_latent_axis)
+            n_samples = min(max(self.n_axis * 5**(self.n_axis // 2), 1000), 500000)
+            alpha = torch.ones(self.n_axis)
             dist = torch.distributions.dirichlet.Dirichlet(alpha)
-            factor = torch.cat((torch.ones(n_samples, self.n_embedding_axis), (torch.randint(low=0, high=2, size=(n_samples,self.n_latent_axis)) * 2 - 1)), dim=1)
+            factor = torch.cat((torch.ones(n_samples, self.n_embedding_axis),
+                                (torch.randint(low=0, high=2, size=(n_samples,self.n_latent_axis)) * 2 - 1)), dim=1)
             search_space = dist.sample(sample_shape=(n_samples,)) * factor
             return search_space
         
@@ -236,7 +256,8 @@ class BayesianRecommender(Recommender):
             # Build search space and filter for embeddings that are on a sphere in CLIP space
             x_embed = torch.linspace(self.embedding_bounds[0], self.embedding_bounds[1], self.n_points_per_axis)
             x_latent = torch.linspace(self.latent_bounds[0], self.latent_bounds[1], self.n_points_per_axis)
-            vectors = torch.meshgrid([x_embed for i in range(self.n_embedding_axis - 1)] + [x_latent for i in range(self.n_latent_axis)], indexing='ij')
+            vectors = torch.meshgrid([x_embed for i in range(self.n_embedding_axis - 1)] +
+                                     [x_latent for i in range(self.n_latent_axis)], indexing='ij')
             vectors = [v.flatten() for v in vectors]
             embed_grid = torch.stack(vectors[:self.n_embedding_axis-1], dim=1)
             latent_grid = torch.stack(vectors[self.n_embedding_axis-1:], dim=1)
