@@ -58,6 +58,9 @@ class MainLoopUI(UIComponent):
         """
         self.webUI.change_state(WebUIState.PLOT_STATE)
         self.webUI.keyboard.active = False
+
+        # Initialize or update the plot
+        self.webUI.plot_ui.update_plot()
     
     def on_save_button_click(self, image_display):
         """
@@ -99,7 +102,7 @@ class MainLoopUI(UIComponent):
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.update_active_image()
         self.webUI.keyboard.active = True
-    
+
     def on_restart_process_button_click(self):
         """
         Restarts the process by starting with the initial iteration again.
