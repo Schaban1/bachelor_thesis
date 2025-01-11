@@ -153,8 +153,9 @@ class WebUI:
             device=self.args.device,
             **self.args.generator        
         )
-        with self.queue_lock:
-            self.generator.generate_image(torch.zeros(1, 77, 768))
+        if self.args.generator.warm_start:
+            with self.queue_lock:
+                self.generator.generate_image(torch.zeros(1, 77, 768))
     
     def init_user_profile_host(self):
         """

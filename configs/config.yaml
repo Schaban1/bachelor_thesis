@@ -16,6 +16,7 @@ generator:
   guidance_scale: 7.5
   random_latents : False
   use_negative_prompt : False
+  warm_start: True
 
 recommender:
   extend_original_prompt : True
