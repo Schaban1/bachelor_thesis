@@ -10,6 +10,7 @@ score_mode: emoji
 device: cuda
 image_display_size : [256, 256]
 random_seed : 42
+generator_warm_start: True
 
 generator:
   num_inference_steps : 30
