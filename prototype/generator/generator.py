@@ -85,9 +85,9 @@ class Generator(GeneratorBase):
         self.pipe.to(self.device)
         #self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
 
-        self.load_generator_utils()
+        self.load_generator()
     
-    def load_generator_utils(self):
+    def load_generator(self):
         self.latents = torch.randn(
             (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
             device=self.device,# dtype=torch.float16
