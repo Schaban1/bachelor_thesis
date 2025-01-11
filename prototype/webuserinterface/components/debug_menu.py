@@ -38,7 +38,8 @@ class DebugMenu(ngUI.element):
                     ngUI.label("Debug Generator Info").style("font-size: 50px; color: white;")
                     ngUI.number(label="height", min=0, precision=0, step=8, on_change=self.webUI.generator.load_generator_utils).props(input_props).bind_value(self.webUI.generator, 'height', forward=int)
                     ngUI.number(label="width", min=0, precision=0, step=8, on_change=self.webUI.generator.load_generator_utils).props(input_props).bind_value(self.webUI.generator, 'width', forward=int)
-                    ngUI.number(label="batch_size", min=0, precision=0, step=1, on_change=self.webUI.generator.load_generator_utils).props(input_props).bind_value(self.webUI.generator, 'batch_size', forward=int)
+                    # Does not work with None value
+                    #ngUI.number(label="batch_size", min=0, precision=0, step=1, on_change=self.webUI.generator.load_generator_utils).props(input_props).bind_value(self.webUI.generator, 'batch_size', forward=int)
                     ngUI.checkbox('random_latents').style(checkbox_style).bind_value(self.webUI.generator, 'random_latents')
                     ngUI.number(label="num_inference_steps", min=0, precision=0, step=1, on_change=self.webUI.generator.load_generator_utils).props(input_props).bind_value(self.webUI.generator, 'num_inference_steps', forward=int)
                     ngUI.number(label="guidance_scale", min=0, step=0.01, on_change=self.webUI.generator.load_generator_utils).props(input_props).bind_value(self.webUI.generator, 'guidance_scale')
