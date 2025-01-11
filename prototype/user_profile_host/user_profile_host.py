@@ -177,7 +177,7 @@ class UserProfileHost():
             user_profile (Variable) : The fitted user profile depending on the optimizer.
         """
         # Initialize or extend the available user related data 
-        if self.preferences == None:
+        if self.preferences is None:
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
@@ -212,7 +212,7 @@ class UserProfileHost():
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
         # Generate recommendations in the user_space
-        if self.user_profile != None:
+        if self.user_profile is not None:
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
                                                                           n_recommendations=num_recommendations)
         else:
@@ -224,7 +224,7 @@ class UserProfileHost():
             user_space_embeddings = torch.cat((rand_embedding_factors, rand_latent_factors), dim=1)
 
         # Safe the user_space_embeddings
-        if self.embeddings != None:
+        if self.embeddings is not None:
             self.embeddings = torch.cat((self.embeddings, user_space_embeddings))
         else:
             self.embeddings = user_space_embeddings
@@ -250,6 +250,8 @@ class UserProfileHost():
             return self.user_profile, self.embeddings, self.preferences
 
         else:
+            print(f'User profile: {self.user_profile}')
+            print(f'Embeddings: {self.embeddings}')
             matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
             if algorithm == 'pca':
                 pca = PCA(n_components=2)

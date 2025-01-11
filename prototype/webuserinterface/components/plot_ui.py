@@ -14,14 +14,18 @@ class PlotUI(UIComponent):
         """
         Builds the UI for the interactive plot state.
         """
-        with ngUI.column().classes('items-center w-full').bind_visibility_from(self.webUI, 'is_interactive_plot', value=True):
+        with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot', value=True))):
             ngUI.button('Back', on_click=self.on_back_to_main_loop_button_click)
-            self.fig = go.Figure()
-            self.fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
-            self.fig.update_layout(title_text='User Profile and Embeddings')
-            self.plot = ngUI.plotly(self.fig)
-            self.plot.update()
+            with ngUI.row().classes('mx-auto items-center'):
+                self.fig = go.Figure()
+                self.fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+                self.plot = ngUI.plotly(self.fig)
+                self.plot.on('plotly_click', self.on_plot_click)
 
+                self.clicked_image = ngUI.image().style(f'width: {self.webUI.image_display_size[0]}px; height: {self.webUI.image_display_size[1]}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
+
+                if self.webUI.user_profile_host is not None:
+                    self.update_plot()
 
     def update_plot(self):
         """
@@ -29,10 +33,14 @@ class PlotUI(UIComponent):
         """
         self.fig.data = []
         user_profile, embeddings, _ = self.webUI.user_profile_host.plotting_utils()
-        self.fig.add_trace(go.Scatter(x=embeddings[:, 0], y=embeddings[:, 1], mode='markers'))
-        self.fig.add_trace(go.Scatter(x=[user_profile[0]], y=[user_profile[1]], mode='markers', marker=dict(size=10, color='red')))
+        self.fig.add_trace(go.Scatter(x=embeddings[:, 0], y=embeddings[:, 1], mode='markers', name='embeddings'))
+        self.fig.add_trace(go.Scatter(x=[user_profile[0]], y=[user_profile[1]], mode='markers', marker=dict(size=10, color='red'), name='user profile'))
         self.plot.update()
 
+    def on_plot_click(self, data):
+        idx = data.args['points'][0]['pointIndex']
+        image = self.webUI.prev_images[idx]
+        self.clicked_image.set_source(image)
 
     def on_back_to_main_loop_button_click(self):
         """

@@ -123,6 +123,7 @@ class WebUI:
         """
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
         self.keyboard = ngUI.keyboard(on_key=self.handle_key, active=False)
+        self.prev_images = []
         with ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif'):
             ngUI.html(webis_template_top).classes('w-full')
             InitialIterationUI(self)
@@ -215,6 +216,7 @@ class WebUI:
         with self.queue_lock:
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
             self.images = self.generator.generate_image(embeddings, latents)
+            self.prev_images.extend(self.images)
     
     def update_image_displays(self):
         """
