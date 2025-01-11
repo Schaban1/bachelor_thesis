@@ -1,9 +1,10 @@
 from abc import abstractmethod, ABC
 from torch import Tensor
 
+from nicegui import binding
 import torch
 from PIL.Image import Image
-from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler, AutoencoderKL
+from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler
 
 
 class GeneratorBase(ABC):
@@ -18,6 +19,15 @@ class GeneratorBase(ABC):
 
 
 class Generator(GeneratorBase):
+    height = binding.BindableProperty()
+    width = binding.BindableProperty()
+    batch_size = binding.BindableProperty()
+    random_latents = binding.BindableProperty()
+    num_inference_steps = binding.BindableProperty()
+    guidance_scale = binding.BindableProperty()
+    n_images = binding.BindableProperty()
+    use_negative_prompt = binding.BindableProperty()
+
     def __init__(self,
                  n_images=5,
                  batch_size=None,
@@ -47,6 +57,8 @@ class Generator(GeneratorBase):
         self.random_latents = random_latents
         self.num_inference_steps = num_inference_steps
         self.guidance_scale = guidance_scale
+        self.n_images = n_images
+        self.use_negative_prompt = use_negative_prompt
 
         scheduler = LMSDiscreteScheduler(
             beta_start=0.00085,
@@ -72,14 +84,15 @@ class Generator(GeneratorBase):
 
         self.pipe.to(self.device)
         #self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
-        self.n_images = n_images
 
+        self.load_generator_utils()
+    
+    def load_generator_utils(self):
         self.latents = torch.randn(
             (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
             device=self.device,# dtype=torch.float16
-        ).repeat(n_images, 1, 1, 1)
+        ).repeat(self.n_images, 1, 1, 1)
 
-        self.use_negative_prompt = use_negative_prompt
         self.negative_prompt_embeds = None
         if self.use_negative_prompt:
             negative_prompt = "lowres, error, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature, deformed, ugly, mutilated, disfigured, text, extra limbs, face cut, head cut, extra fingers, extra arms, poorly drawn face, mutation, bad proportions, cropped head, malformed limbs, mutated hands, fused fingers, long neck, illustration, painting, drawing, art, sketch,bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, worst quality, cropped, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, deformed, missing limb, bad hands, extra digits, extra fingers, not enough fingers, floating head, disembodied"
@@ -88,7 +101,7 @@ class Generator(GeneratorBase):
                                                          max_length=self.pipe.tokenizer.model_max_length,
                                                          truncation=True,
                                                          return_tensors="pt", ).to(self.pipe.text_encoder.device)
-            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(n_images, 1, 1)
+            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
 
     def generate_image(self, embeddings: Tensor | tuple[Tensor, Tensor], latents: Tensor = None) -> list[Image]:
         """
