@@ -143,6 +143,7 @@ class UserProfileHost():
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    beta=di_beta)
+            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
 

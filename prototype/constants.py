@@ -6,7 +6,7 @@ class RecommendationType(Enum):
     WEIGHTED_AXES = "Single point generation with weighted axes"
     EMA_WEIGHTED_AXES = "Single point generation with weighted axes using exponential moving average"
     FUNCTION_BASED = "Function-based generation"
-    EMA_DIRICHLET = "Exponential Moving Average with Dirichlet distribution around"
+    EMA_DIRICHLET = "EMA Weighted User with Dirichlet Distribution"
 
 class WebUIState(Enum):
     INIT_STATE = "Initial iteration"
