@@ -66,7 +66,7 @@ class RandomRecommender(Recommender):
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, betabeta : float = None) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
         """
         :param user_profile: A point in the low-dimensional user profile space.
         :param n_recommendations: Number of recommendations to return. By default, 5.
