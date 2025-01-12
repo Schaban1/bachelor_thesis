@@ -75,18 +75,12 @@ class RandomRecommender(Recommender):
             user_profile where n_dims is the dimensionality of the user_profile.
         """
         # Return random recommendations
-        embed_alpha = torch.ones(self.n_embedding_axis)
-        embed_distribution = torch.distributions.dirichlet.Dirichlet(embed_alpha)
-        embeddings = embed_distribution.sample(sample_shape=(n_recommendations,))
-
-        latent_alpha = torch.ones(self.n_latent_axis)
-        latent_distribution = torch.distributions.dirichlet.Dirichlet(latent_alpha)
-        latents = latent_distribution.sample(sample_shape=(n_recommendations,))
-        factor = (torch.randint(low=0, high=2, size=(latents.shape[0],1)) * 2 - 1).expand(latents.shape[0], self.n_latent_axis)
-        latents = latents * factor
-
-        user_space_embeddings = torch.cat((embeddings, latents), dim=1)
-        return user_space_embeddings
+        alpha = torch.ones(self.n_axis)
+        dist = torch.distributions.dirichlet.Dirichlet(alpha)
+        factor = torch.cat((torch.ones(n_recommendations, self.n_embedding_axis),
+                            (torch.randint(low=0, high=2, size=(n_recommendations, self.n_latent_axis)) * 2 - 1)), dim=1)
+        random_user_embeddings = dist.sample(sample_shape=(n_recommendations,)) * factor
+        return random_user_embeddings
 
 
 class SinglePointRecommender(Recommender):
