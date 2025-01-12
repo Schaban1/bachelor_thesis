@@ -83,6 +83,8 @@ class WebUI:
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
 
+        # Set UI root & load debug menu
+        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif')
         self.debug_menu = DebugMenu(self)
 
         self.keyboard = None
@@ -93,9 +95,20 @@ class WebUI:
 
     def run(self):
         """
-        This function runs the Web UI indefinitely.
+        This function starts the Web UI.
         """
         self.change_state(WebUIState.INIT_STATE)
+        self.build_userinterface()
+    
+    def reload_userinterface(self):
+        """
+        Reloads the UI (only used for the debug menu).
+        """
+        self.root.clear()
+        self.scorer = Scorer(self)
+        self.images = self.images[:min(len(self.images), self.num_images_to_generate)] \
+                    + [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate - min(len(self.images), self.num_images_to_generate))]
+        self.images_display = [None for _ in range(self.num_images_to_generate)]
         self.build_userinterface()
     
     # <---------- Updating State ---------->
@@ -132,7 +145,7 @@ class WebUI:
         """
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
         self.keyboard = ngUI.keyboard(on_key=self.handle_key)
-        with ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif'):
+        with self.root:
             ngUI.html(webis_template_top).classes('w-full')
             InitialIterationUI(self)
             MainLoopUI(self)

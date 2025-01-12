@@ -34,6 +34,7 @@ class DebugMenu(ngUI.element):
                     ngUI.input(label="image_display_size").props(self.input_props).bind_value(self.webUI, 'image_display_size')
                     ngUI.number(label="active_image", min=0, precision=0, step=1).props(self.input_props).bind_value(self.webUI, 'active_image', forward=int)
                     ngUI.input(label="save_path").props(self.input_props).bind_value(self.webUI, 'save_path')
+                    ngUI.button('Force UI Reload', on_click=self.webUI.reload_userinterface, color='red')
                 ngUI.space()
                 with ngUI.column().classes('p-0 gap-0'):
                     ngUI.label("Debug Generator Info").style("font-size: 50px; color: white;")
