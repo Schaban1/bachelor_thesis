@@ -68,7 +68,6 @@ class DebugMenu(ngUI.element):
                     ("ema_alpha", ngUI.number(label="ema_alpha", min=0, step=0.01, on_change=self.up_updater).props(self.input_props)),
                     ("weighted_axis_exploration_factor", ngUI.number(label="weighted_axis_exploration_factor", min=0, step=0.01, on_change=self.up_updater).props(self.input_props)),
                     ]
-
         self.toggle_visibility()
 
     def set_user_profile_updater(self):

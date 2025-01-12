@@ -87,7 +87,7 @@ class WebUI:
         self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif')
         self.debug_menu = DebugMenu(self)
 
-        self.keyboard = None
+        self.keyboard = ngUI.keyboard(on_key=self.handle_key)
         # Remove loading label
         loading_label.delete()
         loading_label = None
@@ -144,7 +144,6 @@ class WebUI:
         - Webis demo template bottom half/footer.
         """
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
-        self.keyboard = ngUI.keyboard(on_key=self.handle_key)
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
             InitialIterationUI(self)
