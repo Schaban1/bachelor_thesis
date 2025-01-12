@@ -2,10 +2,6 @@ from abc import abstractmethod, ABC
 import torch
 from torch import Tensor
 
-from gpytorch.mlls import ExactMarginalLogLikelihood
-from botorch.fit import fit_gpytorch_mll
-from botorch.models import SingleTaskGP
-
 
 class Optimizer(ABC):  # ABC = Abstract Base Class
     """
@@ -30,7 +26,16 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
         pass
 
 
+class NoOptimizer:
 
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+        """
+        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
+        :param preferences: The scores of the current user concerning the (user-space) embeddings.
+        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
+        """
+        return (embeddings, preferences)
+    
 class MaxPrefOptimizer:
 
     def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
@@ -50,6 +55,8 @@ class WeightedSumOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
+        # TODO (@Klara): Discuss returning a random embedding instead of last embedding, as user didnt like any of it
+        # so we shouldnt stay in that region.
         if torch.count_nonzero(preferences) == 0:   # if only zeros in preferences, black images are generated
             user_profile = embeddings[-1]   # fix: return any image as user profile
         else:
@@ -78,6 +85,8 @@ class EMAWeightedSumOptimizer:
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
         # if only zeros in preferences, black images are generated
+        # TODO (@Klara): Discuss if setting preferences.sum() to min(preferences.sum(), 0.1) to avoid division by 0
+        # and if this solves the "all zero problem". 
         all_zero_preferences, user_profile = self.return_if_all_zero_preferences(preferences, embeddings)
 
         if self.user_profile == None:
@@ -90,13 +99,3 @@ class EMAWeightedSumOptimizer:
                     self.alpha * new_user_profile + (1 - self.alpha) * self.user_profile)
 
         return self.user_profile
-
-class NoOptimizer:
-
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
-        """
-        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
-        :param preferences: The scores of the current user concerning the (user-space) embeddings.
-        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
-        """
-        return (embeddings, preferences)
