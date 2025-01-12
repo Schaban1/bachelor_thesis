@@ -35,4 +35,5 @@ class InitialIterationUI(UIComponent):
         await loop.run_in_executor(None, self.webUI.generate_images)
         self.webUI.update_image_displays()
         self.webUI.change_state(WebUIState.MAIN_STATE)
+        self.webUI.debug_menu.set_user_profile_updater()
         self.webUI.update_active_image()

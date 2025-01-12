@@ -95,4 +95,5 @@ class MainLoopUI(UIComponent):
         self.webUI.change_state(WebUIState.INIT_STATE)
         self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
+        self.webUI.debug_menu.set_user_profile_updater()
         seed_everything(self.webUI.args.random_seed)
