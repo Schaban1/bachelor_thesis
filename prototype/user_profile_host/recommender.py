@@ -6,10 +6,9 @@ from .utils import slerp
 
 from botorch.acquisition import UpperConfidenceBound
 from botorch.exceptions import InputDataWarning
-from botorch.optim import optimize_acqf
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
-from gpytorch.means import ConstantMean, LinearMean
+from gpytorch.means import ConstantMean
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
 
@@ -77,9 +76,13 @@ class RandomRecommender(Recommender):
         # Return random recommendations
         alpha = torch.ones(self.n_axis)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
-        factor = torch.cat((torch.ones(n_recommendations, self.n_embedding_axis),
-                            (torch.randint(low=0, high=2, size=(n_recommendations, self.n_latent_axis)) * 2 - 1)), dim=1)
-        random_user_embeddings = dist.sample(sample_shape=(n_recommendations,)) * factor
+        random_user_embeddings = dist.sample(sample_shape=(n_recommendations,))
+
+        # If latent bounds are negative, allow for them to be negative
+        if self.latent_bounds[0] < 0.:
+            factor = torch.cat((torch.ones(n_recommendations, self.n_embedding_axis),
+                                (torch.randint(low=0, high=2, size=(n_recommendations, self.n_latent_axis)) * 2 - 1)), dim=1)
+            random_user_embeddings = random_user_embeddings * factor
         return random_user_embeddings
 
 
@@ -243,9 +246,7 @@ class DirichletRecommender(Recommender):
         """
         alpha = (torch.ones(self.n_axis) * user_profile).reshape(-1) * (beta if beta else self.beta)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
-        factor = torch.cat((torch.ones(n_recommendations, self.n_embedding_axis),
-                            (torch.randint(low=0, high=2, size=(n_recommendations, self.n_latent_axis)) * 2 - 1)), dim=1)
-        search_space = dist.sample(sample_shape=(n_recommendations,)) * factor
+        search_space = dist.sample(sample_shape=(n_recommendations,))
         if self.increase_beta:
             self.beta += 2
         return search_space

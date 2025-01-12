@@ -144,6 +144,7 @@ class UserProfileHost():
                                                    n_latent_axis=self.n_latent_axis,
                                                    beta=di_beta)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
+            assert self.latent_bounds[0] >= 0., 'Dirichlet only works with positive user space!'
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
 
