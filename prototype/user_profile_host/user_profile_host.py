@@ -250,8 +250,6 @@ class UserProfileHost():
             return self.user_profile, self.embeddings, self.preferences
 
         else:
-            print(f'User profile: {self.user_profile}')
-            print(f'Embeddings: {self.embeddings}')
             matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
             if algorithm == 'pca':
                 pca = PCA(n_components=2)

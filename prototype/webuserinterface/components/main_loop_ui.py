@@ -111,4 +111,9 @@ class MainLoopUI(UIComponent):
         self.webUI.keyboard.active = False
         self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
+
+        # Clear plot ui for new process
+        self.webUI.plot_ui.update_plot()
+        self.webUI.prev_images = []
+
         seed_everything(self.webUI.args.random_seed)
