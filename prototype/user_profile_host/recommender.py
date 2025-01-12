@@ -83,6 +83,7 @@ class RandomRecommender(Recommender):
         return random_user_embeddings
 
 
+# TODO: Discuss with Klara if we remove this?
 class SinglePointRecommender(Recommender):
     def __init__(self, embedding_bounds=(-1., 1.)):
         """
@@ -220,9 +221,39 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
         # interpolate between user profile and axes, user user_profile as reference point
         return user_profile + weights @ axes
+    
+
+class DirichletRecommender(Recommender):
+
+    def __init__(self, n_embedding_axis, n_latent_axis, beta: float = 20):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
+        self.beta = beta
+        self.increase_beta = True
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        """
+        Recommends embeddings based on the user profile, the number of recommendations and the trade-off between
+        exploration and exploitation.
+        :param user_profile: Low-dimensional user profile containing embeddings and preferences.
+        :param n_recommendations: Number of recommendations to return.
+        :param beta: Trade-off between exploration and exploitation.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
+        """
+        alpha = (torch.ones(self.n_axis) * user_profile).reshape(-1) * (beta if beta else self.beta)
+        dist = torch.distributions.dirichlet.Dirichlet(alpha)
+        factor = torch.cat((torch.ones(n_recommendations, self.n_embedding_axis),
+                            (torch.randint(low=0, high=2, size=(n_recommendations, self.n_latent_axis)) * 2 - 1)), dim=1)
+        search_space = dist.sample(sample_shape=(n_recommendations,)) * factor
+        if self.increase_beta:
+            self.beta += 2
+        return search_space
+
 
 
 class BayesianRecommender(Recommender):
+
     def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.),
                  n_points_per_axis: int = 3, beta: float = 20, search_space_type : str = 'dirichlet'):
         self.n_embedding_axis = n_embedding_axis
