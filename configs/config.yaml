@@ -20,8 +20,8 @@ generator:
 recommender:
   extend_original_prompt : True
   n_embedding_axis : 13
-  use_embedding_center : True
-  n_latent_axis : 3
+  use_embedding_center : False
+  n_latent_axis : 13
   use_latent_center : False
   weighted_axis_exploration_factor : 0.5
   ema_alpha : 0.5

@@ -60,6 +60,7 @@ class UserProfileHost():
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
+        # TODO: Discuss, if this could be improved.
         self.embedding_axis = []
         if not add_ons:
             add_ons = [
