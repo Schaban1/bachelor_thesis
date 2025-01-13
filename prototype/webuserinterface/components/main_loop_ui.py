@@ -41,7 +41,7 @@ class MainLoopUI(UIComponent):
             with ngUI.row().classes('mx-auto items-center'):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
-                        self.webUI.images_display[i] = ngUI.interactive_image(self.webUI.images[i]).style(f'width: {self.webUI.image_display_size[0]}px; height: {self.webUI.image_display_size[1]}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
+                        self.webUI.images_display[i] = ngUI.interactive_image(self.webUI.images[i]).style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                         with self.webUI.images_display[i]:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.webUI.scorer.build_scorer(i)

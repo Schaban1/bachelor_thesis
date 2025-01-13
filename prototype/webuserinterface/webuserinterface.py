@@ -28,7 +28,8 @@ class WebUI:
     recommendation_type = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
     score_mode = binding.BindableProperty()
-    image_display_size = binding.BindableProperty()
+    image_display_width = binding.BindableProperty()
+    image_display_height = binding.BindableProperty()
     active_image = binding.BindableProperty()
     save_path = binding.BindableProperty()
 
@@ -72,8 +73,8 @@ class WebUI:
         await loop.run_in_executor(None, self.init_generator)
 
         # Lists / UI components
-        self.image_display_size = tuple(self.args.image_display_size)
-        self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
+        self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
         self.submit_button = None
@@ -105,7 +106,7 @@ class WebUI:
         self.root.clear()
         self.scorer = Scorer(self)
         self.images = self.images[:min(len(self.images), self.num_images_to_generate)] \
-                    + [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate - min(len(self.images), self.num_images_to_generate))]
+                    + [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate - min(len(self.images), self.num_images_to_generate))]
         self.images_display = [None for _ in range(self.num_images_to_generate)]
         self.build_userinterface()
     
