@@ -20,10 +20,8 @@ class UserProfileHost():
             hf_model_name: str = "stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir: str = './cache/',
             n_embedding_axis: int = 13,
-            embedding_bounds: tuple = (0., 1.),
             use_embedding_center: bool = True,
             n_latent_axis: int = 3,
-            latent_bounds: tuple = (-1., 1.),
             use_latent_center: bool = False,
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
@@ -104,16 +102,16 @@ class UserProfileHost():
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
 
-        # Some (Bayesian Optimization) Hyperparameters
-        self.embedding_bounds = embedding_bounds
-        self.latent_bounds = latent_bounds
+        # Bounds remain fixed to 0., 1. for simplicity
+        self.embedding_bounds = [0., 1.]
+        self.latent_bounds = [0., 1.]
 
         # Initialize Optimizer and Recommender based on one Mode
         if recommendation_type == RecommendationType.FUNCTION_BASED:
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
-                                                   latent_bounds=latent_bounds,
+                                                   latent_bounds=self.latent_bounds,
                                                    search_space_type=search_space_type,
                                                    beta=bo_beta)
             self.optimizer = NoOptimizer()
@@ -137,14 +135,13 @@ class UserProfileHost():
         elif recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                  n_latent_axis=self.n_latent_axis,
-                                                 embedding_bounds=self.embedding_bounds, latent_bounds=latent_bounds)
+                                                 embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds)
             self.optimizer = NoOptimizer()
         elif recommendation_type == RecommendationType.EMA_DIRICHLET:
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    beta=di_beta)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
-            assert self.latent_bounds[0] >= 0., 'Dirichlet only works with positive user space!'
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
 
