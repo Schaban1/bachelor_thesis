@@ -173,7 +173,7 @@ class DirichletRecommender(Recommender):
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
         if self.increase_beta:
-            self.beta += 2
+            self.beta += 3
         return search_space
 
 

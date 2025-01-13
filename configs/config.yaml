@@ -27,9 +27,6 @@ recommender:
   ema_alpha : 0.5
   search_space_type : dirichlet
 
-user_profile_host:
-  beta: 20
-
 path:
   output_dir: ./output/
   cache_dir: ./cache/
