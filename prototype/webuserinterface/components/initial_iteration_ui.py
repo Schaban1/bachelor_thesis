@@ -17,7 +17,7 @@ class InitialIterationUI(UIComponent):
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_initial_iteration', value=True):
             ngUI.input(label='Your prompt:', validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100").bind_value(self.webUI, 'user_prompt')
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.select({t: t.value for t in RecommendationType}, value=RecommendationType.POINT).props('popup-content-class="max-w-[200px]"').bind_value(self.webUI, 'recommendation_type')
+            ngUI.select({t: t.value for t in RecommendationType}).props('popup-content-class="max-w-[200px]"').bind_value(self.webUI, 'recommendation_type')
             ngUI.space().classes('w-full h-[2vh]')
             ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
     
