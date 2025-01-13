@@ -31,6 +31,30 @@ class UserProfileHost():
             di_beta_increase: float = 3,
             search_space_type: str = 'dirichlet'
     ):
+        """
+        This class is the main interface for the user profile host. It initializes the user profile host with the
+        :param original_prompt: The original prompt as string.
+        :param add_ons: A list of additional prompts to be used as axis for the user profile space.
+            Elements of the list are strings.
+        :param extend_original_prompt: Whether to extend the original prompt with the add_ons, separated by ', '.
+        :param recommendation_type: The type of recommender to be used. Must be in constants.RecommendationType
+        :param stable_dif_pipe: If given, the pipeline will be used to calculate the CLIP embeddings.
+        Otherwise, a new pipeline will be created.
+        :param hf_model_name: Name of the Hugging Face model.
+        :param cache_dir: Path to the cache directory.
+        :param n_embedding_axis: Number of axis to be used for the user profile.
+        :param use_embedding_center: Whether to use the original prompt as the center of the user profile space.
+        :param n_latent_axis: Number of latent axis to be used for the user profile.
+        :param use_latent_center: Whether to use a latent center instead of all zeros.
+        :param n_recommendations: Number of recommendations to be generated each iteration.
+        :param ema_alpha: Used for an exponential moving average to update the user profile.
+            Factor for the exponential moving average. Higher values give more weight to recent recommendations.
+        :param weighted_axis_exploration_factor: Used for the weighted axes recommender. 1 -> high exploration, 0 -> high exploitation
+        :param bo_beta: initial beta for BayesianRecommender
+        :param di_beta: initial beta for DirichletRecommender
+        :param di_beta_increase: increase beta by this amount after each iteration (DirichletRecommender)
+        :param search_space_type: describes the search space; must be 'dirichlet' or 'linspace'
+        """
         # Some Clip Hyperparameters
         self.embedding_dim = 768
         self.n_clip_tokens = 77
