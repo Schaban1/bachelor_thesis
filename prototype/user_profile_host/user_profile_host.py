@@ -80,7 +80,7 @@ class UserProfileHost():
                           "at full height, is working on a beautiful design project, creating design projects, a beautiful workspace, aesthetics, correct proportions realism ultra high quality, real photo"
                       ][:self.n_embedding_axis]
         if extend_original_prompt:
-            for prompt in [original_prompt + ',' + add for add in add_ons]:
+            for prompt in [original_prompt + ', ' + add for add in add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
         else:
             for prompt in add_ons:
