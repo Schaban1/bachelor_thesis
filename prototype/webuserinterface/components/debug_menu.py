@@ -66,6 +66,10 @@ class DebugMenu(ngUI.element):
                     ("n_recommendations", ngUI.number(label="n_recommendations", min=0, precision=0, step=1, on_change=self.up_updater).props(self.input_props)),
                     ("ema_alpha", ngUI.number(label="ema_alpha", min=0, step=0.01, on_change=self.up_updater).props(self.input_props)),
                     ("weighted_axis_exploration_factor", ngUI.number(label="weighted_axis_exploration_factor", min=0, step=0.01, on_change=self.up_updater).props(self.input_props)),
+                    ("bo_beta", ngUI.number(label="bo_beta", min=0, precision=0, step=1, on_change=self.up_updater).props(self.input_props)),
+                    ("di_beta", ngUI.number(label="di_beta", min=0, precision=0, step=1, on_change=self.up_updater).props(self.input_props)),
+                    ("di_beta_increase", ngUI.number(label="di_beta_increase", min=0, precision=0, step=1, on_change=self.up_updater).props(self.input_props)),
+                    ("search_space_type", ngUI.input(label="search_space_type", on_change=self.up_updater).props(self.input_props)),
                     ]
         self.toggle_visibility()
 

@@ -24,6 +24,10 @@ class UserProfileHost():
     n_recommendations = binding.BindableProperty()
     ema_alpha = binding.BindableProperty()
     weighted_axis_exploration_factor = binding.BindableProperty()
+    bo_beta = binding.BindableProperty()
+    di_beta = binding.BindableProperty()
+    di_beta_increase = binding.BindableProperty()
+    search_space_type = binding.BindableProperty()
 
     def __init__(
             self,
