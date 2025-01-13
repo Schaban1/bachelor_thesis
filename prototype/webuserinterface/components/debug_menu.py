@@ -8,6 +8,13 @@ class DebugMenu(ngUI.element):
     """
 
     def __init__(self, webUI, bg_color=(0,0,0,0.5)):
+        """
+        Builds the debug menu UI.
+
+        Args:
+            webUI: The parent WebUI instance that uses this component.
+            bg_color: The background color of the debug menu. Defaults to (0,0,0,0.5).
+        """
         super().__init__(tag='div')
         self.webUI = webUI
         self.set_user_profile_updater()
@@ -75,6 +82,9 @@ class DebugMenu(ngUI.element):
         self.toggle_visibility()
 
     def set_user_profile_updater(self):
+        """
+        Sets the function and bindings of the user profile host debug info.
+        """
         if self.webUI.user_profile_host is None:
             self.up_updater = lambda *args: None
         else:
@@ -83,4 +93,7 @@ class DebugMenu(ngUI.element):
                 ui_element.bind_value(self.webUI.user_profile_host, attribute)
     
     def toggle_visibility(self):
+        """
+        Toggles visibility of the debug menu.
+        """
         self.set_visibility(not self.visible)
