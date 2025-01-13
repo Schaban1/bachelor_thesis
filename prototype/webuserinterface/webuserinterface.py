@@ -146,7 +146,7 @@ class WebUI:
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
             InitialIterationUI(self)
-            MainLoopUI(self)
+            self.main_loop_ui = MainLoopUI(self)
             LoadingSpinnerUI(self)
             PlotUI(self)
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
@@ -199,7 +199,7 @@ class WebUI:
             if e.key.arrow_left and e.action.keydown:
                 self.update_active_image(self.active_image - 1)
             if e.key == 's' and e.action.keydown:
-                self.on_save_button_click(self.images_display[self.active_image])
+                self.main_loop_ui.on_save_button_click(self.images_display[self.active_image])
             if e.key.enter and e.action.keydown:
                 self.submit_button.run_method('click')
             if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
