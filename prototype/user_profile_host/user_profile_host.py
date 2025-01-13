@@ -167,10 +167,10 @@ class UserProfileHost():
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
                                                    latent_bounds=self.self.latent_bounds,
-                                                   search_space_type=search_space_type,
-                                                   beta=bo_beta)
+                                                   search_space_type=self.search_space_type,
+                                                   beta=self.bo_beta)
             self.optimizer = NoOptimizer()
-        elif recommendation_type == RecommendationType.WEIGHTED_AXES:
+        elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
@@ -189,12 +189,12 @@ class UserProfileHost():
                                                  n_latent_axis=self.n_latent_axis,
                                                  embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds)
             self.optimizer = NoOptimizer()
-        elif recommendation_type == RecommendationType.EMA_DIRICHLET:
+        elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
-                                                   beta=di_beta,
-                                                   increase_beta=di_beta_increase)
-            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
+                                                   beta=self.di_beta,
+                                                   increase_beta=self.di_beta_increase)
+            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
 
