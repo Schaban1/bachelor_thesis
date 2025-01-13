@@ -157,13 +157,6 @@ class UserProfileHost():
         else:
             self.num_axis = self.embedding_axis.shape[0]
 
-        # Placeholder for the already evaluated embeddings of the current user
-        self.embeddings = None
-        self.preferences = None
-
-        # Placeholder until the user_profile is fit the first time
-        self.user_profile = None
-
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
