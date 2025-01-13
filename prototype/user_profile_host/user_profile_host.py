@@ -28,6 +28,7 @@ class UserProfileHost():
             weighted_axis_exploration_factor: float = 0.5,
             bo_beta: int = 20,
             di_beta: int = 1,
+            di_beta_increase: float = 3,
             search_space_type: str = 'dirichlet'
     ):
         # Some Clip Hyperparameters
@@ -138,7 +139,8 @@ class UserProfileHost():
         elif recommendation_type == RecommendationType.EMA_DIRICHLET:
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
-                                                   beta=di_beta)
+                                                   beta=di_beta,
+                                                   increase_beta=di_beta_increase)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
         else:
             raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")

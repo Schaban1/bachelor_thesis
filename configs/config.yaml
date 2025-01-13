@@ -26,6 +26,7 @@ recommender:
   weighted_axis_exploration_factor : 0.5
   ema_alpha : 0.5
   search_space_type : dirichlet
+  di_beta_increase: 3.
 
 path:
   output_dir: ./output/

@@ -153,12 +153,12 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 class DirichletRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis, n_latent_axis, beta: float = 20):
+    def __init__(self, n_embedding_axis, n_latent_axis, beta: float = 1, increase_beta: float = 3.):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
         self.beta = beta
-        self.increase_beta = True
+        self.increase_beta = max(increase_beta, 0.)
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
@@ -172,8 +172,7 @@ class DirichletRecommender(Recommender):
         alpha = (torch.ones(self.n_axis) * user_profile).reshape(-1) * (beta if beta else self.beta)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
-        if self.increase_beta:
-            self.beta += 3
+        self.beta += self.increase_beta
         return search_space
 
 
