@@ -55,28 +55,18 @@ class WeightedSumOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        # TODO (@Klara): Discuss returning a random embedding instead of last embedding, as user didnt like any of it
-        # so we shouldnt stay in that region.
         if torch.count_nonzero(preferences) == 0:   # if only zeros in preferences, black images are generated
-            user_profile = embeddings[-1]   # fix: return any image as user profile
+            user_profile = torch.rand(size=(embeddings.shape[1],))   # fix: return a random user profile
         else:
             user_profile = (preferences.reshape(-1) @ embeddings)/preferences.sum()
         return user_profile
     
 class EMAWeightedSumOptimizer:
+
     def __init__(self, n_recommendations : int = 5, alpha : int = 0.2):
         self.user_profile = None
         self.n_recommendations = n_recommendations
         self.alpha = alpha
-
-    def return_if_all_zero_preferences(self, preferences: Tensor, embeddings: Tensor):
-        """
-        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
-        :param preferences: The scores of the current user concerning the (user-space) embeddings.
-        :return: Boolean indicating if only zeros in preferences and the user profile as any embedding to avoid
-        generating black images.
-        """
-        return (torch.count_nonzero(preferences) == 0), embeddings[-1]
 
     def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
         """
@@ -84,18 +74,17 @@ class EMAWeightedSumOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        # if only zeros in preferences, black images are generated
-        # TODO (@Klara): Discuss if setting preferences.sum() to min(preferences.sum(), 0.1) to avoid division by 0
-        # and if this solves the "all zero problem". 
-        all_zero_preferences, user_profile = self.return_if_all_zero_preferences(preferences, embeddings)
-
+        # If this is the first optimization step, just create a new user profile based on current embeddings
         if self.user_profile == None:
-            self.user_profile = user_profile if all_zero_preferences \
-                else (preferences.reshape(-1) @ embeddings) / preferences.sum()
+            if torch.count_nonzero(preferences) == 0:
+                self.user_profile = torch.rand(size=(embeddings.shape[1],))
+            else:
+                self.user_profile = (preferences.reshape(-1) @ embeddings) / preferences.sum()
         else:
             new_embeddings, new_preferences = embeddings[-self.n_recommendations:], preferences[-self.n_recommendations:]
-            new_user_profile = (new_preferences.reshape(-1) @ new_embeddings)/new_preferences.sum()
-            self.user_profile = user_profile if all_zero_preferences else (
-                    self.alpha * new_user_profile + (1 - self.alpha) * self.user_profile)
+            # TODO (Discuss, Klara, Paul): whats the best response to all 0 preferences? Currently just keeping old user profile
+            if not torch.count_nonzero(new_preferences) == 0:
+                new_user_profile = (new_preferences.reshape(-1) @ new_embeddings)/new_preferences.sum()
+                self.user_profile = self.alpha * new_user_profile + (1 - self.alpha) * self.user_profile
 
         return self.user_profile

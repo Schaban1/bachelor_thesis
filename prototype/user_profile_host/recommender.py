@@ -130,9 +130,6 @@ class SinglePointWeightedAxesRecommender(Recommender):
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
         exploration_factor = self.exploration_factor# beta if beta else self.exploration_factor
-        # whether recommendations should be on the sphere or not
-        if self.on_sphere:  # usage of SLERP
-            return self.recommend_on_sphere(user_profile, n_recommendations, radius=exploration_factor)
 
         axes = torch.eye(user_profile.shape[0])
 
