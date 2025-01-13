@@ -162,7 +162,7 @@ class WebUI:
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_initial_iteration', value=True):
             ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input, validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100")
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.select({t: t.value for t in RecommendationType}, value=RecommendationType.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
+            ngUI.select({t: t.value for t in RecommendationType}, value=self.recommendation_type, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
             ngUI.space().classes('w-full h-[2vh]')
             ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
     
