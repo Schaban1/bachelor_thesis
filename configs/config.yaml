@@ -3,7 +3,7 @@ defaults:
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled
 
-num_recommendations : 5
+num_recommendations : 6
 port: 2020
 reconnect_timeout: 3
 score_mode: emoji
@@ -12,7 +12,7 @@ image_display_size : [256, 256]
 random_seed : 42
 
 generator:
-  num_inference_steps : 30
+  num_inference_steps : 25
   guidance_scale: 7.5
   random_latents : False
   use_negative_prompt : False
@@ -20,16 +20,13 @@ generator:
 recommender:
   extend_original_prompt : True
   n_embedding_axis : 13
-  embedding_bounds : [0., 1.]
-  use_embedding_center : True
-  n_latent_axis : 3
-  latent_bounds : [-1., 1.]
+  use_embedding_center : False
+  n_latent_axis : 13
   use_latent_center : False
   weighted_axis_exploration_factor : 0.5
   ema_alpha : 0.5
-
-user_profile_host:
-  beta: 20
+  search_space_type : dirichlet
+  di_beta_increase: 3.
 
 path:
   output_dir: ./output/

@@ -53,14 +53,14 @@ class WebUI:
         self.is_generating = False
         # Provided by the user / system
         self.user_prompt = ""
-        self.recommendation_type = RecommendationType.POINT
+        self.user_profile_host_beta = None
+        self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
         self.score_mode = self.args.score_mode
         self.init_score_mode()
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        self.user_profile_host_beta = self.args.user_profile_host.beta
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.init_generator)
 
@@ -162,7 +162,7 @@ class WebUI:
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_initial_iteration', value=True):
             ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input, validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100")
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.select({t: t.value for t in RecommendationType}, value=RecommendationType.POINT, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
+            ngUI.select({t: t.value for t in RecommendationType}, value=self.recommendation_type, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
             ngUI.space().classes('w-full h-[2vh]')
             ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
     
@@ -307,7 +307,7 @@ class WebUI:
         Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated 
         images of the generator in self.images.
         """
-        with self.queue_lock:
+        with self.queue_lock: #TODO (Discuss): How to handle beta even though optimizers should take care of it.
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
             self.images = self.generator.generate_image(embeddings, latents)
     
@@ -374,7 +374,6 @@ class WebUI:
         """
         normalized_scores = self.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
-        self.user_profile_host_beta -= 1
     
     def on_save_button_click(self, image_display):
         """

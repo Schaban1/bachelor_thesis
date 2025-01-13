@@ -2,10 +2,10 @@ from enum import Enum
 
 class RecommendationType(Enum):
     RANDOM = "Random Recommendations"
-    POINT = "Single point generation"
     WEIGHTED_AXES = "Single point generation with weighted axes"
     EMA_WEIGHTED_AXES = "Single point generation with weighted axes using exponential moving average"
     FUNCTION_BASED = "Function-based generation"
+    EMA_DIRICHLET = "EMA Weighted User with Dirichlet Distribution"
 
 class WebUIState(Enum):
     INIT_STATE = "Initial iteration"
