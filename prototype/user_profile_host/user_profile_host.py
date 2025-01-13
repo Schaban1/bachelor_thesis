@@ -30,20 +30,46 @@ class UserProfileHost():
             original_prompt: str,
             add_ons: list = None,
             extend_original_prompt: bool = True,
-            recommendation_type: str = RecommendationType.FUNCTION_BASED,
+            recommendation_type: str = RecommendationType.RANDOM,
             stable_dif_pipe: StableDiffusionPipeline = None,
             hf_model_name: str = "stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir: str = './cache/',
             n_embedding_axis: int = 13,
-            embedding_bounds: tuple = (0., 1.),
             use_embedding_center: bool = True,
             n_latent_axis: int = 3,
-            latent_bounds: tuple = (-1., 1.),
             use_latent_center: bool = False,
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
-            weighted_axis_exploration_factor: float = 0.5
+            weighted_axis_exploration_factor: float = 0.5,
+            bo_beta: int = 20,
+            di_beta: int = 1,
+            di_beta_increase: float = 3,
+            search_space_type: str = 'dirichlet'
     ):
+        """
+        This class is the main interface for the user profile host. It initializes the user profile host with the
+        :param original_prompt: The original prompt as string.
+        :param add_ons: A list of additional prompts to be used as axis for the user profile space.
+            Elements of the list are strings.
+        :param extend_original_prompt: Whether to extend the original prompt with the add_ons, separated by ', '.
+        :param recommendation_type: The type of recommender to be used. Must be in constants.RecommendationType
+        :param stable_dif_pipe: If given, the pipeline will be used to calculate the CLIP embeddings.
+        Otherwise, a new pipeline will be created.
+        :param hf_model_name: Name of the Hugging Face model.
+        :param cache_dir: Path to the cache directory.
+        :param n_embedding_axis: Number of axis to be used for the user profile.
+        :param use_embedding_center: Whether to use the original prompt as the center of the user profile space.
+        :param n_latent_axis: Number of latent axis to be used for the user profile.
+        :param use_latent_center: Whether to use a latent center instead of all zeros.
+        :param n_recommendations: Number of recommendations to be generated each iteration.
+        :param ema_alpha: Used for an exponential moving average to update the user profile.
+            Factor for the exponential moving average. Higher values give more weight to recent recommendations.
+        :param weighted_axis_exploration_factor: Used for the weighted axes recommender. 1 -> high exploration, 0 -> high exploitation
+        :param bo_beta: initial beta for BayesianRecommender
+        :param di_beta: initial beta for DirichletRecommender
+        :param di_beta_increase: increase beta by this amount after each iteration (DirichletRecommender)
+        :param search_space_type: describes the search space; must be 'dirichlet' or 'linspace'
+        """
         # Some Clip Hyperparameters
         self.original_prompt = original_prompt
         self.add_ons = add_ons
@@ -60,6 +86,7 @@ class UserProfileHost():
         self.use_embedding_center = use_embedding_center
         self.use_latent_center = use_latent_center
         self.n_recommendations = n_recommendations
+        self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
         self.weighted_axis_exploration_factor = weighted_axis_exploration_factor
 
@@ -94,6 +121,7 @@ class UserProfileHost():
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
+        # TODO: Discuss, if this could be improved.
         self.embedding_axis = []
         if not self.add_ons:
             self.add_ons = [
@@ -112,7 +140,7 @@ class UserProfileHost():
                           "at full height, is working on a beautiful design project, creating design projects, a beautiful workspace, aesthetics, correct proportions realism ultra high quality, real photo"
                       ][:self.n_embedding_axis]
         if self.extend_original_prompt:
-            for prompt in [self.original_prompt + ',' + add for add in self.add_ons]:
+            for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
         else:
             for prompt in self.add_ons:
@@ -129,17 +157,27 @@ class UserProfileHost():
         else:
             self.num_axis = self.embedding_axis.shape[0]
 
+        # Placeholder for the already evaluated embeddings of the current user
+        self.embeddings = None
+        self.preferences = None
+
+        # Placeholder until the user_profile is fit the first time
+        self.user_profile = None
+
+        # Bounds remain fixed to 0., 1. for simplicity
+        self.embedding_bounds = [0., 1.]
+        self.latent_bounds = [0., 1.]
+
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
-                                                   latent_bounds=self.latent_bounds)
+                                                   latent_bounds=self.self.latent_bounds,
+                                                   search_space_type=search_space_type,
+                                                   beta=bo_beta)
             self.optimizer = NoOptimizer()
-        elif self.recommendation_type == RecommendationType.POINT:
-            self.recommender = SinglePointRecommender(embedding_bounds=self.embedding_bounds)
-            self.optimizer = MaxPrefOptimizer()
-        elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
+        elif recommendation_type == RecommendationType.WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
@@ -158,6 +196,12 @@ class UserProfileHost():
                                                  n_latent_axis=self.n_latent_axis,
                                                  embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds)
             self.optimizer = NoOptimizer()
+        elif recommendation_type == RecommendationType.EMA_DIRICHLET:
+            self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                   n_latent_axis=self.n_latent_axis,
+                                                   beta=di_beta,
+                                                   increase_beta=di_beta_increase)
+            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
 
@@ -232,22 +276,18 @@ class UserProfileHost():
 
         Parameters:
             num_recommendations (int): Defines the number of embeddings that will be returned for user evaluation.
-            beta (float): Defines the trade-off between exploration and exploitation when using the BayesRecommender.
+            beta (float): Defines the trade-off between exploration and exploitation when using the BayesRecommender
+            or the weighted axes Recommender.
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
         # Generate recommendations in the user_space
         if self.user_profile != None:
-            user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                                          n_recommendations=num_recommendations)
+            user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile, n_recommendations=num_recommendations, beta=beta)
         else:
             # Start initially with some random embeddings and take into account the bounds
-            rand_embedding_factors = (torch.rand(size=(num_recommendations, self.n_embedding_axis)) *
-                                      (self.embedding_bounds[1] - self.embedding_bounds[0]) + self.embedding_bounds[0])
-            rand_latent_factors = (torch.rand(size=(num_recommendations, self.n_latent_axis)) *
-                                   (self.latent_bounds[1] - self.latent_bounds[0]) + self.latent_bounds[0])
-            user_space_embeddings = torch.cat((rand_embedding_factors, rand_latent_factors), dim=1)
-
+            user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds).recommend_embeddings(None, self.n_recommendations)
+        
         # Safe the user_space_embeddings
         if self.embeddings != None:
             self.embeddings = torch.cat((self.embeddings, user_space_embeddings))
@@ -275,15 +315,30 @@ class UserProfileHost():
             return self.user_profile, self.embeddings, self.preferences
 
         else:
-            matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
-            if algorithm == 'pca':
-                pca = PCA(n_components=2)
-                transformed_embeddings = pca.fit_transform(matrix)
-            elif algorithm == 'tsne':
-                transformed_embeddings = TSNE(random_state=42).fit_transform(matrix)
-            else:
-                raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
+            # Check for GP-User Embedding
+            if self.recommendation_type == RecommendationType.FUNCTION_BASED:
+                matrix = self.embeddings
+                pca = PCA(n_components=2).fit(matrix)
+                transformed_embeddings = pca.transform(matrix)
 
-            low_d_user_profile = transformed_embeddings[0]
-            low_d_embeddings = transformed_embeddings[1:]
-            return low_d_user_profile, low_d_embeddings, self.preferences
+                # Retrieve scores for heatmap
+                grid_x, grid_y = torch.meshgrid(torch.linspace(-1, 1, 200), torch.linspace(-1, 1, 200), indexing='ij')
+                low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
+                user_space = pca.inverse_transform(low_d_user_space).float()
+                scores = self.recommender.heat_map_values(user_profile=self.user_profile, user_space=user_space).reshape(grid_x.shape)                
+                
+                return (grid_x, grid_y, scores), transformed_embeddings, self.preferences
+
+            else:
+                matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+                if algorithm == 'pca':
+                    pca = PCA(n_components=2)
+                    transformed_embeddings = pca.fit_transform(matrix)
+                elif algorithm == 'tsne':
+                    transformed_embeddings = TSNE(random_state=42).fit_transform(matrix)
+                else:
+                    raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
+
+                low_d_user_profile = transformed_embeddings[0]
+                low_d_embeddings = transformed_embeddings[1:]
+                return low_d_user_profile, low_d_embeddings, self.preferences
