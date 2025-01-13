@@ -101,7 +101,7 @@ class WebUI:
     
     def reload_userinterface(self):
         """
-        Reloads the UI (only used for the debug menu).
+        Reloads the UI.
         """
         self.root.clear()
         self.scorer = Scorer(self)
@@ -244,6 +244,7 @@ class WebUI:
         Updates the image displays with the current images in self.images.
         """
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
+        self.reload_userinterface()
     
     def update_user_profile(self):
         """
