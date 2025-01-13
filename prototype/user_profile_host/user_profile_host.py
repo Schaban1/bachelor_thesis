@@ -15,7 +15,7 @@ class UserProfileHost():
             original_prompt: str,
             add_ons: list = None,
             extend_original_prompt: bool = True,
-            recommendation_type: str = RecommendationType.FUNCTION_BASED,
+            recommendation_type: str = RecommendationType.RANDOM,
             stable_dif_pipe: StableDiffusionPipeline = None,
             hf_model_name: str = "stable-diffusion-v1-5/stable-diffusion-v1-5",
             cache_dir: str = './cache/',

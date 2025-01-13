@@ -53,7 +53,7 @@ class WebUI:
         self.is_generating = False
         # Provided by the user / system
         self.user_prompt = ""
-        self.recommendation_type = RecommendationType.POINT
+        self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
         self.score_mode = self.args.score_mode
         self.init_score_mode()

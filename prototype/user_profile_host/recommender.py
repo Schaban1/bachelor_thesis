@@ -167,16 +167,14 @@ class SinglePointWeightedAxesRecommender(Recommender):
         upper_sampling_ranges = self.bounds[1] - user_profile
 
         # OLD: random weights for axes for each recommendation in bounds
-        weights = torch.rand(size=(n_recommendations, self.n_axis))  # in [0, 1]
+        # weights = torch.rand(size=(n_recommendations, self.n_axis))  # in [0, 1]
 
-        # FIXME: generates noise images
         alpha = torch.ones(self.n_axis)  # Concentration parameter (uniform)
         distribution = torch.distributions.dirichlet.Dirichlet(alpha)
         weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
 
         # scale to bounds to ranges & scale with exploration factor
-        weights = (exploration_factor *
-                   (weights_dirichlet * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
+        weights = (exploration_factor * (weights_dirichlet * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
 
         # interpolate between user profile and axes, user user_profile as reference point
         return user_profile + weights @ axes
@@ -197,7 +195,7 @@ class DirichletRecommender(Recommender):
         exploration and exploitation.
         :param user_profile: Low-dimensional user profile containing embeddings and preferences.
         :param n_recommendations: Number of recommendations to return.
-        :param beta: Trade-off between exploration and exploitation.
+        :param beta: Trade-off between exploration and exploitation (Higher Beta, more exploitation).
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
         alpha = (torch.ones(self.n_axis) * user_profile).reshape(-1) * (beta if beta else self.beta)
