@@ -89,6 +89,10 @@ class UserProfileHost():
         self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
         self.weighted_axis_exploration_factor = weighted_axis_exploration_factor
+        self.bo_beta = bo_beta
+        self.di_beta = di_beta
+        self.di_beta_increase = di_beta_increase
+        self.search_space_type = search_space_type
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
