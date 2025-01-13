@@ -97,9 +97,9 @@ class UserProfileHost():
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
 
-        # Some (Bayesian Optimization) Hyperparameters
-        self.embedding_bounds = embedding_bounds
-        self.latent_bounds = latent_bounds
+        # Bounds remain fixed to 0., 1. for simplicity
+        self.embedding_bounds = [0., 1.]
+        self.latent_bounds = [0., 1.]
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
         if not self.stable_dif_pipe:
@@ -163,10 +163,6 @@ class UserProfileHost():
 
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
-
-        # Bounds remain fixed to 0., 1. for simplicity
-        self.embedding_bounds = [0., 1.]
-        self.latent_bounds = [0., 1.]
 
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
