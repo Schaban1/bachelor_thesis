@@ -61,7 +61,6 @@ class WebUI:
         self.is_interactive_plot = False
         # Provided by the user / system
         self.user_prompt = ""
-        self.user_profile_host_beta = None
         self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
         self.score_mode = self.args.score_mode
@@ -235,8 +234,8 @@ class WebUI:
         Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated 
         images of the generator in self.images.
         """
-        with self.queue_lock: #TODO (Discuss): How to handle beta even though optimizers should take care of it.
-            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
+        with self.queue_lock:
+            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
     
     def update_image_displays(self):
@@ -251,7 +250,6 @@ class WebUI:
         """
         normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
-        self.user_profile_host_beta -= 1
     
     # <----------------------------------------------------->
     # <---------- Misc. ---------->
