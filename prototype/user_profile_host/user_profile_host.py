@@ -2,6 +2,7 @@ import torch
 from torch import Tensor
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
+from nicegui import binding
 
 from .recommender import *
 from .optimizer import *
@@ -10,6 +11,24 @@ from diffusers import StableDiffusionPipeline
 
 
 class UserProfileHost():
+    original_prompt = binding.BindableProperty()
+    extend_original_prompt = binding.BindableProperty()
+    recommendation_type = binding.BindableProperty()
+    height = binding.BindableProperty()
+    width = binding.BindableProperty()
+    latent_space_length = binding.BindableProperty()
+    n_latent_axis = binding.BindableProperty()
+    n_embedding_axis = binding.BindableProperty()
+    use_embedding_center = binding.BindableProperty()
+    use_latent_center = binding.BindableProperty()
+    n_recommendations = binding.BindableProperty()
+    ema_alpha = binding.BindableProperty()
+    weighted_axis_exploration_factor = binding.BindableProperty()
+    bo_beta = binding.BindableProperty()
+    di_beta = binding.BindableProperty()
+    di_beta_increase = binding.BindableProperty()
+    search_space_type = binding.BindableProperty()
+
     def __init__(
             self,
             original_prompt: str,
@@ -56,6 +75,11 @@ class UserProfileHost():
         :param search_space_type: describes the search space; must be 'dirichlet' or 'linspace'
         """
         # Some Clip Hyperparameters
+        self.original_prompt = original_prompt
+        self.add_ons = add_ons
+        self.extend_original_prompt = extend_original_prompt
+        self.recommendation_type = recommendation_type
+        self.stable_dif_pipe = stable_dif_pipe
         self.embedding_dim = 768
         self.n_clip_tokens = 77
         self.height = 512
@@ -67,18 +91,38 @@ class UserProfileHost():
         self.use_latent_center = use_latent_center
         self.n_recommendations = n_recommendations
         self.recommendation_type = recommendation_type
+        self.ema_alpha = ema_alpha
+        self.weighted_axis_exploration_factor = weighted_axis_exploration_factor
+        self.bo_beta = bo_beta
+        self.di_beta = di_beta
+        self.di_beta_increase = di_beta_increase
+        self.search_space_type = search_space_type
+
+        # Placeholder for the already evaluated embeddings of the current user
+        self.embeddings = None
+        self.preferences = None
+
+        # Placeholder until the user_profile is fit the first time
+        self.user_profile = None
+
+        # Bounds remain fixed to 0., 1. for simplicity
+        self.embedding_bounds = [0., 1.]
+        self.latent_bounds = [0., 1.]
 
         # Initialize tokenizer and text encoder to calculate CLIP embeddings
-        if not stable_dif_pipe:
-            stable_dif_pipe = StableDiffusionPipeline.from_pretrained(
+        if not self.stable_dif_pipe:
+            self.stable_dif_pipe = StableDiffusionPipeline.from_pretrained(
                 pretrained_model_name_or_path=hf_model_name,
                 cache_dir=cache_dir
             )
-        self.tokenizer = stable_dif_pipe.tokenizer
-        self.text_encoder = stable_dif_pipe.text_encoder
-
+        self.tokenizer = self.stable_dif_pipe.tokenizer
+        self.text_encoder = self.stable_dif_pipe.text_encoder
+        
+        self.load_user_profile_host()
+    
+    def load_user_profile_host(self):
         # Define the center of the user_space with the original prompt embedding
-        self.embedding_center = self.clip_embedding(original_prompt)
+        self.embedding_center = self.clip_embedding(self.original_prompt)
         self.embedding_length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False)
         if not self.use_embedding_center:
             self.embedding_center = torch.zeros(size=(1, self.n_clip_tokens, self.embedding_dim))
@@ -87,8 +131,8 @@ class UserProfileHost():
         # by calculating the respective CLIP embeddings to the resulting prompts
         # TODO: Discuss, if this could be improved.
         self.embedding_axis = []
-        if not add_ons:
-            add_ons = [
+        if not self.add_ons:
+            self.add_ons = [
                           "beautiful, moody lighting, best quality, full body portrait, real picture, intricate details, depth of field, in a cold snowstorm, fujifilm xt3, outdoors, beautiful lighting, raw photo, 8k uhd, film grain, unreal engine 5, ray trace",
                           "in the style of liquid metal, vray tracing, raw character, 32k uhd, schlieren photography, conceptual portraiture, wet - on - wet blending",
                           "Detailed, vibrant illustration, full of plants, trees, by herge, in the style of tin-tin comics, vibrant colors, detailed, lots of people, sunny day, beautiful illustration",
@@ -103,71 +147,60 @@ class UserProfileHost():
                           "behind windwow, rainy, black and white photography surreal art blurry minimalistic",
                           "at full height, is working on a beautiful design project, creating design projects, a beautiful workspace, aesthetics, correct proportions realism ultra high quality, real photo"
                       ][:self.n_embedding_axis]
-        if extend_original_prompt:
-            for prompt in [original_prompt + ', ' + add for add in add_ons]:
+        if self.extend_original_prompt:
+            for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
         else:
-            for prompt in add_ons:
+            for prompt in self.add_ons:
                 self.embedding_axis.append(self.clip_embedding(prompt))
 
         self.embedding_axis = torch.stack(self.embedding_axis)
-        if n_latent_axis:
-            self.latent_center = torch.randn((1, stable_dif_pipe.unet.config.in_channels, self.height // 8,
+        if self.n_latent_axis:
+            self.latent_center = torch.randn((1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
                                               self.width // 8)) if self.use_latent_center else (
-                torch.zeros(size=(1, stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)))
-            self.latent_axis = torch.randn((n_latent_axis, stable_dif_pipe.unet.config.in_channels, self.height // 8,
+                torch.zeros(size=(1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)))
+            self.latent_axis = torch.randn((self.n_latent_axis, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
                                             self.width // 8))
             self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
         else:
             self.num_axis = self.embedding_axis.shape[0]
 
-        # Placeholder for the already evaluated embeddings of the current user
-        self.embeddings = None
-        self.preferences = None
-
-        # Placeholder until the user_profile is fit the first time
-        self.user_profile = None
-
-        # Bounds remain fixed to 0., 1. for simplicity
-        self.embedding_bounds = [0., 1.]
-        self.latent_bounds = [0., 1.]
-
         # Initialize Optimizer and Recommender based on one Mode
-        if recommendation_type == RecommendationType.FUNCTION_BASED:
+        if self.recommendation_type == RecommendationType.FUNCTION_BASED:
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
                                                    latent_bounds=self.latent_bounds,
-                                                   search_space_type=search_space_type,
-                                                   beta=bo_beta)
+                                                   search_space_type=self.search_space_type,
+                                                   beta=self.bo_beta)
             self.optimizer = NoOptimizer()
-        elif recommendation_type == RecommendationType.WEIGHTED_AXES:
+        elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
                                                                   latent_bounds=self.latent_bounds,
-                                                                  exploration_factor=weighted_axis_exploration_factor)
+                                                                  exploration_factor=self.weighted_axis_exploration_factor)
             self.optimizer = WeightedSumOptimizer()
-        elif recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
+        elif self.recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
                                                                   latent_bounds=self.latent_bounds,
-                                                                  exploration_factor=weighted_axis_exploration_factor)
-            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
-        elif recommendation_type == RecommendationType.RANDOM:
+                                                                  exploration_factor=self.weighted_axis_exploration_factor)
+            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
+        elif self.recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                  n_latent_axis=self.n_latent_axis,
                                                  embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds)
             self.optimizer = NoOptimizer()
-        elif recommendation_type == RecommendationType.EMA_DIRICHLET:
+        elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
-                                                   beta=di_beta,
-                                                   increase_beta=di_beta_increase)
-            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=ema_alpha)
+                                                   beta=self.di_beta,
+                                                   increase_beta=self.di_beta_increase)
+            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         else:
-            raise ValueError(f"The recommendation type {recommendation_type} is not implemented yet.")
+            raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
 
     def inv_transform(self, user_embeddings: Tensor):
         """
