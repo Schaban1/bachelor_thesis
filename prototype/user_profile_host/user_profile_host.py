@@ -115,9 +115,6 @@ class UserProfileHost():
                                                    search_space_type=search_space_type,
                                                    beta=bo_beta)
             self.optimizer = NoOptimizer()
-        elif recommendation_type == RecommendationType.POINT:
-            self.recommender = SinglePointRecommender(embedding_bounds=self.embedding_bounds)
-            self.optimizer = MaxPrefOptimizer()
         elif recommendation_type == RecommendationType.WEIGHTED_AXES:
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
