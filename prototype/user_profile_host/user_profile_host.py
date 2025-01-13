@@ -166,7 +166,7 @@ class UserProfileHost():
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
-                                                   latent_bounds=self.self.latent_bounds,
+                                                   latent_bounds=self.latent_bounds,
                                                    search_space_type=self.search_space_type,
                                                    beta=self.bo_beta)
             self.optimizer = NoOptimizer()
