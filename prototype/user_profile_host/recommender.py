@@ -86,50 +86,6 @@ class RandomRecommender(Recommender):
         return random_user_embeddings
 
 
-# TODO: Discuss with Klara if we remove this?
-class SinglePointRecommender(Recommender):
-    def __init__(self, embedding_bounds=(-1., 1.)):
-        """
-        The SinglePoint Recommender is supposed to recommend points around a (high confidence) user profile.
-        However, if the user profile is bad or the user wants to explore the space,this recommender is not suitable.
-
-        :param embedding_bounds: Used to determine the radius used when embeddings lie on a sphere.
-        """
-        self.embedding_bounds = embedding_bounds
-
-    def get_random_samples_on_n_sphere(self, n_dims: int = 10, radius: float = 1.0, n_samples: int = 5) -> Tensor:
-        """
-        Code from: https://stackoverflow.com/questions/52808880/algorithm-for-generating-uniformly-distributed-random
-        -points-on-the-n-sphere (27.11.2024)
-        Idea from: https://mathworld.wolfram.com/HyperspherePointPicking.html (27.11.2024)
-
-        :param n_dims: Number of dimensions of system. The sphere surface is n_dims-1 dimensional.
-        :param radius: Radius of the sphere.
-        :param n_samples: Number of samples to generate.
-        :return: Tensor of shape (n_samples, n_dims) containing the samples on surface of sphere with center 0^n_dims.
-        """
-        x = np.random.default_rng().normal(size=(n_samples, n_dims))
-
-        return torch.from_numpy(radius / np.sqrt(np.sum(x ** 2, 1, keepdims=True)) * x).float()
-
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
-        """
-        :param user_profile: A point in the low-dimensional user profile space.
-        :param n_recommendations: Number of recommendations to return. By default, 5.
-        :param beta: Not used in this recommender.
-        :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
-            user_profile where n_dims is the dimensionality of the user_profile.
-        """
-        radius = abs(self.embedding_bounds[0] - self.embedding_bounds[1]) / 2  # radius of sphere
-
-        # recommendations on the surface of a sphere around the 0-center
-        zero_centered_generated_points = self.get_random_samples_on_n_sphere(n_dims=len(user_profile), radius=radius,
-                                                                             n_samples=n_recommendations)
-
-        # move the points s.t. the user profile is the center
-        return torch.add(zero_centered_generated_points, user_profile)
-
-
 class SinglePointWeightedAxesRecommender(Recommender):
 
     def __init__(self, n_embedding_axis: int, n_latent_axis: int, embedding_bounds=(0., 1.), latent_bounds=(0., 1.),
