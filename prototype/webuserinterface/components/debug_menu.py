@@ -30,7 +30,7 @@ class DebugMenu(ngUI.element):
                     ngUI.select({t: t.value for t in RecommendationType}, label='recommendation_type').props(self.input_props).bind_value(self.webUI, 'recommendation_type')
                     ngUI.number(label="num_images_to_generate", min=0, precision=0, step=1, on_change=self.webUI.reload_userinterface).props(self.input_props).bind_value(self.webUI, 'num_images_to_generate', forward=int)
                     ngUI.select({m.value: m.value for m in ScoreMode}, label='score_mode', on_change=self.webUI.reload_userinterface).style("width: 100px;").props(self.input_props).bind_value(self.webUI, 'score_mode')
-                    ngUI.number(label="user_profile_host_beta", min=0, precision=0, step=1).props(self.input_props).bind_value(self.webUI, 'user_profile_host_beta', forward=int)
+                    #ngUI.number(label="user_profile_host_beta", min=0, precision=0, step=1).props(self.input_props).bind_value(self.webUI, 'user_profile_host_beta', forward=int)
                     ngUI.input(label="image_display_size").props(self.input_props).bind_value(self.webUI, 'image_display_size')
                     ngUI.number(label="active_image", min=0, precision=0, step=1).props(self.input_props).bind_value(self.webUI, 'active_image', forward=int)
                     ngUI.input(label="save_path").props(self.input_props).bind_value(self.webUI, 'save_path')

@@ -28,7 +28,6 @@ class WebUI:
     recommendation_type = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
     score_mode = binding.BindableProperty()
-    user_profile_host_beta = binding.BindableProperty()
     image_display_size = binding.BindableProperty()
     active_image = binding.BindableProperty()
     save_path = binding.BindableProperty()
