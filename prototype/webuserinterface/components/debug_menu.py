@@ -21,7 +21,7 @@ class DebugMenu(ngUI.element):
                 with ngUI.column().classes('p-0 gap-0'):
                     ngUI.label("Debug UI Info").style("font-size: 50px; color: white;")
                     ngUI.input(label="session_id").props(self.input_props).bind_value(self.webUI, 'session_id')
-                    ngUI.select({s: s.value for s in WebUIState}, label='state').props(self.input_props).bind_value(self.webUI, 'state')
+                    ngUI.select({s: s.value for s in WebUIState}, label='state', on_change=self.webUI.update_state_variables).props(self.input_props).bind_value(self.webUI, 'state')
                     ngUI.checkbox('is_initial_iteration').style(self.checkbox_style).bind_value(self.webUI, 'is_initial_iteration')
                     ngUI.checkbox('is_main_loop_iteration').style(self.checkbox_style).bind_value(self.webUI, 'is_main_loop_iteration')
                     ngUI.checkbox('is_generating').style(self.checkbox_style).bind_value(self.webUI, 'is_generating')
