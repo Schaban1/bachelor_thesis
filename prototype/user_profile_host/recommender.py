@@ -89,7 +89,7 @@ class RandomRecommender(Recommender):
 class SinglePointWeightedAxesRecommender(Recommender):
 
     def __init__(self, n_embedding_axis: int, n_latent_axis: int, embedding_bounds=(0., 1.), latent_bounds=(0., 1.),
-                 exploration_factor: float = 1.0, on_sphere: bool = False):
+                 exploration_factor: float = 1.0):
         """
         :param n_embedding_axis: Number of axes in the embedding space.
         :param n_latent_axis: Number of axes in the latent space.
@@ -108,7 +108,6 @@ class SinglePointWeightedAxesRecommender(Recommender):
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
         self.exploration_factor = exploration_factor    # TODO: decrease radius with higher iteration
-        self.on_sphere = on_sphere
         # Define bounds for search space
         self.bounds = torch.tensor([
             # lower bounds (1, n_axis)
@@ -118,31 +117,6 @@ class SinglePointWeightedAxesRecommender(Recommender):
             [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in
                                                                                 range(self.n_latent_axis)]
         ])
-
-    def recommend_on_sphere(self, user_profile: Tensor, n_recommendations: int = 5, radius: float = 1.0) -> Tensor:
-        """
-        Uses SLERP to interpolate between the user profile and the axes of the user space.
-        In this case, the points are on the surface of the sphere.
-        The generated points are interpolated between the user profile and one axes.
-        :param radius: Radius of the sphere.
-        :param user_profile: Low-dimensional user profile.
-        :param n_recommendations: Number of recommendations to return.
-        :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations on the surface of the sphere.
-        """
-        # weights for influence of axes: random integer between 0 and n_recommendations
-        weights = torch.randint(low=0, high=n_recommendations, size=(n_recommendations,))  # random weights for axes
-
-        # one hot encoding for axes
-        axes = torch.multiply(torch.eye(user_profile.shape[0]), radius)
-
-        # interpolate between user profile and axes:
-        # Weights are used to determine the influence of the axes (SLERP returns interpolated points with increasing
-        # influence of the axes) -> the higher the weight (i.e. index), the more the axis is taken into account
-        # if fewer axes than n_recommendations, repeat axes
-        interpolated_points = [slerp(user_profile, axis, num=n_recommendations)[weight] for axis, weight
-                               in zip(axes.repeat(n_recommendations // axes.shape[0], 1), weights)]
-
-        return torch.stack(interpolated_points)
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
