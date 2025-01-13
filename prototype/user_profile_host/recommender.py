@@ -70,7 +70,7 @@ class RandomRecommender(Recommender):
         """
         :param user_profile: A point in the low-dimensional user profile space.
         :param n_recommendations: Number of recommendations to return. By default, 5.
-        beta (float): Not used in this recommender.
+        :param beta: Not used in this recommender.
         :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
             user_profile where n_dims is the dimensionality of the user_profile.
         """
