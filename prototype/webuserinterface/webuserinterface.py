@@ -137,7 +137,7 @@ class WebUI:
 
         UI Structure:
         - Webis demo template top half.
-        - Content based on the current state. Either the initial prompt input, the main loop with the user preferences or the loading spinner.
+        - Content based on the current state. Either the initial prompt input, the main loop with the user preferences, the loading spinner or the plot.
         - Some empty space so the footer doesnt look weird on high resolution devices.
         - Webis demo template bottom half/footer.
         """
