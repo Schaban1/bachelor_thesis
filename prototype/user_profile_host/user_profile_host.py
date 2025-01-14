@@ -247,9 +247,7 @@ class UserProfileHost():
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
-        self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences)
-
-        return self.user_profile
+        self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
     def clip_embedding(self, prompt: str):
         """

@@ -17,7 +17,7 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
     """
 
     @abstractmethod
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -28,7 +28,7 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
 
 class NoOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -39,7 +39,7 @@ class NoOptimizer:
 
 class MaxPrefOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -51,7 +51,7 @@ class MaxPrefOptimizer:
 
 class WeightedSumOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -72,28 +72,26 @@ class EMAWeightedSumOptimizer:
         :param n_recommendations: Number of recommendations to be considered recent each iteration.
         :param alpha: Factor for the exponential moving average. Higher values give more weight to recent recommendations.
         """
-        self.user_profile = None
         self.n_recommendations = n_recommendations
         self.alpha = alpha
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
         # If this is the first optimization step, just create a new user profile based on current embeddings
-        if self.user_profile == None:
+        if user_profile == None:
             if torch.count_nonzero(preferences) == 0:
-                self.user_profile = torch.rand(size=(embeddings.shape[1],))
+                user_profile = torch.rand(size=(embeddings.shape[1],))
             else:
-                self.user_profile = (preferences.reshape(-1) @ embeddings) / preferences.sum()
+                user_profile = (preferences.reshape(-1) @ embeddings) / preferences.sum()
         else:
-            new_embeddings, new_preferences = embeddings[-self.n_recommendations:], preferences[
-                                                                                    -self.n_recommendations:]
+            new_embeddings, new_preferences = embeddings[-self.n_recommendations:], preferences[-self.n_recommendations:]
             # TODO (Discuss, Klara, Paul): whats the best response to all 0 preferences? Currently just keeping old user profile
             if not torch.count_nonzero(new_preferences) == 0:
                 new_user_profile = (new_preferences.reshape(-1) @ new_embeddings) / new_preferences.sum()
-                self.user_profile = self.alpha * new_user_profile + (1 - self.alpha) * self.user_profile
+                user_profile = self.alpha * new_user_profile + (1 - self.alpha) * user_profile
 
-        return self.user_profile
+        return user_profile
