@@ -12,7 +12,7 @@ image_display_size : [256, 256]
 random_seed : 42
 
 generator:
-  num_inference_steps : 25
+  num_inference_steps : 50
   guidance_scale: 7.5
   random_latents : False
   use_negative_prompt : False

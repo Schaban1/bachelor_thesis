@@ -130,11 +130,14 @@ class WebUI:
             n_images=self.num_images_to_generate,
             cache_dir=self.args.path.cache_dir,
             device=self.args.device,
-            **self.args.generator        
+            **self.args.generator
         )
-        with self.queue_lock:
-            self.generator.generate_image(torch.zeros(1, 77, 768))
-    
+        # with self.queue_lock:
+        #     self.generator.generate_image_stream(torch.zeros(size=(1, 77, 768),
+        #                                                      device=self.generator.pipe.device,
+        #                                                      dtype=self.generator.pipe.dtype)
+        #                                          )
+
     def build_userinterface(self):
         """
         Builds the complete user interface using NiceGUI.
@@ -301,15 +304,17 @@ class WebUI:
             n_recommendations=self.num_images_to_generate,
             **self.args.recommender
         )
+
+        self.generator.setup(self.user_prompt, self.args.random_seed)
     
     def generate_images(self):
         """
-        Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated 
+        Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated
         images of the generator in self.images.
         """
         with self.queue_lock: #TODO (Discuss): How to handle beta even though optimizers should take care of it.
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
-            self.images = self.generator.generate_image(embeddings, latents)
+            self.images = self.generator.generate_image_stream(embeddings, latents)
     
     def update_image_displays(self):
         """

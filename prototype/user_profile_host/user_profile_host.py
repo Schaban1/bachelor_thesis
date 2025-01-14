@@ -158,7 +158,8 @@ class UserProfileHost():
         if self.n_latent_axis:
             latent_factors = user_embeddings[:, -self.latent_axis.shape[0]:]
             user_embeddings = user_embeddings[:, :-self.latent_axis.shape[0]]
-
+        user_embeddings = user_embeddings.type(self.text_encoder.dtype)
+        self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
         product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
         embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
@@ -227,7 +228,8 @@ class UserProfileHost():
         else:
             # Start initially with some random embeddings and take into account the bounds
             user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds).recommend_embeddings(None, self.n_recommendations)
-        
+
+        user_space_embeddings.type(self.text_encoder.dtype)
         # Safe the user_space_embeddings
         if self.embeddings != None:
             self.embeddings = torch.cat((self.embeddings, user_space_embeddings))
@@ -264,7 +266,7 @@ class UserProfileHost():
                 # Retrieve scores for heatmap
                 grid_x, grid_y = torch.meshgrid(torch.linspace(-1, 1, 200), torch.linspace(-1, 1, 200), indexing='ij')
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
-                user_space = pca.inverse_transform(low_d_user_space).float()
+                user_space = pca.inverse_transform(low_d_user_space).type(self.text_encoder.dtype)
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile, user_space=user_space).reshape(grid_x.shape)                
                 
                 return (grid_x, grid_y, scores), transformed_embeddings, self.preferences

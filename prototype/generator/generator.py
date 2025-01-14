@@ -3,8 +3,10 @@ from torch import Tensor
 
 import torch
 from PIL.Image import Image
-from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler, AutoencoderKL
-
+from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler, AutoencoderKL, AutoencoderTiny
+from streamdiffusion import StreamDiffusion
+from streamdiffusion.image_utils import postprocess_image
+import time
 
 class GeneratorBase(ABC):
 
@@ -20,14 +22,14 @@ class GeneratorBase(ABC):
 class Generator(GeneratorBase):
     def __init__(self,
                  n_images=5,
-                 batch_size=None,
+                 batch_size: int = None,
                  hf_model_name: str = "stable-diffusion-v1-5/stable-diffusion-v1-5",
                  cache_dir: str | None = '/cache/',
                  num_inference_steps: int = 20,
                  device: str = 'cuda',
                  random_latents: bool = False,
                  guidance_scale: float = 7.,
-                 use_negative_prompt: bool = False
+                 use_negative_prompt: bool = False,
                  ):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
@@ -41,55 +43,108 @@ class Generator(GeneratorBase):
             device: gpu or cpu that should be used to generate images
         """
 
+        # import torch._dynamo
+        # torch._dynamo.config.suppress_errors = True
+        # print("surpressing")
+
         self.height = 512
         self.width = 512
         self.batch_size = batch_size
         self.random_latents = random_latents
         self.num_inference_steps = num_inference_steps
         self.guidance_scale = guidance_scale
-
-        scheduler = LMSDiscreteScheduler(
-            beta_start=0.00085,
-            beta_end=0.012,
-            beta_schedule="scaled_linear",
-            num_train_timesteps=1000,
-            steps_offset=1
-        )
-
-        self.pipe = StableDiffusionPipeline.from_pretrained(
-            hf_model_name,
-            scheduler=scheduler,
-            safety_checker=None,
-            requires_safety_checker=False,
-            cache_dir=cache_dir,
-            #torch_dtype=torch.float16
-        )
+        self.n_images = n_images
 
         self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
-        # vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", cache_dir=cache_dir ,torch_dtype=torch.float16).to(self.device)
-        # self.pipe.vae = vae
+        self.pipe = StableDiffusionPipeline.from_pretrained(
+            hf_model_name,
+            safety_checker=None,
+            requires_safety_checker=False,
+            cache_dir=cache_dir,
+            torch_dtype=torch.float16
+        ).to(device=self.device)
 
-        self.pipe.to(self.device)
-        #self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
-        self.n_images = n_images
+        self.stream = StreamDiffusion(
+            self.pipe,
+            t_index_list=[0, 16, 32, 45],
+            torch_dtype=torch.float16,
+            cfg_type="none",
+        )
+        self.stream.load_lcm_lora()
+        self.stream.fuse_lora()
+
+        self.stream.vae = AutoencoderTiny.from_pretrained("madebyollin/taesd", torch_dtype=self.pipe.dtype).to(device=self.pipe.device)
+        #stream.vae = AutoencoderKL.from_pretrained("").to(device=pipe.device, dtype=pipe.dtype)
+
+        self.latent_height = int(self.height // self.pipe.vae_scale_factor)
+        self.latent_width = int(self.width // self.pipe.vae_scale_factor)
+
+        self.pipe.enable_xformers_memory_efficient_attention()
+        # if torch.onnx.is_onnxrt_backend_supported():
+        #     print("compiling...")
+        #     self.pipe.unet = torch.compile(self.pipe.unet, backend="onnxrt")
 
         self.latents = torch.randn(
-            (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
-            device=self.device,# dtype=torch.float16
+            (1, self.pipe.unet.config.in_channels, self.height, self.width),
+            device=self.pipe.device, dtype=self.pipe.dtype
         ).repeat(n_images, 1, 1, 1)
 
         self.use_negative_prompt = use_negative_prompt
         self.negative_prompt_embeds = None
+        self.negative_prompt = ""
         if self.use_negative_prompt:
-            negative_prompt = "lowres, error, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature, deformed, ugly, mutilated, disfigured, text, extra limbs, face cut, head cut, extra fingers, extra arms, poorly drawn face, mutation, bad proportions, cropped head, malformed limbs, mutated hands, fused fingers, long neck, illustration, painting, drawing, art, sketch,bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, worst quality, cropped, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, deformed, missing limb, bad hands, extra digits, extra fingers, not enough fingers, floating head, disembodied"
-            negative_prompt_tokens = self.pipe.tokenizer(negative_prompt,
+            self.negative_prompt = "lowres, error, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature, deformed, ugly, mutilated, disfigured, text, extra limbs, face cut, head cut, extra fingers, extra arms, poorly drawn face, mutation, bad proportions, cropped head, malformed limbs, mutated hands, fused fingers, long neck, illustration, painting, drawing, art, sketch,bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, worst quality, cropped, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, deformed, missing limb, bad hands, extra digits, extra fingers, not enough fingers, floating head, disembodied"
+            negative_prompt_tokens = self.pipe.tokenizer(self.negative_prompt,
                                                          padding="max_length",
                                                          max_length=self.pipe.tokenizer.model_max_length,
                                                          truncation=True,
                                                          return_tensors="pt", ).to(self.pipe.text_encoder.device)
             self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(n_images, 1, 1)
 
+    def setup(self, prompt: str, seed: int):
+        self.stream.prepare(prompt=prompt,
+                            negative_prompt=self.negative_prompt,
+                            guidance_scale=self.guidance_scale,
+                            num_inference_steps=self.num_inference_steps,
+                            seed=seed)
+        for _ in range(4):
+            self.stream()
+
+
+    @torch.no_grad()
+    def generate_image_stream(self, embeddings: Tensor | tuple[Tensor, Tensor], latents: Tensor = None) -> list[Image]:
+        start = time.time()
+        latents = latents.to(self.pipe.device)
+        embeddings = embeddings.to(self.pipe.device)
+        embeddings = embeddings.type(self.pipe.dtype)
+
+        if latents != None:
+            latents = latents.to(self.pipe.device)
+            latents = latents.type(self.pipe.dtype)
+        else:
+            if self.random_latents:
+                latents = torch.randn(
+                    (self.n_images, self.pipe.unet.config.in_channels, self.latent_height, self.latent_width),
+                    device=self.pipe.device, dtype=self.pipe.dtype
+                )
+            else:
+                latents = self.latents
+
+        image_list = []
+        for embedding, latent in zip(embeddings, latents):
+            embedding = embedding.repeat(self.stream.batch_size, 1, 1)
+            latent = latent.unsqueeze(0)
+
+            self.stream.prompt_embeds = embedding
+            x_0_pred_out = self.stream.predict_x0_batch(latent)
+
+            x_output = self.stream.decode_image(x_0_pred_out).detach().clone()
+            image_list += postprocess_image(x_output, output_type="pil")
+        print(f"generation done in {time.time() - start}")
+        return image_list
+
+    @torch.no_grad()
     def generate_image(self, embeddings: Tensor | tuple[Tensor, Tensor], latents: Tensor = None) -> list[Image]:
         """
         Generates a list of image(s) from given embedding
@@ -107,13 +162,13 @@ class Generator(GeneratorBase):
 
         embeddings = embeddings.to(self.device)
         if latents != None:
-            latents = latents.to(self.device)
-            #latents = latents.type(torch.float16)
+            latents = latents.to(self.pipe.device)
+            latents = latents.type(self.pipe.dtype)
         else:
             if self.random_latents:
                 latents = torch.randn(
                     (self.n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
-                    device=self.device,# dtype=torch.float16
+                    device=self.pipe.device, dtype=self.pipe.dtype
                 )
             else:
                 latents = self.latents
@@ -139,27 +194,48 @@ class Generator(GeneratorBase):
 
 
 if __name__ == "__main__":
-    n_images = 3
+    import os
+    import time
+
+    n_images = 5
     gen = Generator(n_images=n_images,
                     batch_size=None,
                     cache_dir=None,
-                    num_inference_steps=25,
+                    num_inference_steps=50,
                     use_negative_prompt=False,
                     random_latents=True)
-    prompt = "A cinematic shot of a baby racoon wearing an intricate italian priest robe."
-    prompt_tokens = gen.pipe.tokenizer(prompt,
-                                       padding="max_length",
-                                       max_length=gen.pipe.tokenizer.model_max_length,
-                                       truncation=True,
-                                       return_tensors="pt",
-                                       )
 
-    embed = gen.pipe.text_encoder(prompt_tokens.input_ids.to(gen.device))[0]
+    prompt = "A cinematic shot of a baby racoon wearing an intricate italian priest robe."
+
+    # prompt_tokens = gen.pipe.tokenizer(prompt,
+    #                                    padding="max_length",
+    #                                    max_length=gen.pipe.tokenizer.model_max_length,
+    #                                    truncation=True,
+    #                                    return_tensors="pt",
+    #                                    ).to(gen.device)
+
+    embed = gen.pipe.encode_prompt(prompt,
+                                   device=gen.pipe.device,
+                                   num_images_per_prompt=1,
+                                   do_classifier_free_guidance=False)[0]
     embed = embed.repeat(n_images, 1, 1)
     print(f"{embed.shape=}")
-    for i in range(5):
+
+    start = time.time()
+    os.makedirs("output", exist_ok=True)
+    for i in range(1):
         img = gen.generate_image(embed)
         for i in range(n_images):
-            img[i].save(f"../output/{i}.png")
+            img[i].save(f"output/{i}.png")
+    print("normal generation took:", time.time() - start)
 
+    print("running stream")
+    start = time.time()
+    os.makedirs("output_stream", exist_ok=True)
+    for i in range(1):
+        img = gen.generate_image_stream(embed)
+        for i in range(n_images):
+
+            img[i].save(f"output_stream/{i}.png")
+    print("stream generation took:", time.time() - start)
     print(img)
