@@ -22,7 +22,7 @@ class PlotUI(UIComponent):
                 self.plot = ngUI.plotly(self.fig)
                 self.plot.on('plotly_click', self.on_plot_click)
 
-                self.clicked_image = ngUI.image().style(f'width: {self.webUI.image_display_size[0]}px; height: {self.webUI.image_display_size[1]}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
+                self.clicked_image = ngUI.image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                 self.update_plot()
 
     def update_plot(self):
@@ -31,10 +31,11 @@ class PlotUI(UIComponent):
         """
         self.fig.data = []
         self.clicked_image.set_source(None)
-        if self.webUI.user_profile_host is not None:
+        if self.webUI.user_profile_host is not None and self.webUI.user_profile_host.user_profile is not None:
             user_profile, embeddings, _ = self.webUI.user_profile_host.plotting_utils()
             self.fig.add_trace(go.Scatter(x=embeddings[:, 0], y=embeddings[:, 1], mode='markers', name='embeddings'))
-            self.fig.add_trace(go.Scatter(x=[user_profile[0]], y=[user_profile[1]], mode='markers', marker=dict(size=10, color='red'), name='user profile'))
+            if user_profile is not None:
+                self.fig.add_trace(go.Scatter(x=[user_profile[0]], y=[user_profile[1]], mode='markers', marker=dict(size=10, color='red'), name='user profile'))
 
         self.plot.update()
 

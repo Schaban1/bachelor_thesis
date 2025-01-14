@@ -74,6 +74,7 @@ class WebUI:
 
         # Lists / UI components
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
+        self.prev_images = []
         self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
@@ -103,6 +104,7 @@ class WebUI:
         """
         Reloads the UI.
         """
+        print("CLEAR UI")
         self.root.clear()
         self.scorer = Scorer(self)
         self.images = self.images[:min(len(self.images), self.num_images_to_generate)] \
@@ -142,8 +144,8 @@ class WebUI:
         - Some empty space so the footer doesnt look weird on high resolution devices.
         - Webis demo template bottom half/footer.
         """
+        print("BUILD UI")
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
-        self.prev_images = []
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
             InitialIterationUI(self)

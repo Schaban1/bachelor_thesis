@@ -314,12 +314,15 @@ class UserProfileHost():
 
         else:
             # Check for GP-User Embedding
-            if self.recommendation_type == RecommendationType.FUNCTION_BASED:
+            if self.recommendation_type == RecommendationType.FUNCTION_BASED or self.recommendation_type == RecommendationType.RANDOM:
                 matrix = self.embeddings
                 pca = PCA(n_components=2).fit(matrix)
                 transformed_embeddings = pca.transform(matrix)
 
-                # Retrieve scores for heatmap
+                if self.recommendation_type == RecommendationType.RANDOM:
+                    return None, transformed_embeddings, self.preferences
+
+                # Retrieve scores for heatmap (function-based recommender)
                 grid_x, grid_y = torch.meshgrid(torch.linspace(-1, 1, 200), torch.linspace(-1, 1, 200), indexing='ij')
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
                 user_space = pca.inverse_transform(low_d_user_space).float()
