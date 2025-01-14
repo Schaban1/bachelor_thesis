@@ -98,13 +98,13 @@ class WebUI:
         This function starts the Web UI.
         """
         self.change_state(WebUIState.INIT_STATE)
+        self.root.clear()
         self.build_userinterface()
 
     def reload_userinterface(self):
         """
         Reloads the UI.
         """
-        print("CLEAR UI")
         self.root.clear()
         self.scorer = Scorer(self)
         self.images = self.images[:min(len(self.images), self.num_images_to_generate)] \
@@ -144,7 +144,6 @@ class WebUI:
         - Some empty space so the footer doesnt look weird on high resolution devices.
         - Webis demo template bottom half/footer.
         """
-        print("BUILD UI")
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
