@@ -166,9 +166,10 @@ class WebUI:
             device=self.args.device,
             **self.args.generator
         )
-        if self.args.generator_warm_start:
-            with self.queue_lock:
-                self.generator.generate_image(torch.zeros(1, 77, 768))
+
+        # if self.args.generator_warm_start:
+        #     with self.queue_lock:
+        #         self.generator.generate_image(torch.zeros(1, 77, 768))
     
     def init_user_profile_host(self):
         """
@@ -183,6 +184,8 @@ class WebUI:
             n_recommendations=self.num_images_to_generate,
             **self.args.recommender
         )
+
+        self.generator.setup(self.user_prompt, self.args.random_seed)
     
     # <------------------------------------------------------->
     # <---------- Keyboard controls ---------->
@@ -239,7 +242,7 @@ class WebUI:
         """
         with self.queue_lock:
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
-            self.images = self.generator.generate_image(embeddings, latents)
+            self.images = self.generator.generate_image_stream(embeddings, latents)
             self.prev_images.extend(self.images)
 
     def update_image_displays(self):

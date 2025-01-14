@@ -98,7 +98,7 @@ class Generator(GeneratorBase):
         self.latents = torch.randn(
             (1, self.pipe.unet.config.in_channels, self.height, self.width),
             device=self.pipe.device, dtype=self.pipe.dtype
-        ).repeat(n_images, 1, 1, 1)
+        ).repeat(self.n_images, 1, 1, 1)
 
         self.negative_prompt_embeds = None
         self.negative_prompt = ""

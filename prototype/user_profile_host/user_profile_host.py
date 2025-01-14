@@ -219,6 +219,8 @@ class UserProfileHost():
             user_embeddings = user_embeddings[:, :-self.latent_axis.shape[0]]
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
+        user_embeddings = user_embeddings.type(self.text_encoder.dtype)
+        self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
         product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
         embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
         clip_embeddings = (self.embedding_center + product)
