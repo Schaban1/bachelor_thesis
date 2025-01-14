@@ -2,7 +2,7 @@ from nicegui import ui as ngUI
 import plotly.graph_objects as go
 
 from prototype.webuserinterface.components.ui_component import UIComponent
-from prototype.constants import WebUIState
+from prototype.constants import WebUIState, RecommendationType
 
 
 class PlotUI(UIComponent):
@@ -14,7 +14,8 @@ class PlotUI(UIComponent):
         """
         Builds the UI for the interactive plot state.
         """
-        with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot', value=True))):
+        with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
+                                                                                  value=True))):
             ngUI.button('Back', on_click=self.on_back_to_main_loop_button_click)
             with ngUI.row().classes('mx-auto items-center'):
                 self.fig = go.Figure()
@@ -22,8 +23,21 @@ class PlotUI(UIComponent):
                 self.plot = ngUI.plotly(self.fig)
                 self.plot.on('plotly_click', self.on_plot_click)
 
-                self.clicked_image = ngUI.image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
-                self.update_plot()
+                self.clicked_image = ngUI.image().style(
+                    f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
+                # self.update_plot()
+
+    def create_contour_plot(self, user_profile, embeddings):
+        fig = go.Figure(data=go.Contour(x=user_profile[0], y=user_profile[1], z=user_profile[2]))
+        fig.add_trace(go.Scatter(x=embeddings[:, 0], y=embeddings[:, 1], mode='markers', name='embeddings'))
+        return fig
+
+    def create_scatter_plot(self, user_profile, embeddings):
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=embeddings[:, 0], y=embeddings[:, 1], mode='markers', name='embeddings'))
+        if user_profile is not None:
+            fig.add_trace(go.Scatter(x=[user_profile[0]], y=[user_profile[1]], mode='markers', marker=dict(size=10, color='red'), name='user profile'))
+        return fig
 
     def update_plot(self):
         """
@@ -33,9 +47,13 @@ class PlotUI(UIComponent):
         self.clicked_image.set_source(None)
         if self.webUI.user_profile_host is not None and self.webUI.user_profile_host.user_profile is not None:
             user_profile, embeddings, _ = self.webUI.user_profile_host.plotting_utils()
-            self.fig.add_trace(go.Scatter(x=embeddings[:, 0], y=embeddings[:, 1], mode='markers', name='embeddings'))
-            if user_profile is not None:
-                self.fig.add_trace(go.Scatter(x=[user_profile[0]], y=[user_profile[1]], mode='markers', marker=dict(size=10, color='red'), name='user profile'))
+
+            if user_profile is not None and len(user_profile) == 3:  # Heatmap for function-based recommender
+                fig = self.create_contour_plot(user_profile, embeddings)
+            else:
+                fig = self.create_scatter_plot(user_profile, embeddings)
+
+            self.plot.update_figure(fig)
 
         self.plot.update()
 

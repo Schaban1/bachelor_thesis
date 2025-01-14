@@ -133,20 +133,20 @@ class UserProfileHost():
         self.embedding_axis = []
         if not self.add_ons:
             self.add_ons = [
-                          "beautiful, moody lighting, best quality, full body portrait, real picture, intricate details, depth of field, in a cold snowstorm, fujifilm xt3, outdoors, beautiful lighting, raw photo, 8k uhd, film grain, unreal engine 5, ray trace",
-                          "in the style of liquid metal, vray tracing, raw character, 32k uhd, schlieren photography, conceptual portraiture, wet - on - wet blending",
-                          "Detailed, vibrant illustration, full of plants, trees, by herge, in the style of tin-tin comics, vibrant colors, detailed, lots of people, sunny day, beautiful illustration",
-                          "Sun profile, halftone pattern, editorial illustration of the memento morti, higly textured, genre defining mixed media collage painting, fringe absurdism, award winning halftone pattern illustration, simple flowing shapes, subtle shadows, paper texture, minimalist color scheme, inspired by zdzisław beksiński",
-                          "3d illustration, in the style of fantasy, minimalistic, featuring multiple soft and rounded fractal, complex forms dressed as royal and glamorous in gold and white",
-                          "Black, thin lines, all lines have the same mass and weight, continuity can be seen in the common flow of all lines, the lines occupy only the central part of the image, white background",
-                          "a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art",
-                          "A surreal picture, in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel, nyc explosion coverage",
-                          "Realistic, red white and black, made of red coral, mahogany, black obsidian, bloodstone, tourmaline and gold, elegant, diamonds, gold, elegant, masterpiece, concept art, tectonic, gold shiny background, nikon photography, shot photography by wes anderson, kodak color, hd, 300mm",
-                          "colored ink mikhail garmash, louis jover, victor cheleg, damien hirst, ivan aizovsky, claude joseph vernet, broken glass effect, no background, amazing, something that doesn’t even exist, mythical creature, energy, molecular, textures, shimmering and luminescent colors, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, three-dimensional light, auras, rays, vibrant colors, broken glass effect, no background, stunning, something that even doesn't exist, mythical being, energy, molecular, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, breathtaking beauty, volumetric light, auras, rays, vivid colors reflects",
-                          "shot on leica, shadowplay, gorgeous lighting, subtle pastel hues, 8k, pretty freckles",
-                          "behind windwow, rainy, black and white photography surreal art blurry minimalistic",
-                          "at full height, is working on a beautiful design project, creating design projects, a beautiful workspace, aesthetics, correct proportions realism ultra high quality, real photo"
-                      ][:self.n_embedding_axis]
+                               "beautiful, moody lighting, best quality, full body portrait, real picture, intricate details, depth of field, in a cold snowstorm, fujifilm xt3, outdoors, beautiful lighting, raw photo, 8k uhd, film grain, unreal engine 5, ray trace",
+                               "in the style of liquid metal, vray tracing, raw character, 32k uhd, schlieren photography, conceptual portraiture, wet - on - wet blending",
+                               "Detailed, vibrant illustration, full of plants, trees, by herge, in the style of tin-tin comics, vibrant colors, detailed, lots of people, sunny day, beautiful illustration",
+                               "Sun profile, halftone pattern, editorial illustration of the memento morti, higly textured, genre defining mixed media collage painting, fringe absurdism, award winning halftone pattern illustration, simple flowing shapes, subtle shadows, paper texture, minimalist color scheme, inspired by zdzisław beksiński",
+                               "3d illustration, in the style of fantasy, minimalistic, featuring multiple soft and rounded fractal, complex forms dressed as royal and glamorous in gold and white",
+                               "Black, thin lines, all lines have the same mass and weight, continuity can be seen in the common flow of all lines, the lines occupy only the central part of the image, white background",
+                               "a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art",
+                               "A surreal picture, in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel, nyc explosion coverage",
+                               "Realistic, red white and black, made of red coral, mahogany, black obsidian, bloodstone, tourmaline and gold, elegant, diamonds, gold, elegant, masterpiece, concept art, tectonic, gold shiny background, nikon photography, shot photography by wes anderson, kodak color, hd, 300mm",
+                               "colored ink mikhail garmash, louis jover, victor cheleg, damien hirst, ivan aizovsky, claude joseph vernet, broken glass effect, no background, amazing, something that doesn’t even exist, mythical creature, energy, molecular, textures, shimmering and luminescent colors, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, three-dimensional light, auras, rays, vibrant colors, broken glass effect, no background, stunning, something that even doesn't exist, mythical being, energy, molecular, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, breathtaking beauty, volumetric light, auras, rays, vivid colors reflects",
+                               "shot on leica, shadowplay, gorgeous lighting, subtle pastel hues, 8k, pretty freckles",
+                               "behind windwow, rainy, black and white photography surreal art blurry minimalistic",
+                               "at full height, is working on a beautiful design project, creating design projects, a beautiful workspace, aesthetics, correct proportions realism ultra high quality, real photo"
+                           ][:self.n_embedding_axis]
         if self.extend_original_prompt:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
@@ -159,8 +159,9 @@ class UserProfileHost():
             self.latent_center = torch.randn((1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
                                               self.width // 8)) if self.use_latent_center else (
                 torch.zeros(size=(1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)))
-            self.latent_axis = torch.randn((self.n_latent_axis, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
-                                            self.width // 8))
+            self.latent_axis = torch.randn(
+                (self.n_latent_axis, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
+                 self.width // 8))
             self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
         else:
             self.num_axis = self.embedding_axis.shape[0]
@@ -191,13 +192,14 @@ class UserProfileHost():
         elif self.recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                  n_latent_axis=self.n_latent_axis,
-                                                 embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds)
+                                                 embedding_bounds=self.embedding_bounds,
+                                                 latent_bounds=self.latent_bounds)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                   n_latent_axis=self.n_latent_axis,
-                                                   beta=self.di_beta,
-                                                   increase_beta=self.di_beta_increase)
+                                                    n_latent_axis=self.n_latent_axis,
+                                                    beta=self.di_beta,
+                                                    increase_beta=self.di_beta_increase)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
@@ -226,7 +228,7 @@ class UserProfileHost():
         latents = None
         if self.n_latent_axis:
             latents = self.latent_center + torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
-            latents = torch.nan_to_num(latents, nan=0.0)    # avoid SVD LinAlgError for all zero preferences
+            latents = torch.nan_to_num(latents, nan=0.0)  # avoid SVD LinAlgError for all zero preferences
             latents = (latents / torch.linalg.matrix_norm(latents, ord=2, dim=(-2, -1), keepdim=True)
                        * self.latent_space_length)
 
@@ -284,7 +286,11 @@ class UserProfileHost():
                                                                           n_recommendations=num_recommendations)
         else:
             # Start initially with some random embeddings and take into account the bounds
-            user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis, embedding_bounds=self.embedding_bounds, latent_bounds=self.latent_bounds).recommend_embeddings(None, self.n_recommendations)
+            user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                      n_latent_axis=self.n_latent_axis,
+                                                      embedding_bounds=self.embedding_bounds,
+                                                      latent_bounds=self.latent_bounds).recommend_embeddings(None,
+                                                                                                             self.n_recommendations)
 
         # Safe the user_space_embeddings
         if self.embeddings is not None:
@@ -323,10 +329,12 @@ class UserProfileHost():
                     return None, transformed_embeddings, self.preferences
 
                 # Retrieve scores for heatmap (function-based recommender)
-                grid_x, grid_y = torch.meshgrid(torch.linspace(-1, 1, 200), torch.linspace(-1, 1, 200), indexing='ij')
+                grid_x = torch.linspace(-1, 1, 200)
+                grid_y = torch.linspace(-1, 1, 200)
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
                 user_space = pca.inverse_transform(low_d_user_space).float()
-                scores = self.recommender.heat_map_values(user_profile=self.user_profile, user_space=user_space).reshape(grid_x.shape)
+                scores = self.recommender.heat_map_values(user_profile=self.user_profile,
+                                                          user_space=user_space).reshape(grid_x.shape)
 
                 return (grid_x, grid_y, scores), transformed_embeddings, self.preferences
 
