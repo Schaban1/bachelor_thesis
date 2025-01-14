@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABC
 from torch import Tensor
 
+from nicegui import binding
 import torch
 from PIL.Image import Image
 from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler, AutoencoderKL, AutoencoderTiny
@@ -20,6 +21,15 @@ class GeneratorBase(ABC):
 
 
 class Generator(GeneratorBase):
+    height = binding.BindableProperty()
+    width = binding.BindableProperty()
+    batch_size = binding.BindableProperty()
+    random_latents = binding.BindableProperty()
+    num_inference_steps = binding.BindableProperty()
+    guidance_scale = binding.BindableProperty()
+    n_images = binding.BindableProperty()
+    use_negative_prompt = binding.BindableProperty()
+
     def __init__(self,
                  n_images=5,
                  batch_size: int = None,
@@ -29,7 +39,7 @@ class Generator(GeneratorBase):
                  device: str = 'cuda',
                  random_latents: bool = False,
                  guidance_scale: float = 7.,
-                 use_negative_prompt: bool = False,
+                 use_negative_prompt: bool = False
                  ):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
@@ -43,10 +53,6 @@ class Generator(GeneratorBase):
             device: gpu or cpu that should be used to generate images
         """
 
-        # import torch._dynamo
-        # torch._dynamo.config.suppress_errors = True
-        # print("surpressing")
-
         self.height = 512
         self.width = 512
         self.batch_size = batch_size
@@ -54,6 +60,7 @@ class Generator(GeneratorBase):
         self.num_inference_steps = num_inference_steps
         self.guidance_scale = guidance_scale
         self.n_images = n_images
+        self.use_negative_prompt = use_negative_prompt
 
         self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
@@ -85,12 +92,14 @@ class Generator(GeneratorBase):
         #     print("compiling...")
         #     self.pipe.unet = torch.compile(self.pipe.unet, backend="onnxrt")
 
+        self.load_generator()
+
+    def load_generator(self):
         self.latents = torch.randn(
             (1, self.pipe.unet.config.in_channels, self.height, self.width),
             device=self.pipe.device, dtype=self.pipe.dtype
         ).repeat(n_images, 1, 1, 1)
 
-        self.use_negative_prompt = use_negative_prompt
         self.negative_prompt_embeds = None
         self.negative_prompt = ""
         if self.use_negative_prompt:
@@ -100,7 +109,7 @@ class Generator(GeneratorBase):
                                                          max_length=self.pipe.tokenizer.model_max_length,
                                                          truncation=True,
                                                          return_tensors="pt", ).to(self.pipe.text_encoder.device)
-            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(n_images, 1, 1)
+            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
 
     def setup(self, prompt: str, seed: int):
         self.stream.prepare(prompt=prompt,

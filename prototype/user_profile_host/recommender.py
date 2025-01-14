@@ -28,26 +28,27 @@ class Recommender(ABC):  # ABC = Abstract Base Class
     correspond to valid embeddings, i.e. produce meaningful images.
     The method used for generation depends on the user choice.
     It is possible to generate embeddings via the following methods:
-    1. Single point generation:
-        Multiple random points on a sphere surface around the current user profile are generated.
-        These points are returned as recommendation.
-        The SinglePoint Recommender is supposed to recommend points around a (high confidence) user profile.
-        However, if the user profile is bad or the user wants to explore the space,this recommender is not suitable.
-    2. Single point generation with weighted axes:
+    1. Single point generation with weighted axes:
         Some axes spanning the user space may convey more information than others.
         Hence, axes should be weighted differently according to their influence.
         There are two implementations: One where the points are on the surface of a sphere and one where they are not.
-    3. Random generation:
+    2. Random generation:
         Random points in the user space are generated.
-    4. Function-based generation:
+    3. Function-based generation:
         In this scenario, one doesn't want to optimize the position of the user profile (a point) in the suer profile
         space and use this position to generate new generations, but one chooses multiple points in fascinating
         regions of the user sspace and requests feedback of the user to "learn" the space.
         The choice of the points is based on an acquisition function, e.g. a Gaussian process.
+    4. Dirichlet generation:
+        A Dirichlet distribution is used to generate points in the user space.
+        The concentration parameter is multiplied by the user profile to influence the distribution.
+        The method increases the degree of exploitation with each recommendation.
+        The Dirichlet distribution is chosen because it generates points on a simpley which produce roughly uniformly
+        distributed samples in the high dimensional CLIP space after transformation & norming them.
     """
 
     @abstractmethod
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
         :param user_profile: Encodes the user profile in the low-dimensional user profile space. Randomly initialized.
         :param n_recommendations: Number of recommendations to return. By default, 5.
@@ -57,7 +58,7 @@ class Recommender(ABC):  # ABC = Abstract Base Class
 
 
 class RandomRecommender(Recommender):
-    
+
     def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.)):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
@@ -65,11 +66,11 @@ class RandomRecommender(Recommender):
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
 
-    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta : float = None) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
         :param user_profile: A point in the low-dimensional user profile space.
         :param n_recommendations: Number of recommendations to return. By default, 5.
-        beta (float): Not used in this recommender.
+        :param beta: Not used in this recommender.
         :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
             user_profile where n_dims is the dimensionality of the user_profile.
         """
@@ -81,7 +82,8 @@ class RandomRecommender(Recommender):
         # If latent bounds are negative, allow for them to be negative
         if self.latent_bounds[0] < 0.:
             factor = torch.cat((torch.ones(n_recommendations, self.n_embedding_axis),
-                                (torch.randint(low=0, high=2, size=(n_recommendations, self.n_latent_axis)) * 2 - 1)), dim=1)
+                                (torch.randint(low=0, high=2, size=(n_recommendations, self.n_latent_axis)) * 2 - 1)),
+                               dim=1)
             random_user_embeddings = random_user_embeddings * factor
         return random_user_embeddings
 
@@ -98,16 +100,13 @@ class SinglePointWeightedAxesRecommender(Recommender):
             experimental evaluation led to the findings that negative bounds produce noisy generated images.
         :param exploration_factor: Must be in [0, 1]. Determines factor multiplied to the chosen distance from the user
             profile, i.e. the magnitude of area searched. Values closer to 0 lead to smaller areas searched.
-        :param on_sphere: Whether the recommendations should be on the surface of a sphere or not. By default, False.
-            Experimental evaluation led to the findings that the generated images are too similar when the points are on
-            the surface of a sphere.
         """
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
-        self.exploration_factor = exploration_factor    # TODO: decrease radius with higher iteration
+        self.exploration_factor = exploration_factor  # TODO: decrease radius with higher iteration
         # Define bounds for search space
         self.bounds = torch.tensor([
             # lower bounds (1, n_axis)
@@ -121,15 +120,14 @@ class SinglePointWeightedAxesRecommender(Recommender):
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
         Recommends embeddings based on the user profile, axes of the user space and the number of recommendations.
-        If points should be on the sphere, SLERP is used to interpolate between the user profile and the axes.
-        Otherwise, random weights are used to interpolate between the user profile and the axes.
+        Random weights are used to interpolate between the user profile and the axes.
         :param user_profile: Low-dimensional user profile.
         :param n_recommendations: Number of recommendations to return.
         :param beta: Defines the trade-off between exploration and exploitation when using the BayesRecommender
             or the weighted axes Recommender.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        exploration_factor = self.exploration_factor# beta if beta else self.exploration_factor
+        exploration_factor = self.exploration_factor  # beta if beta else self.exploration_factor
 
         axes = torch.eye(user_profile.shape[0])
 
@@ -145,11 +143,12 @@ class SinglePointWeightedAxesRecommender(Recommender):
         weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
 
         # scale to bounds to ranges & scale with exploration factor
-        weights = (exploration_factor * (weights_dirichlet * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
+        weights = (exploration_factor * (
+                weights_dirichlet * (upper_sampling_ranges - lower_sampling_ranges) + lower_sampling_ranges))
 
         # interpolate between user profile and axes, user user_profile as reference point
         return user_profile + weights @ axes
-    
+
 
 class DirichletRecommender(Recommender):
 
@@ -158,7 +157,7 @@ class DirichletRecommender(Recommender):
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
         self.beta = beta
-        self.increase_beta = max(increase_beta, 0.)
+        self.increase_beta = max(increase_beta, 0.)  # Amount by which beta is increased after each recommendation
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
@@ -166,7 +165,8 @@ class DirichletRecommender(Recommender):
         exploration and exploitation.
         :param user_profile: Low-dimensional user profile containing embeddings and preferences.
         :param n_recommendations: Number of recommendations to return.
-        :param beta: Trade-off between exploration and exploitation (Higher Beta, more exploitation).
+        :param beta: Trade-off between exploration and exploitation (Higher Beta, more exploitation). A reasonable
+            initial value is 1. Beta is increased by increase_beta after each recommendation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
         alpha = (torch.ones(self.n_axis) * user_profile).reshape(-1) * (beta if beta else self.beta)
@@ -176,11 +176,10 @@ class DirichletRecommender(Recommender):
         return search_space
 
 
-
 class BayesianRecommender(Recommender):
 
     def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.),
-                 n_points_per_axis: int = 3, beta: float = 20, search_space_type : str = 'dirichlet'):
+                 n_points_per_axis: int = 3, beta: float = 20, search_space_type: str = 'dirichlet'):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
@@ -188,20 +187,20 @@ class BayesianRecommender(Recommender):
         self.latent_bounds = latent_bounds
         self.cand_indices = []
         self.beta = beta
-        self.reduce_beta = True
+        self.reduce_beta = True  # If beta is reduced after each recommendation
         self.n_points_per_axis = n_points_per_axis
         self.search_space_type = search_space_type
 
     def build_search_space(self):
         if self.search_space_type == 'dirichlet':
-            n_samples = min(max(self.n_axis * 5**(self.n_axis // 2), 1000), 500000)
+            n_samples = min(max(self.n_axis * 5 ** (self.n_axis // 2), 1000), 500000)
             alpha = torch.ones(self.n_axis)
             dist = torch.distributions.dirichlet.Dirichlet(alpha)
             factor = torch.cat((torch.ones(n_samples, self.n_embedding_axis),
-                                (torch.randint(low=0, high=2, size=(n_samples,self.n_latent_axis)) * 2 - 1)), dim=1)
+                                (torch.randint(low=0, high=2, size=(n_samples, self.n_latent_axis)) * 2 - 1)), dim=1)
             search_space = dist.sample(sample_shape=(n_samples,)) * factor
             return search_space
-        
+
         elif self.search_space_type == 'linspace':
             # Build search space and filter for embeddings that are on a sphere in CLIP space
             x_embed = torch.linspace(self.embedding_bounds[0], self.embedding_bounds[1], self.n_points_per_axis)
@@ -209,8 +208,8 @@ class BayesianRecommender(Recommender):
             vectors = torch.meshgrid([x_embed for i in range(self.n_embedding_axis - 1)] +
                                      [x_latent for i in range(self.n_latent_axis)], indexing='ij')
             vectors = [v.flatten() for v in vectors]
-            embed_grid = torch.stack(vectors[:self.n_embedding_axis-1], dim=1)
-            latent_grid = torch.stack(vectors[self.n_embedding_axis-1:], dim=1)
+            embed_grid = torch.stack(vectors[:self.n_embedding_axis - 1], dim=1)
+            latent_grid = torch.stack(vectors[self.n_embedding_axis - 1:], dim=1)
             embed_grid_sum = torch.sum(embed_grid, dim=1)
 
             # Mask out the points where x + y > 1 to ensure they lie on the plane x + y + z = 1
@@ -228,13 +227,15 @@ class BayesianRecommender(Recommender):
         else:
             raise NotImplementedError('Invalid Search Space.')
 
-    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta : float = None) -> Tensor:
+    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5,
+                             beta: float = None) -> Tensor:
         """
         Recommends embeddings based on the user profile, the number of recommendations and the trade-off between
         exploration and exploitation.
         :param user_profile: Low-dimensional user profile containing embeddings and preferences.
         :param n_recommendations: Number of recommendations to return.
-        :param beta: Trade-off between exploration and exploitation.
+        :param beta: Trade-off between exploration and exploitation. Big beta means more exploration.
+            A reasonable initial value is 20.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
         # Get embeddings and ratings from user profile
@@ -284,9 +285,18 @@ class BayesianRecommender(Recommender):
         # Unstandardize and return them
         candidates = candidates_std * std + mean
         return candidates
-    
 
-    def heat_map_values(self, user_profile: Tensor, user_space: Tensor, beta : float = None):
+    def heat_map_values(self, user_profile: Tensor, user_space: Tensor, beta: float = None):
+        """
+        Get the values of the acquisition function for a given user profile and user space.
+        These values can be used to create a heat map of the acquisition function, indicating which areas are likely to
+        be chosen as future samples.
+        :param user_profile: Low-dimensional user profile containing embeddings and preferences.
+        :param user_space: The user space in which the user profile lies.
+        :param beta: rade-off between exploration and exploitation. Big beta means more exploration.
+            A reasonable initial value is 20.
+        :return: Tensor containing the values of the acquisition function.
+        """
         # Get embeddings and ratings from user profile
         embeddings, preferences = user_profile
 

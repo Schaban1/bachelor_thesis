@@ -11,6 +11,7 @@ class WebUIState(Enum):
     INIT_STATE = "Initial iteration"
     MAIN_STATE = "Main loop iteration"
     GENERATING_STATE = "Generating"
+    PLOT_STATE = "Interactive plot"
 
 class ScoreMode(Enum):
     SLIDER = "slider"

@@ -1,10 +1,8 @@
-import os
 from nicegui import ui as ngUI
 from nicegui import binding
 from nicegui.events import KeyEventArguments
 from PIL import Image
 import torch
-from functools import partial
 import asyncio
 import threading
 import secrets
@@ -13,17 +11,27 @@ from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
 from prototype.utils import seed_everything
+from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer, DebugMenu
 
 
 class WebUI:
     """
     This class implements a interactive web user interface for an image generation system.
     """
+    session_id = binding.BindableProperty()
+    state = binding.BindableProperty()
     is_initial_iteration = binding.BindableProperty()
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
+    is_interactive_plot = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
+    num_images_to_generate = binding.BindableProperty()
+    score_mode = binding.BindableProperty()
+    image_display_width = binding.BindableProperty()
+    image_display_height = binding.BindableProperty()
+    active_image = binding.BindableProperty()
+    save_path = binding.BindableProperty()
 
     @classmethod
     async def create(cls, args):
@@ -51,13 +59,13 @@ class WebUI:
         self.is_initial_iteration = False
         self.is_main_loop_iteration = False
         self.is_generating = False
+        self.is_interactive_plot = False
         # Provided by the user / system
         self.user_prompt = ""
-        self.user_profile_host_beta = None
         self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
         self.score_mode = self.args.score_mode
-        self.init_score_mode()
+        self.scorer = Scorer(self)
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
@@ -65,18 +73,21 @@ class WebUI:
         await loop.run_in_executor(None, self.init_generator)
 
         # Lists / UI components
-        self.image_display_size = tuple(self.args.image_display_size)
-        self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
+        self.prev_images = []
+        self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
-        self.scores_toggles = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
-        self.scores_slider = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.submit_button = None
         # Image saving
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
 
-        self.keyboard = None
+        # Set UI root & load debug menu
+        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif')
+        self.debug_menu = DebugMenu(self)
+
+        self.keyboard = ngUI.keyboard(on_key=self.handle_key)
         # Remove loading label
         loading_label.delete()
         loading_label = None
@@ -84,11 +95,24 @@ class WebUI:
 
     def run(self):
         """
-        This function runs the Web UI indefinitely.
+        This function starts the Web UI.
         """
         self.change_state(WebUIState.INIT_STATE)
+        self.root.clear()
         self.build_userinterface()
-    
+
+    def reload_userinterface(self):
+        """
+        Reloads the UI.
+        """
+        self.root.clear()
+        self.scorer = Scorer(self)
+        self.images = self.images[:min(len(self.images), self.num_images_to_generate)] \
+                    + [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate - min(len(self.images), self.num_images_to_generate))]
+        self.images_display = [None for _ in range(self.num_images_to_generate)]
+        self.build_userinterface()
+
+    # <---------- Updating State ---------->
     def change_state(self, new_state: WebUIState):
         """
         Updates the current state of the Web UI.
@@ -106,22 +130,32 @@ class WebUI:
         self.is_initial_iteration = self.state == WebUIState.INIT_STATE
         self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
         self.is_generating = self.state == WebUIState.GENERATING_STATE
+        self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
     
-    def init_score_mode(self):
+    # <------------------------------------>
+    # <---------- Building UI ---------->
+    def build_userinterface(self):
         """
-        Registers some functions based on the current self.score_mode.
+        Builds the complete user interface using NiceGUI.
+
+        UI Structure:
+        - Webis demo template top half.
+        - Content based on the current state. Either the initial prompt input, the main loop with the user preferences, the loading spinner or the plot.
+        - Some empty space so the footer doesnt look weird on high resolution devices.
+        - Webis demo template bottom half/footer.
         """
-        if self.score_mode == ScoreMode.SLIDER.value:
-            self.build_scorer = self.build_slider
-            self.get_scores = self.get_scores_slider
-            self.reset_scorers = self.reset_sliders
-        elif self.score_mode == ScoreMode.EMOJI.value:
-            self.build_scorer = self.build_emoji_toggle
-            self.get_scores = self.get_scores_emoji_toggles
-            self.reset_scorers = self.reset_emoji_toggles
-        else:
-            print(f"Unknown score mode: {self.score_mode}")
+        webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
+        with self.root:
+            ngUI.html(webis_template_top).classes('w-full')
+            InitialIterationUI(self)
+            self.main_loop_ui = MainLoopUI(self)
+            LoadingSpinnerUI(self)
+            self.plot_ui = PlotUI(self)
+            ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
+            ngUI.html(webis_template_bottom).classes('w-full')
     
+    # <--------------------------------->
+    # <---------- Initialize other non-UI components ---------->
     def init_generator(self):
         """
         Initializes the generator and performs a warm-start.
@@ -132,105 +166,26 @@ class WebUI:
             device=self.args.device,
             **self.args.generator
         )
-        # with self.queue_lock:
-        #     self.generator.generate_image_stream(torch.zeros(size=(1, 77, 768),
-        #                                                      device=self.generator.pipe.device,
-        #                                                      dtype=self.generator.pipe.dtype)
-        #                                          )
-
-    def build_userinterface(self):
-        """
-        Builds the complete user interface using NiceGUI.
-
-        UI Structure:
-        - Webis demo template top half.
-        - Content based on the current state. Either the initial prompt input, the main loop with the user preferences or the loading spinner.
-        - Some empty space so the footer doesnt look weird on high resolution devices.
-        - Webis demo template bottom half/footer.
-        """
-        webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
-        self.keyboard = ngUI.keyboard(on_key=self.handle_key, active=False)
-        with ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif'):
-            ngUI.html(webis_template_top).classes('w-full')
-            self.build_initial_userinterface()
-            self.build_main_loop_userinterface()
-            self.build_loading_spinner_userinterface()
-            ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
-            ngUI.html(webis_template_bottom).classes('w-full')
+        if self.args.generator_warm_start:
+            with self.queue_lock:
+                self.generator.generate_image(torch.zeros(1, 77, 768))
     
-    def build_initial_userinterface(self):
+    def init_user_profile_host(self):
         """
-        Builds the UI for the initial iteration state.
+        Initializes the user profile host with the initial user prompt.
         """
-        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_initial_iteration', value=True):
-            ngUI.input(label='Your prompt:', on_change=self.on_user_prompt_input, validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100")
-            ngUI.space().classes('w-full h-[2vh]')
-            ngUI.select({t: t.value for t in RecommendationType}, value=self.recommendation_type, on_change=self.on_recommendation_type_select).props('popup-content-class="max-w-[200px]"')
-            ngUI.space().classes('w-full h-[2vh]')
-            ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
+        self.user_profile_host = UserProfileHost(
+            original_prompt=self.user_prompt,
+            add_ons=None,
+            recommendation_type=self.recommendation_type,
+            cache_dir=self.args.path.cache_dir,
+            stable_dif_pipe=self.generator.pipe,
+            n_recommendations=self.num_images_to_generate,
+            **self.args.recommender
+        )
     
-    def build_main_loop_userinterface(self):
-        """
-        Builds the UI for the main loop iteration state.
-        """
-        ngUI.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
-        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_main_loop_iteration', value=True):
-            with ngUI.row().classes('mx-auto items-center'):
-                ngUI.label('Please rate these images based on your satisfaction.').style('font-size: 200%;')
-                if self.score_mode == ScoreMode.EMOJI.value:
-                    ngUI.button(icon='o_info', on_click=lambda: ngUI.notify(
-                        'Keyboard Controls:\n'
-                        'Left/Right arrow: Navigate through images\n'
-                        '1-5: Score current image\n'
-                        's: Save current image\n'
-                        'Enter: Submit scores',
-                        multi_line=True,
-                        classes='multi-line-notification'
-                    )).props('flat fab color=black')
-            with ngUI.row().classes('mx-auto items-center'):
-                ngUI.label(f'Your selected recommendation type:').style('font-size: 150%; font-weight: bold;')
-                ngUI.label(self.recommendation_type).style('font-size: 150%;').bind_text_from(self, 'recommendation_type')
-            ngUI.label(f'Your initial prompt:').style('font-size: 150%; font-weight: bold;')
-            ngUI.label(self.user_prompt).style('font-size: 150%;').bind_text_from(self, 'user_prompt')
-            with ngUI.row().classes('mx-auto items-center'):
-                for i in range(self.num_images_to_generate):
-                    with ngUI.column().classes('mx-auto items-center'):
-                        self.images_display[i] = ngUI.interactive_image(self.images[i]).style(f'width: {self.image_display_size[0]}px; height: {self.image_display_size[1]}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
-                        with self.images_display[i]:
-                            ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
-                        self.build_scorer(i)
-            ngUI.space()
-            self.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
-            with ngUI.row().classes('w-full justify-end'):
-                ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
-    
-    def build_slider(self, idx):
-        """
-        Registers a slider object at position idx.
-
-        Args:
-            idx: The index of the slider.
-        """
-        self.scores_slider[idx] = ngUI.slider(min=0, max=10, value=0, step=0.1)
-        ngUI.label().bind_text_from(self.scores_slider[idx], 'value')
-    
-    def build_emoji_toggle(self, idx):
-        """
-        Registers a toggle object at position idx.
-
-        Args:
-            idx: The index of the toggle object.
-        """
-        self.scores_toggles[idx] = ngUI.toggle({0: '😢1', 1: '🙁2', 2: '😐3', 3: '😄4', 4: '😍5'}, value=0).props('rounded')
-    
-    def build_loading_spinner_userinterface(self):
-        """
-        Builds the UI for the generating state.
-        """
-        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self, 'is_generating', value=True):
-            ngUI.label('Generating images...').style('font-size: 200%;')
-            ngUI.spinner(size='128px')
-    
+    # <------------------------------------------------------->
+    # <---------- Keyboard controls ---------->
     def handle_key(self, e: KeyEventArguments):
         """
         Handles key events.
@@ -238,13 +193,15 @@ class WebUI:
         Args:
             e: KeyEvent args.
         """
-        if self.score_mode == ScoreMode.EMOJI.value:
+        if e.key.f9 and e.action.keydown:
+            self.debug_menu.toggle_visibility()
+        if self.score_mode == ScoreMode.EMOJI.value and self.state == WebUIState.MAIN_STATE:
             if e.key.arrow_right and e.action.keydown:
                 self.update_active_image(self.active_image + 1)
             if e.key.arrow_left and e.action.keydown:
                 self.update_active_image(self.active_image - 1)
             if e.key == 's' and e.action.keydown:
-                self.on_save_button_click(self.images_display[self.active_image])
+                self.main_loop_ui.on_save_button_click(self.images_display[self.active_image])
             if e.key.enter and e.action.keydown:
                 self.submit_button.run_method('click')
             if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
@@ -270,158 +227,37 @@ class WebUI:
         Args:
             key: The number of the key typed.
         """
-        self.scores_toggles[self.active_image].value = key - 1
+        self.scorer.scores_toggles[self.active_image].value = key - 1
         self.update_active_image(self.active_image + 1)
     
-    def on_user_prompt_input(self, new_user_prompt):
-        """
-        Updates the user_prompt class variable on input in the text field.
-
-        Args:
-            new_user_prompt: Input of the text field in the initial iteration state.
-        """
-        self.user_prompt = new_user_prompt.value
-    
-    def on_recommendation_type_select(self, new_recommendation_type):
-        """
-        Updates the recommendation_type class variable on selection in the select menu.
-
-        Args:
-            new_recommendation_type: Selection of the select menu in the initial iteration state.
-        """
-        self.recommendation_type = new_recommendation_type.value
-    
-    def init_user_profile_host(self):
-        """
-        Initializes the user profile host with the initial user prompt.
-        """
-        self.user_profile_host = UserProfileHost(
-            original_prompt=self.user_prompt,
-            add_ons=None,
-            recommendation_type=self.recommendation_type,
-            cache_dir=self.args.path.cache_dir,
-            stable_dif_pipe=self.generator.pipe,
-            n_recommendations=self.num_images_to_generate,
-            **self.args.recommender
-        )
-
-        self.generator.setup(self.user_prompt, self.args.random_seed)
-    
+    # <--------------------------------------->
+    # <---------- Image generation & User profile ---------->
     def generate_images(self):
         """
-        Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated
+        Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated 
         images of the generator in self.images.
         """
-        with self.queue_lock: #TODO (Discuss): How to handle beta even though optimizers should take care of it.
-            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
-            self.images = self.generator.generate_image_stream(embeddings, latents)
-    
+        with self.queue_lock:
+            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
+            self.images = self.generator.generate_image(embeddings, latents)
+            self.prev_images.extend(self.images)
+
     def update_image_displays(self):
         """
         Updates the image displays with the current images in self.images.
         """
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
-    
-    async def on_generate_images_button_click(self):
-        """
-        Initializes the user profile host with the initial user prompt and generates the first images.
-        """
-        if not self.user_prompt:
-            ngUI.notify('Please type in a prompt!')
-            return
-        self.change_state(WebUIState.GENERATING_STATE)
-        ngUI.notify('Generating images...')
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self.init_user_profile_host)
-        await loop.run_in_executor(None, self.generate_images)
-        self.update_image_displays()
-        self.change_state(WebUIState.MAIN_STATE)
-        self.update_active_image()
-        self.keyboard.active = True
-    
-    def get_scores_slider(self):
-        """
-        Get the normalized scores provided by the user with the sliders.
+        self.reload_userinterface()
 
-        Returns:
-            The normalized scores as a one-dim tensor of shape (num_images_to_generate).
-        """
-        scores = torch.FloatTensor([slider.value for slider in self.scores_slider])
-        normalized_scores = scores / 10
-        return normalized_scores
-    
-    def get_scores_emoji_toggles(self):
-        """
-        Get the normalized scores provided by the user with the emoji toggle buttons.
-
-        Returns:
-            The normalized scores as a one-dim tensor of shape (num_images_to_generate).
-        """
-        scores = torch.FloatTensor([toggle.value for toggle in self.scores_toggles])
-        normalized_scores = scores / 4
-        return normalized_scores
-    
-    def reset_sliders(self):
-        """
-        Reset the value of the score sliders to the default value.
-        """
-        [slider.set_value(0) for slider in self.scores_slider]
-    
-    def reset_emoji_toggles(self):
-        """
-        Reset the value of the score toggles to the default value.
-        """
-        [toggle.set_value(0) for toggle in self.scores_toggles]
-    
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
         """
-        normalized_scores = self.get_scores()
+        normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
     
-    def on_save_button_click(self, image_display):
-        """
-        Saves the displayed image where the save button is located in the images save dir.
-
-        Args:
-            image_display: The image display containing the image to save.
-        """
-        image_to_save = image_display.source
-        if not os.path.exists(self.save_path):
-            os.makedirs(self.save_path)
-        file_name = f"image_{self.num_images_saved}.png"
-        image_to_save.save(f"{self.save_path}/{file_name}")
-        self.num_images_saved += 1
-        ngUI.notify(f"Image saved in {self.save_path}/{file_name}!")
-    
-    async def on_submit_scores_button_click(self):
-        """
-        Updates the user profile with the user scores and generates the next images.
-        """
-        self.update_user_profile()
-        ngUI.notify('Scores submitted!')
-        self.change_state(WebUIState.GENERATING_STATE)
-        self.keyboard.active = False
-        ngUI.notify('Generating new images...')
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self.generate_images)
-        self.update_image_displays()
-        self.reset_scorers()
-        self.change_state(WebUIState.MAIN_STATE)
-        self.update_active_image()
-        self.keyboard.active = True
-    
-    def on_restart_process_button_click(self):
-        """
-        Restarts the process by starting with the initial iteration again.
-        """
-        self.change_state(WebUIState.INIT_STATE)
-        self.keyboard.active = False
-        self.reset_scorers()
-        self.user_profile_host = None
-        seed_everything(self.args.random_seed)
-    
+    # <----------------------------------------------------->
+    # <---------- Misc. ---------->
     def get_webis_demo_template_html(self):
         """
         Returns the webis html template for demo web applications.
@@ -434,3 +270,5 @@ class WebUI:
         with open("./prototype/resources/webis_template_bottom.html") as f:
             webis_template_bottom = f.read()
         return webis_template_top, webis_template_bottom
+
+    # <--------------------------->
