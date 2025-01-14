@@ -74,6 +74,7 @@ class WebUI:
 
         # Lists / UI components
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
+        self.prev_images = []
         self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
@@ -97,8 +98,9 @@ class WebUI:
         This function starts the Web UI.
         """
         self.change_state(WebUIState.INIT_STATE)
+        self.root.clear()
         self.build_userinterface()
-    
+
     def reload_userinterface(self):
         """
         Reloads the UI.
@@ -109,7 +111,7 @@ class WebUI:
                     + [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate - min(len(self.images), self.num_images_to_generate))]
         self.images_display = [None for _ in range(self.num_images_to_generate)]
         self.build_userinterface()
-    
+
     # <---------- Updating State ---------->
     def change_state(self, new_state: WebUIState):
         """
@@ -148,7 +150,7 @@ class WebUI:
             InitialIterationUI(self)
             self.main_loop_ui = MainLoopUI(self)
             LoadingSpinnerUI(self)
-            PlotUI(self)
+            self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
     
@@ -238,14 +240,15 @@ class WebUI:
         with self.queue_lock:
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
-    
+            self.prev_images.extend(self.images)
+
     def update_image_displays(self):
         """
         Updates the image displays with the current images in self.images.
         """
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
         self.reload_userinterface()
-    
+
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.

@@ -55,6 +55,10 @@ class MainLoopUI(UIComponent):
         Shows the interactive plot screen.
         """
         self.webUI.change_state(WebUIState.PLOT_STATE)
+        self.webUI.keyboard.active = False
+
+        # Initialize or update the plot
+        self.webUI.plot_ui.update_plot()
     
     def on_save_button_click(self, image_display):
         """
@@ -70,7 +74,7 @@ class MainLoopUI(UIComponent):
         image_to_save.save(f"{self.webUI.save_path}/{file_name}")
         self.webUI.num_images_saved += 1
         ngUI.notify(f"Image saved in {self.webUI.save_path}/{file_name}!")
-    
+
     async def on_submit_scores_button_click(self):
         """
         Updates the user profile with the user scores and generates the next images.
@@ -85,7 +89,7 @@ class MainLoopUI(UIComponent):
         self.webUI.scorer.reset_scorers()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.update_active_image()
-    
+
     def on_restart_process_button_click(self):
         """
         Restarts the process by starting with the initial iteration again.
@@ -93,4 +97,9 @@ class MainLoopUI(UIComponent):
         self.webUI.change_state(WebUIState.INIT_STATE)
         self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
+
+        # Clear plot ui for new process
+        self.webUI.plot_ui.update_plot()
+        self.webUI.prev_images = []
+
         seed_everything(self.webUI.args.random_seed)
