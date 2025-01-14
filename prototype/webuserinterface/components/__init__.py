@@ -3,3 +3,4 @@ from .main_loop_ui import *
 from .loading_spinner_ui import *
 from .plot_ui import *
 from .scorer import *
+from .debug_menu import *

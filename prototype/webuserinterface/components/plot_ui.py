@@ -48,4 +48,3 @@ class PlotUI(UIComponent):
         Returns to the 'Main Loop' screen.
         """
         self.webUI.change_state(WebUIState.MAIN_STATE)
-        self.webUI.keyboard.active = True
