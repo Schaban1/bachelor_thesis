@@ -173,6 +173,37 @@ class DirichletRecommender(Recommender):
         search_space = dist.sample(sample_shape=(n_recommendations,))
         self.beta += self.increase_beta
         return search_space
+    
+
+class ClusterRecommender(Recommender):
+
+    def __init__(self, n_embedding_axis, n_latent_axis, beta: float = 1, beta_increase: float = 3):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
+        self.beta = beta
+        self.beta_increase = beta_increase
+
+    def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        embeddings, preferences = user_profile
+        top_embeddings = embeddings[preferences == preferences.max()]
+        recommendations = []
+        for i in range(n_recommendations):
+            # Build Dirichlet Dist around this point
+            alpha = (torch.ones(self.n_axis) * top_embeddings[i%top_embeddings.shape[0]]).reshape(-1) * (beta if beta else self.beta)
+            dist = torch.distributions.dirichlet.Dirichlet(alpha)
+
+            # Sample a point from Dist
+            embed = dist.sample(sample_shape=(1,))
+
+            # Add that to the recommendations
+            recommendations.append(embed)
+
+        recommendations = torch.cat(recommendations)
+
+        # Increase beta
+        beta += self.beta_increase
+        return recommendations
 
 
 class BayesianRecommender(Recommender):
