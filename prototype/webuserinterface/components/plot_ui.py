@@ -27,7 +27,7 @@ class PlotUI(UIComponent):
                 # self.update_plot()
 
     def create_contour_plot(self, user_profile, embeddings):
-        fig = go.Figure(data=go.Contour(x=user_profile[0], y=user_profile[1], z=user_profile[2]))
+        fig = go.Figure(data=go.Contour(x=user_profile[0], y=user_profile[1], z=user_profile[2], opacity=0.4))
         fig.add_trace(go.Scatter(x=embeddings[:, 0], y=embeddings[:, 1], mode='markers', name='embeddings'))
         return fig
 
