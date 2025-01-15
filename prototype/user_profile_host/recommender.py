@@ -2,7 +2,6 @@ from abc import abstractmethod, ABC
 import numpy as np
 import torch
 from torch import Tensor
-from .utils import slerp
 
 from botorch.acquisition import UpperConfidenceBound
 from botorch.exceptions import InputDataWarning
@@ -263,7 +262,7 @@ class BayesianRecommender(Recommender):
             mll = fit_gpytorch_mll(mll)
 
             # Initialize the acquisition function
-            acqf = UpperConfidenceBound(model=model, beta=self.beta if not beta else beta, maximize=True)
+            acqf = UpperConfidenceBound(model=model, beta=np.exp(self.beta if not beta else beta).item(), maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
             scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
