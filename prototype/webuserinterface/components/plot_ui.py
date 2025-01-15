@@ -14,17 +14,16 @@ class PlotUI(UIComponent):
         """
         Builds the UI for the interactive plot state.
         """
-        with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
+        with ((ngUI.column().classes('max-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
                                                                                   value=True))):
             ngUI.button('Back', on_click=self.on_back_to_main_loop_button_click)
             with ngUI.row().classes('mx-auto items-center'):
                 self.fig = go.Figure()
-                self.fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+                self.fig.update_layout(margin=dict(l=0, r=0, t=0, b=0), width=1000, height=600)
                 self.plot = ngUI.plotly(self.fig)
                 self.plot.on('plotly_click', self.on_plot_click)
 
-                self.clicked_image = ngUI.image().style(
-                    f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
+                self.clicked_image = ngUI.image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                 # self.update_plot()
 
     def create_contour_plot(self, user_profile, embeddings):
