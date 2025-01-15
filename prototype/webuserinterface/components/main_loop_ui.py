@@ -55,7 +55,6 @@ class MainLoopUI(UIComponent):
         Shows the interactive plot screen.
         """
         self.webUI.change_state(WebUIState.PLOT_STATE)
-        self.webUI.keyboard.active = False
 
         # Initialize or update the plot
         self.webUI.plot_ui.update_plot()
