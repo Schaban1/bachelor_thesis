@@ -15,7 +15,11 @@ class InitialIterationUI(UIComponent):
         Builds the UI for the initial iteration state.
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_initial_iteration', value=True):
-            ngUI.input(label='Your prompt:', validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100").bind_value(self.webUI, 'user_prompt')
+            prompt_field = ngUI.input(label='Your prompt:', validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100").bind_value(self.webUI, 'user_prompt')
+            with prompt_field.add_slot("append"):
+                with ngUI.button(icon='more_vert').props('flat fab color=black'):
+                    with ngUI.menu():
+                        ngUI.switch("Blind Mode").style('margin-right: 8px;').bind_value(self.webUI, "blind_mode")
             ngUI.space().classes('w-full h-[2vh]')
             ngUI.select({t: t.value for t in RecommendationType}).props('popup-content-class="max-w-[200px]"').bind_value(self.webUI, 'recommendation_type')
             ngUI.space().classes('w-full h-[2vh]')
