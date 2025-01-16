@@ -1,5 +1,6 @@
 from nicegui import ui as ngUI
 import asyncio
+import random
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 from prototype.constants import RecommendationType, WebUIState
@@ -32,6 +33,8 @@ class InitialIterationUI(UIComponent):
         if not self.webUI.user_prompt:
             ngUI.notify('Please type in a prompt!')
             return
+        if self.webUI.blind_mode:
+            self.setup_blind_mode()
         self.webUI.change_state(WebUIState.GENERATING_STATE)
         ngUI.notify('Generating images...')
         loop = asyncio.get_event_loop()
@@ -41,3 +44,9 @@ class InitialIterationUI(UIComponent):
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.debug_menu.set_user_profile_updater()
         self.webUI.update_active_image()
+    
+    def setup_blind_mode(self):
+        """
+        Setups blind mode by selecting a random recommender.
+        """
+        self.webUI.recommendation_type = random.choice([t for t in RecommendationType])
