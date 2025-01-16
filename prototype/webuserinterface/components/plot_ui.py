@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from prototype.webuserinterface.components.ui_component import UIComponent
 from prototype.constants import WebUIState, RecommendationType
 
+MAPPING = {0: '😢', 1: '🙁', 2: '😐', 3: '😄', 4: '😍'}
 
 class PlotUI(UIComponent):
     """
@@ -14,6 +15,7 @@ class PlotUI(UIComponent):
         """
         Builds the UI for the interactive plot state.
         """
+        print('Building interactive plot UI...')
         with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
                                                                                   value=True))):
             ngUI.button('Back', on_click=self.on_back_to_main_loop_button_click)
@@ -25,18 +27,27 @@ class PlotUI(UIComponent):
 
                 self.clicked_image = ngUI.image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
 
-            ngUI.separator()
-            self.build_image_grid(self.webUI.prev_images)
+            if self.webUI.user_profile_host is not None and self.webUI.user_profile_host.user_profile is not None:
+                self.user_profile, self.embeddings, self.preferences = self.webUI.user_profile_host.plotting_utils()
+                self.preferences = self.preferences * 4
+                self.preferences = self.preferences.tolist()
+                ngUI.separator()
+                self.build_image_grid()
 
-    def build_image_grid(self, images):
+    def build_image_grid(self):
         """
         Displays all previous generated images in a wall.
         """
+        images = self.webUI.prev_images
+        self.preferences.extend([None] * self.webUI.num_images_to_generate)
+
         ngUI.label('Your generation history:').style('font-size: 150%; font-weight: bold;')
         with ngUI.grid(columns=self.webUI.num_images_to_generate):
-            for img in images[::-1]:
+            for img, pref in zip(images[::-1], self.preferences[::-1]):
                 with ngUI.row().classes('mx-auto items-center'):
-                    ngUI.image(img).style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
+                    with ngUI.image(img).style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;'):
+                        if pref is not None:
+                            ngUI.label(MAPPING[pref]).classes('absolute bottom-0 right-0 m-2')
 
     def create_contour_plot(self, user_profile, embeddings):
         fig = go.Figure(data=go.Contour(x=user_profile[0], y=user_profile[1], z=user_profile[2], opacity=0.4))
@@ -54,17 +65,16 @@ class PlotUI(UIComponent):
         """
         Updates the figure with the new embeddings.
         """
+        print('Updating plot...')
         self.fig.data = []
         self.clicked_image.set_source(None)
-        if self.webUI.user_profile_host is not None and self.webUI.user_profile_host.user_profile is not None:
-            user_profile, embeddings, _ = self.webUI.user_profile_host.plotting_utils()
 
-            if user_profile is not None and len(user_profile) == 3:  # Heatmap for function-based recommender
-                fig = self.create_contour_plot(user_profile, embeddings)
-            else:
-                fig = self.create_scatter_plot(user_profile, embeddings)
+        if self.user_profile is not None and len(self.user_profile) == 3:  # Heatmap for function-based recommender
+            fig = self.create_contour_plot(self.user_profile, self.embeddings)
+        else:
+            fig = self.create_scatter_plot(self.user_profile, self.embeddings)
 
-            self.plot.update_figure(fig)
+        self.plot.update_figure(fig)
 
         self.plot.update()
 
