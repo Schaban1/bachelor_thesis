@@ -13,6 +13,8 @@ from botorch.models import SingleTaskGP
 
 import warnings
 
+from prototype.user_profile_host.utils import get_valid_beta, get_unnormalized_value
+
 warnings.simplefilter("ignore", category=InputDataWarning)
 
 
@@ -51,6 +53,8 @@ class Recommender(ABC):  # ABC = Abstract Base Class
         """
         :param user_profile: Encodes the user profile in the low-dimensional user profile space. Randomly initialized.
         :param n_recommendations: Number of recommendations to return. By default, 5.
+        :param beta: Trade-off between exploration and exploitation. Higher beta means more exploitation.
+            Must be in [0, 1].
         :return: A tensor of recommendations, i.e. n_recommendations many low-dimensional embeddings.
         """
         pass
@@ -122,11 +126,12 @@ class SinglePointWeightedAxesRecommender(Recommender):
         Random weights are used to interpolate between the user profile and the axes.
         :param user_profile: Low-dimensional user profile.
         :param n_recommendations: Number of recommendations to return.
-        :param beta: Defines the trade-off between exploration and exploitation when using the BayesRecommender
-            or the weighted axes Recommender.
+        :param beta: Trade-off between exploration and exploitation. Higher beta means more exploitation.
+            Must be in [0, 1].
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        exploration_factor = self.exploration_factor  # beta if beta else self.exploration_factor
+        # low exploration factor means more exploitation, hence higher beta
+        exploration_factor = 1 - get_valid_beta(beta) if beta else self.exploration_factor
 
         axes = torch.eye(user_profile.shape[0])
 
@@ -151,11 +156,11 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 class DirichletRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis, n_latent_axis, beta: float = 1, increase_beta: float = 3.):
+    def __init__(self, n_embedding_axis, n_latent_axis, beta: float = 0., increase_beta: float = 3.):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
-        self.beta = beta
+        self.beta = get_valid_beta(beta)
         self.increase_beta = max(increase_beta, 0.)  # Amount by which beta is increased after each recommendation
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
@@ -164,28 +169,32 @@ class DirichletRecommender(Recommender):
         exploration and exploitation.
         :param user_profile: Low-dimensional user profile containing embeddings and preferences.
         :param n_recommendations: Number of recommendations to return.
-        :param beta: Trade-off between exploration and exploitation (Higher Beta, more exploitation). A reasonable
-            initial value is 1. Beta is increased by increase_beta after each recommendation.
+        :param beta: Trade-off between exploration and exploitation. Higher beta means more exploitation.
+            Must be in [0, 1]. A reasonable initial value is 0.
+            Beta is increased by increase_beta after each recommendation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        alpha = (torch.ones(self.n_axis) * user_profile).reshape(-1) * (beta if beta else self.beta)
+        # init beta=1, but since we uniformly make beta an element of [0, 1], we have to multiply it by 10
+        # initial beta is 1, thus, we add 1 to it, since we uniformly make beta origin from [0, 1]
+        alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) *
+                 (10 * get_valid_beta(beta if beta else self.beta) + 1))
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
-        self.beta += self.increase_beta
+        self.beta += self.increase_beta * 0.1
         return search_space
 
 
 class BayesianRecommender(Recommender):
 
     def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.),
-                 n_points_per_axis: int = 3, beta: float = 20, search_space_type: str = 'dirichlet'):
+                 n_points_per_axis: int = 3, beta: float = 0., search_space_type: str = 'dirichlet'):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
         self.embedding_bounds = embedding_bounds
         self.latent_bounds = latent_bounds
         self.cand_indices = []
-        self.beta = beta
+        self.beta = get_valid_beta(beta)
         self.reduce_beta = True  # If beta is reduced after each recommendation
         self.n_points_per_axis = n_points_per_axis
         self.search_space_type = search_space_type
@@ -226,6 +235,19 @@ class BayesianRecommender(Recommender):
         else:
             raise NotImplementedError('Invalid Search Space.')
 
+    def obtain_bo_beta(self, rec_beta: float = None):
+        """
+        Obtain the beta value for the Bayesian Optimizer.
+        In this recommender, big beta means more exploration.
+        Outside the recommender, big beta means more exploitation.
+        Hence, the beta value is transformed to fit the recommender's needs.
+        :param rec_beta: The beta value obtained from the function call of the recommender.
+        :return: The beta value for the Bayesian Optimizer.
+        """
+        # here: big beta means more exploration, outside recommender: big beta means more exploitation
+        valid_beta = 1 - get_valid_beta(rec_beta if rec_beta else self.beta)  # beta in [0, 1]
+        return get_unnormalized_value(valid_beta, 20, 0)  # beta in [0, 20]
+
     def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5,
                              beta: float = None) -> Tensor:
         """
@@ -233,7 +255,11 @@ class BayesianRecommender(Recommender):
         exploration and exploitation.
         :param user_profile: Low-dimensional user profile containing embeddings and preferences.
         :param n_recommendations: Number of recommendations to return.
-        :param beta: Trade-off between exploration and exploitation. Big beta means more exploration.
+        :param beta: Trade-off between exploration and exploitation. Higher beta means more exploitation.
+            Must be in [0, 1]. A reasonable initial value is 0.
+            Beta is increased by increase_beta after each recommendation.
+
+            Big beta means more exploration.
             A reasonable initial value is 20.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
@@ -261,8 +287,10 @@ class BayesianRecommender(Recommender):
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             mll = fit_gpytorch_mll(mll)
 
+            unnormalized_beta = self.obtain_bo_beta(rec_beta=beta)
+
             # Initialize the acquisition function
-            acqf = UpperConfidenceBound(model=model, beta=np.exp(self.beta if not beta else beta).item(), maximize=True)
+            acqf = UpperConfidenceBound(model=model, beta=np.exp(unnormalized_beta).item(), maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
             scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
@@ -274,9 +302,9 @@ class BayesianRecommender(Recommender):
             embeddings_std = torch.cat((embeddings_std, candidate))
             preferences = torch.cat((preferences, pseudo_preference.reshape(1, 1)))
 
-        # Lower beta if settings require it
+        # Increase beta if settings require it
         if self.reduce_beta:
-            self.beta -= 1
+            self.beta += 0.1
 
         # Return most promising candidates
         candidates_std = embeddings_std[-n_recommendations:]
@@ -318,8 +346,10 @@ class BayesianRecommender(Recommender):
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
         mll = fit_gpytorch_mll(mll)
 
+        unnormalized_beta = self.obtain_bo_beta(rec_beta=beta)
+
         # Initialize the acquisition function
-        acqf = UpperConfidenceBound(model=model, beta=np.exp(self.beta if not beta else beta).item(), maximize=True)
+        acqf = UpperConfidenceBound(model=model, beta=np.exp(unnormalized_beta).item(), maximize=True)
 
         # Get the highest scoring candidates out of meshgrid
         scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1])).detach()

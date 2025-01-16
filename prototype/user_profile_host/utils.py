@@ -127,3 +127,39 @@ def display_heatmap_user_profile_2d(low_d_embeddings: Tensor, grid_x: Tensor, gr
         plt.savefig(save_path + f"generated_points_compressed_using_{compression_technique}.svg",
                     dpi=300, bbox_inches='tight', format='svg')
     plt.show()
+
+def valid_beta(beta:float, min:float=0., max:float=1.):
+    """
+    Check if beta is in the valid range.
+    :param beta: The beta value to check.
+    :param min: The minimum value for beta. Default is 0.
+    :param max: The maximum value for beta. Default is 1.
+    :return: True if beta is in the valid range, False otherwise.
+    """
+
+def get_valid_beta(beta: float, min: float = 0.0, max: float = 1.0):
+    """
+    Ensure beta is in the valid range [min, max]. If beta is outside the range,
+    map it to the nearest boundary.
+
+    :param beta: The beta value to check and adjust.
+    :param min: The minimum value for beta. Default is 0.
+    :param max: The maximum value for beta. Default is 1.
+    :return: A beta value clamped within the range [min, max].
+    """
+    if beta < min:
+        return min
+    elif beta > max:
+        return max
+    else:
+        return beta
+
+def get_unnormalized_value(x_norm:float, or_max:float, or_min:float):
+    """
+    Get the unnormalized value of x_norm given the original max and min values.
+    :param x_norm: The normalized value.
+    :param or_max: The original max value.
+    :param or_min: The original min value.
+    :return: The unnormalized value.
+    """
+    return x_norm * (or_max - or_min) + or_min
