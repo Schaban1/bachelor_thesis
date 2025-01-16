@@ -69,7 +69,7 @@ class WebUI:
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        self.beta = -1 # Required for debugging purposes: -1 means beta is not used
+        self.beta = -0.1 # Required for debugging purposes: -1 means beta is not used
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.init_generator)
 
@@ -123,7 +123,7 @@ class WebUI:
         """
         self.state = new_state
         self.update_state_variables()
-    
+
     def update_state_variables(self):
         """
         Updates the boolean state variables (used for component visibility) based on the current state of the web UI.
@@ -132,7 +132,7 @@ class WebUI:
         self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
         self.is_generating = self.state == WebUIState.GENERATING_STATE
         self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
-    
+
     # <------------------------------------>
     # <---------- Building UI ---------->
     def build_userinterface(self):
@@ -154,7 +154,7 @@ class WebUI:
             self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
-    
+
     # <--------------------------------->
     # <---------- Initialize other non-UI components ---------->
     def init_generator(self):
@@ -165,12 +165,12 @@ class WebUI:
             n_images=self.num_images_to_generate,
             cache_dir=self.args.path.cache_dir,
             device=self.args.device,
-            **self.args.generator        
+            **self.args.generator
         )
         if self.args.generator_warm_start:
             with self.queue_lock:
                 self.generator.generate_image(torch.zeros(1, 77, 768))
-    
+
     def init_user_profile_host(self):
         """
         Initializes the user profile host with the initial user prompt.
@@ -184,7 +184,7 @@ class WebUI:
             n_recommendations=self.num_images_to_generate,
             **self.args.recommender
         )
-    
+
     # <------------------------------------------------------->
     # <---------- Keyboard controls ---------->
     def handle_key(self, e: KeyEventArguments):
@@ -207,7 +207,7 @@ class WebUI:
                 self.submit_button.run_method('click')
             if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
                 self.on_number_keystroke(e.key.number)
-    
+
     def update_active_image(self, idx=0):
         """
         Updates the active image and its visuals on the UI (currently only used in emoji ScoreMode).
@@ -220,7 +220,7 @@ class WebUI:
             self.images_display[self.active_image].style('border-color: lightgray')
             self.active_image = idx
             self.images_display[idx].style('border-color: red')
-    
+
     def on_number_keystroke(self, key):
         """
         Updates the score for the active image upon typing one of the valid number keys.
@@ -230,7 +230,7 @@ class WebUI:
         """
         self.scorer.scores_toggles[self.active_image].value = key - 1
         self.update_active_image(self.active_image + 1)
-    
+
     # <--------------------------------------->
     # <---------- Image generation & User profile ---------->
     def generate_images(self):
@@ -256,7 +256,7 @@ class WebUI:
         """
         normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
-    
+
     # <----------------------------------------------------->
     # <---------- Misc. ---------->
     def get_webis_demo_template_html(self):
@@ -271,5 +271,5 @@ class WebUI:
         with open("./prototype/resources/webis_template_bottom.html") as f:
             webis_template_bottom = f.read()
         return webis_template_top, webis_template_bottom
-    
+
     # <--------------------------->
