@@ -14,7 +14,7 @@ class PlotUI(UIComponent):
         """
         Builds the UI for the interactive plot state.
         """
-        with ((ngUI.column().classes('max-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
+        with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
                                                                                   value=True))):
             ngUI.button('Back', on_click=self.on_back_to_main_loop_button_click)
             with ngUI.row().classes('mx-auto items-center'):
@@ -24,7 +24,19 @@ class PlotUI(UIComponent):
                 self.plot.on('plotly_click', self.on_plot_click)
 
                 self.clicked_image = ngUI.image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
-                # self.update_plot()
+
+            ngUI.separator()
+            self.build_image_grid(self.webUI.prev_images)
+
+    def build_image_grid(self, images):
+        """
+        Displays all previous generated images in a wall.
+        """
+        ngUI.label('Your generation history:').style('font-size: 150%; font-weight: bold;')
+        with ngUI.grid(columns=self.webUI.num_images_to_generate):
+            for img in images[::-1]:
+                with ngUI.row().classes('mx-auto items-center'):
+                    ngUI.image(img).style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
 
     def create_contour_plot(self, user_profile, embeddings):
         fig = go.Figure(data=go.Contour(x=user_profile[0], y=user_profile[1], z=user_profile[2], opacity=0.4))
