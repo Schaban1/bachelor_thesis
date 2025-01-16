@@ -45,9 +45,9 @@ class UserProfileHost():
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
             weighted_axis_exploration_factor: float = 0.5,
-            bo_beta: int = 20,
-            di_beta: int = 1,
-            di_beta_increase: float = 3,
+            bo_beta: float = 0.,
+            di_beta: float = 0.,
+            di_beta_increase: float = 0.3,
             search_space_type: str = 'dirichlet'
     ):
         """
@@ -281,7 +281,8 @@ class UserProfileHost():
         # Generate recommendations in the user_space
         if self.user_profile is not None:
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                                          n_recommendations=num_recommendations)
+                                                                          n_recommendations=num_recommendations,
+                                                                          beta=beta)
         else:
             # Start initially with some random embeddings and take into account the bounds
             user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
