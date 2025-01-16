@@ -66,7 +66,7 @@ class WeightedSumOptimizer:
 
 class EMAWeightedSumOptimizer:
 
-    def __init__(self, n_recommendations: int = 5, alpha: int = 0.2):
+    def __init__(self, n_recommendations: int = 5, alpha: float = 0.2):
         """
         Initialize the EMAWeightedSumOptimizer. This optimizer uses an exponential moving average to update the user profile.
         :param n_recommendations: Number of recommendations to be considered recent each iteration.
