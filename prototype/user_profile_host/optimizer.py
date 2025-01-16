@@ -2,10 +2,6 @@ from abc import abstractmethod, ABC
 import torch
 from torch import Tensor
 
-from gpytorch.mlls import ExactMarginalLogLikelihood
-from botorch.fit import fit_gpytorch_mll
-from botorch.models import SingleTaskGP
-
 
 class Optimizer(ABC):  # ABC = Abstract Base Class
     """
@@ -21,7 +17,7 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
     """
 
     @abstractmethod
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -30,10 +26,20 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
         pass
 
 
+class NoOptimizer:
+
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+        """
+        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
+        :param preferences: The scores of the current user concerning the (user-space) embeddings.
+        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
+        """
+        return (embeddings, preferences)
+
 
 class MaxPrefOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -42,61 +48,50 @@ class MaxPrefOptimizer:
         user_profile = embeddings[torch.argmax(preferences)]
         return user_profile
 
+
 class WeightedSumOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        if torch.count_nonzero(preferences) == 0:   # if only zeros in preferences, black images are generated
-            user_profile = embeddings[-1]   # fix: return any image as user profile
+        if torch.count_nonzero(preferences) == 0:
+            user_profile = None  # This will trigger the random recommender in embeddings
         else:
-            user_profile = (preferences.reshape(-1) @ embeddings)/preferences.sum()
+            user_profile = (preferences.reshape(-1) @ embeddings) / preferences.sum()
         return user_profile
-    
+
+
 class EMAWeightedSumOptimizer:
-    def __init__(self, n_recommendations : int = 5, alpha : int = 0.2):
-        self.user_profile = None
+
+    def __init__(self, n_recommendations: int = 5, alpha: int = 0.2):
+        """
+        Initialize the EMAWeightedSumOptimizer. This optimizer uses an exponential moving average to update the user profile.
+        :param n_recommendations: Number of recommendations to be considered recent each iteration.
+        :param alpha: Factor for the exponential moving average. Higher values give more weight to recent recommendations.
+        """
         self.n_recommendations = n_recommendations
         self.alpha = alpha
 
-    def return_if_all_zero_preferences(self, preferences: Tensor, embeddings: Tensor):
-        """
-        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
-        :param preferences: The scores of the current user concerning the (user-space) embeddings.
-        :return: Boolean indicating if only zeros in preferences and the user profile as any embedding to avoid
-        generating black images.
-        """
-        return (torch.count_nonzero(preferences) == 0), embeddings[-1]
-
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        # if only zeros in preferences, black images are generated
-        all_zero_preferences, user_profile = self.return_if_all_zero_preferences(preferences, embeddings)
-
-        if self.user_profile == None:
-            self.user_profile = user_profile if all_zero_preferences \
-                else (preferences.reshape(-1) @ embeddings) / preferences.sum()
+        # If this is the first optimization step, just create a new user profile based on current embeddings
+        if user_profile == None:
+            if torch.count_nonzero(preferences) == 0:
+                user_profile = None  # This will trigger the random recommender in embeddings
+            else:
+                user_profile = (preferences.reshape(-1) @ embeddings) / preferences.sum()
         else:
             new_embeddings, new_preferences = embeddings[-self.n_recommendations:], preferences[-self.n_recommendations:]
-            new_user_profile = (new_preferences.reshape(-1) @ new_embeddings)/new_preferences.sum()
-            self.user_profile = user_profile if all_zero_preferences else (
-                    self.alpha * new_user_profile + (1 - self.alpha) * self.user_profile)
+            # TODO (Discuss, Klara, Paul): whats the best response to all 0 preferences? Currently just keeping old user profile
+            if not torch.count_nonzero(new_preferences) == 0:
+                new_user_profile = (new_preferences.reshape(-1) @ new_embeddings) / new_preferences.sum()
+                user_profile = self.alpha * new_user_profile + (1 - self.alpha) * user_profile
 
-        return self.user_profile
-
-class NoOptimizer:
-
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor) -> Tensor:
-        """
-        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
-        :param preferences: The scores of the current user concerning the (user-space) embeddings.
-        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
-        """
-        return (embeddings, preferences)
+        return user_profile

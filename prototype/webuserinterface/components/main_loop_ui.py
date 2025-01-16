@@ -41,14 +41,12 @@ class MainLoopUI(UIComponent):
             with ngUI.row().classes('mx-auto items-center'):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
-                        self.webUI.images_display[i] = ngUI.interactive_image(self.webUI.images[i]).style(f'width: {self.webUI.image_display_size[0]}px; height: {self.webUI.image_display_size[1]}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
+                        self.webUI.images_display[i] = ngUI.interactive_image(self.webUI.images[i]).style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                         with self.webUI.images_display[i]:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.webUI.scorer.build_scorer(i)
             ngUI.space()
-            ngUI.number(label='Next beta', value=self.webUI.user_profile_host_beta, min=0, precision=0, step=1, on_change=self.on_next_beta_input, validation={'Needs to be a number!': lambda value: isinstance(value, (int, float)), 'Needs to be a positive number!': lambda value: value >= 0}).bind_value_from(self.webUI, 'user_profile_host_beta')
-            ngUI.space()
-            self.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
+            self.webUI.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
                 ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
     
@@ -57,7 +55,9 @@ class MainLoopUI(UIComponent):
         Shows the interactive plot screen.
         """
         self.webUI.change_state(WebUIState.PLOT_STATE)
-        self.webUI.keyboard.active = False
+
+        # Initialize or update the plot
+        self.webUI.plot_ui.update_plot()
     
     def on_save_button_click(self, image_display):
         """
@@ -73,16 +73,7 @@ class MainLoopUI(UIComponent):
         image_to_save.save(f"{self.webUI.save_path}/{file_name}")
         self.webUI.num_images_saved += 1
         ngUI.notify(f"Image saved in {self.webUI.save_path}/{file_name}!")
-    
-    def on_next_beta_input(self, new_next_beta):
-        """
-        Updates the user_profile_host_beta class variable on input in the number field.
 
-        Args:
-            new_next_beta: Input of the number field in the main loop iteration state.
-        """
-        self.webUI.user_profile_host_beta = new_next_beta.value
-    
     async def on_submit_scores_button_click(self):
         """
         Updates the user profile with the user scores and generates the next images.
@@ -90,7 +81,6 @@ class MainLoopUI(UIComponent):
         self.webUI.update_user_profile()
         ngUI.notify('Scores submitted!')
         self.webUI.change_state(WebUIState.GENERATING_STATE)
-        self.webUI.keyboard.active = False
         ngUI.notify('Generating new images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
@@ -98,14 +88,17 @@ class MainLoopUI(UIComponent):
         self.webUI.scorer.reset_scorers()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.update_active_image()
-        self.webUI.keyboard.active = True
-    
+
     def on_restart_process_button_click(self):
         """
         Restarts the process by starting with the initial iteration again.
         """
         self.webUI.change_state(WebUIState.INIT_STATE)
-        self.webUI.keyboard.active = False
         self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
+
+        # Clear plot ui for new process
+        self.webUI.plot_ui.update_plot()
+        self.webUI.prev_images = []
+
         seed_everything(self.webUI.args.random_seed)

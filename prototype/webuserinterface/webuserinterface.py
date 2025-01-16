@@ -11,20 +11,27 @@ from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator
 from prototype.utils import seed_everything
-from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer
+from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer, DebugMenu
 
 
 class WebUI:
     """
     This class implements a interactive web user interface for an image generation system.
     """
+    session_id = binding.BindableProperty()
+    state = binding.BindableProperty()
     is_initial_iteration = binding.BindableProperty()
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
     is_interactive_plot = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
-    user_profile_host_beta = binding.BindableProperty()
+    num_images_to_generate = binding.BindableProperty()
+    score_mode = binding.BindableProperty()
+    image_display_width = binding.BindableProperty()
+    image_display_height = binding.BindableProperty()
+    active_image = binding.BindableProperty()
+    save_path = binding.BindableProperty()
 
     @classmethod
     async def create(cls, args):
@@ -55,20 +62,21 @@ class WebUI:
         self.is_interactive_plot = False
         # Provided by the user / system
         self.user_prompt = ""
-        self.recommendation_type = RecommendationType.POINT
+        self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
         self.score_mode = self.args.score_mode
         self.scorer = Scorer(self)
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        self.user_profile_host_beta = self.args.user_profile_host.beta
+        self.beta = -1 # Required for debugging purposes
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.init_generator)
 
         # Lists / UI components
-        self.image_display_size = tuple(self.args.image_display_size)
-        self.images = [Image.new('RGB', self.image_display_size) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
+        self.prev_images = []
+        self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
         self.submit_button = None
@@ -76,7 +84,11 @@ class WebUI:
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
 
-        self.keyboard = None
+        # Set UI root & load debug menu
+        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif')
+        self.debug_menu = DebugMenu(self)
+
+        self.keyboard = ngUI.keyboard(on_key=self.handle_key)
         # Remove loading label
         loading_label.delete()
         loading_label = None
@@ -84,11 +96,23 @@ class WebUI:
 
     def run(self):
         """
-        This function runs the Web UI indefinitely.
+        This function starts the Web UI.
         """
         self.change_state(WebUIState.INIT_STATE)
+        self.root.clear()
         self.build_userinterface()
-    
+
+    def reload_userinterface(self):
+        """
+        Reloads the UI.
+        """
+        self.root.clear()
+        self.scorer = Scorer(self)
+        self.images = self.images[:min(len(self.images), self.num_images_to_generate)] \
+                    + [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate - min(len(self.images), self.num_images_to_generate))]
+        self.images_display = [None for _ in range(self.num_images_to_generate)]
+        self.build_userinterface()
+
     # <---------- Updating State ---------->
     def change_state(self, new_state: WebUIState):
         """
@@ -117,18 +141,17 @@ class WebUI:
 
         UI Structure:
         - Webis demo template top half.
-        - Content based on the current state. Either the initial prompt input, the main loop with the user preferences or the loading spinner.
+        - Content based on the current state. Either the initial prompt input, the main loop with the user preferences, the loading spinner or the plot.
         - Some empty space so the footer doesnt look weird on high resolution devices.
         - Webis demo template bottom half/footer.
         """
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
-        self.keyboard = ngUI.keyboard(on_key=self.handle_key, active=False)
-        with ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif'):
+        with self.root:
             ngUI.html(webis_template_top).classes('w-full')
             InitialIterationUI(self)
-            MainLoopUI(self)
+            self.main_loop_ui = MainLoopUI(self)
             LoadingSpinnerUI(self)
-            PlotUI(self)
+            self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
     
@@ -144,8 +167,9 @@ class WebUI:
             device=self.args.device,
             **self.args.generator        
         )
-        with self.queue_lock:
-            self.generator.generate_image(torch.zeros(1, 77, 768))
+        if self.args.generator_warm_start:
+            with self.queue_lock:
+                self.generator.generate_image(torch.zeros(1, 77, 768))
     
     def init_user_profile_host(self):
         """
@@ -170,13 +194,15 @@ class WebUI:
         Args:
             e: KeyEvent args.
         """
-        if self.score_mode == ScoreMode.EMOJI.value:
+        if e.key.f9 and e.action.keydown:
+            self.debug_menu.toggle_visibility()
+        if self.score_mode == ScoreMode.EMOJI.value and self.state == WebUIState.MAIN_STATE:
             if e.key.arrow_right and e.action.keydown:
                 self.update_active_image(self.active_image + 1)
             if e.key.arrow_left and e.action.keydown:
                 self.update_active_image(self.active_image - 1)
             if e.key == 's' and e.action.keydown:
-                self.on_save_button_click(self.images_display[self.active_image])
+                self.main_loop_ui.on_save_button_click(self.images_display[self.active_image])
             if e.key.enter and e.action.keydown:
                 self.submit_button.run_method('click')
             if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
@@ -213,22 +239,23 @@ class WebUI:
         images of the generator in self.images.
         """
         with self.queue_lock:
-            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=self.user_profile_host_beta)
+            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=(self.beta if self.beta >= 0 else None))
             self.images = self.generator.generate_image(embeddings, latents)
-    
+            self.prev_images.extend(self.images)
+
     def update_image_displays(self):
         """
         Updates the image displays with the current images in self.images.
         """
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
-    
+        self.reload_userinterface()
+
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
         """
         normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
-        self.user_profile_host_beta -= 1
     
     # <----------------------------------------------------->
     # <---------- Misc. ---------->
