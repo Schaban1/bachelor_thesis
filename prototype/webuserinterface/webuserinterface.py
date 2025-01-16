@@ -69,7 +69,7 @@ class WebUI:
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        self.beta = -1 # Required for debugging purposes
+        self.beta = -1 # Required for debugging purposes: -1 means beta is not used
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.init_generator)
 
