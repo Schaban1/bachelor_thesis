@@ -22,7 +22,7 @@ class InitialIterationUI(UIComponent):
                     with ngUI.menu():
                         ngUI.switch("Blind Mode").style('margin-right: 8px;').bind_value(self.webUI, "blind_mode")
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.select({t: t.value for t in RecommendationType}).props('popup-content-class="max-w-[200px]"').bind_value(self.webUI, 'recommendation_type').bind_visibility_from(self.webUI, 'blind_mode', False)
+            ngUI.select({t: t.value for t in RecommendationType}).props('popup-content-class="max-w-[200px]"').bind_value(self.webUI, 'recommendation_type').bind_visibility_from(self.webUI, 'blind_mode', value=False)
             ngUI.space().classes('w-full h-[2vh]')
             ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
     
