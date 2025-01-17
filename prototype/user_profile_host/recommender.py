@@ -196,6 +196,7 @@ class DirichletRecommender(Recommender):
         search_space = dist.sample(sample_shape=(n_recommendations,))
         if self.beta < 1.:  # increase beta if beta is within [0, 1)
             self.beta += self.increase_beta
+            self.beta = min(self.beta, 1.)
             print('Beta used in next generation of images (in [0,1]):', self.beta)
         return search_space
 
