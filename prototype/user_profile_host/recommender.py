@@ -191,7 +191,8 @@ class DirichletRecommender(Recommender):
                  ((10 * get_valid_beta(beta if beta else self.beta)) + 1))
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
-        self.beta += self.increase_beta
+        if self.beta < 1.:  # increase beta if beta is within [0, 1)
+            self.beta += self.increase_beta
         return search_space
 
 
@@ -311,8 +312,8 @@ class BayesianRecommender(Recommender):
             embeddings_std = torch.cat((embeddings_std, candidate))
             preferences = torch.cat((preferences, pseudo_preference.reshape(1, 1)))
 
-        # Increase beta if settings require it
-        if self.reduce_exploration:
+        # Increase beta if settings require it & beta is within [0, 1)
+        if self.reduce_exploration and (self.beta < 1.):
             self.beta += 0.1
             print('Altered Beta:', self.beta)
 
