@@ -49,4 +49,5 @@ class InitialIterationUI(UIComponent):
         """
         Setups blind mode by selecting a random recommender.
         """
+        random.seed()
         self.webUI.recommendation_type = random.choice([t for t in RecommendationType])
