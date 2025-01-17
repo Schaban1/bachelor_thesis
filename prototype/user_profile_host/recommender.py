@@ -287,6 +287,9 @@ class BayesianRecommender(Recommender):
         # Standardize search space
         search_space = (search_space - mean) / std
 
+        unnormalized_beta = self.obtain_bo_beta(rec_beta=beta)
+        print('unnormalized Beta:', unnormalized_beta)
+
         # Get new acquisitions step by step
         for _ in range(n_recommendations):
             # Build a GP model
@@ -294,8 +297,6 @@ class BayesianRecommender(Recommender):
             model = SingleTaskGP(train_X=embeddings_std, train_Y=preferences, mean_module=mean_mod)
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             mll = fit_gpytorch_mll(mll)
-
-            unnormalized_beta = self.obtain_bo_beta(rec_beta=beta)
 
             # Initialize the acquisition function
             acqf = UpperConfidenceBound(model=model, beta=np.exp(unnormalized_beta).item(), maximize=True)
@@ -313,6 +314,7 @@ class BayesianRecommender(Recommender):
         # Increase beta if settings require it
         if self.reduce_exploration:
             self.beta += 0.1
+            print('Altered Beta:', self.beta)
 
         # Return most promising candidates
         candidates_std = embeddings_std[-n_recommendations:]
