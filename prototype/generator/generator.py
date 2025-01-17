@@ -118,7 +118,7 @@ class Generator(GeneratorBase):
         # if embeddings.dtype == torch.float32:
         #     embeddings = embeddings.type(torch.float16)
 
-        embeddings = embeddings.to_empty(self.device)   # NotImplementedError: Cannot copy out of meta tensor; no data! Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to() when moving module from meta to a different device.
+        embeddings = embeddings.to(self.device)
         if latents != None:
             latents = latents.to(self.device)
             #latents = latents.type(torch.float16)
