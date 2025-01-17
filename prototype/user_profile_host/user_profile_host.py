@@ -96,7 +96,7 @@ class UserProfileHost():
         self.bo_beta = bo_beta
         self.di_beta = di_beta
         self.beta = 0.
-        self.di_beta_increase = di_beta_increase
+        self.di_beta_increase = min(di_beta_increase, 0.4)  # avoid too high increase
         self.search_space_type = search_space_type
 
         # Placeholder for the already evaluated embeddings of the current user
