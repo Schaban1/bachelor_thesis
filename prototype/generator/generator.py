@@ -82,7 +82,7 @@ class Generator(GeneratorBase):
         # vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", cache_dir=cache_dir ,torch_dtype=torch.float16).to(self.device)
         # self.pipe.vae = vae
 
-        self.pipe.to(self.device)
+        self.pipe.to_empty(self.device) # NotImplementedError: Cannot copy out of meta tensor; no data! Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to() when moving module from meta to a different device.
         #self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
 
         self.load_generator()
@@ -100,7 +100,7 @@ class Generator(GeneratorBase):
                                                          padding="max_length",
                                                          max_length=self.pipe.tokenizer.model_max_length,
                                                          truncation=True,
-                                                         return_tensors="pt", ).to(self.pipe.text_encoder.device)
+                                                         return_tensors="pt", ).to_empty(self.pipe.text_encoder.device) # NotImplementedError: Cannot copy out of meta tensor; no data! Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to() when moving module from meta to a different device.
             self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
 
     def generate_image(self, embeddings: Tensor | tuple[Tensor, Tensor], latents: Tensor = None) -> list[Image]:
@@ -118,7 +118,7 @@ class Generator(GeneratorBase):
         # if embeddings.dtype == torch.float32:
         #     embeddings = embeddings.type(torch.float16)
 
-        embeddings = embeddings.to(self.device)
+        embeddings = embeddings.to_empty(self.device)   # NotImplementedError: Cannot copy out of meta tensor; no data! Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to() when moving module from meta to a different device.
         if latents != None:
             latents = latents.to(self.device)
             #latents = latents.type(torch.float16)
@@ -167,7 +167,7 @@ if __name__ == "__main__":
                                        return_tensors="pt",
                                        )
 
-    embed = gen.pipe.text_encoder(prompt_tokens.input_ids.to(gen.device))[0]
+    embed = gen.pipe.text_encoder(prompt_tokens.input_ids.to_empty(gen.device))[0] # NotImplementedError: Cannot copy out of meta tensor; no data! Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to() when moving module from meta to a different device.
     embed = embed.repeat(n_images, 1, 1)
     print(f"{embed.shape=}")
     for i in range(5):
