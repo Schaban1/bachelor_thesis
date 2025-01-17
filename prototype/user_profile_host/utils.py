@@ -128,14 +128,6 @@ def display_heatmap_user_profile_2d(low_d_embeddings: Tensor, grid_x: Tensor, gr
                     dpi=300, bbox_inches='tight', format='svg')
     plt.show()
 
-def valid_beta(beta:float, min:float=0., max:float=1.):
-    """
-    Check if beta is in the valid range.
-    :param beta: The beta value to check.
-    :param min: The minimum value for beta. Default is 0.
-    :param max: The maximum value for beta. Default is 1.
-    :return: True if beta is in the valid range, False otherwise.
-    """
 
 def get_valid_beta(beta: float, min: float = 0.0, max: float = 1.0):
     """
