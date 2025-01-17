@@ -276,7 +276,7 @@ class UserProfileHost():
         :return: A beta value clamped within the range [min, max].
         """
         print('obtained debug beta:', rec_beta)
-        if rec_beta and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
+        if (rec_beta is not None) and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
             self.beta = rec_beta
 
         # compute beta based on recommender types
