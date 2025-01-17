@@ -279,7 +279,10 @@ class UserProfileHost():
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
         # Generate recommendations in the user_space
-        if self.user_profile is not None:
+        if ((self.user_profile is not None) and     # User profile is initialized
+                # if bayesian recommender: at least one non-zero preference
+                ((torch.count_nonzero(self.preferences) > 0) or
+                 self.recommendation_type != RecommendationType.FUNCTION_BASED)):
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
                                                                           n_recommendations=num_recommendations,
                                                                           beta=beta)
