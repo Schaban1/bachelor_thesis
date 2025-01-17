@@ -275,7 +275,6 @@ class UserProfileHost():
         :param rec_beta: The beta value to check and adjust.
         :return: A beta value clamped within the range [min, max].
         """
-        print('obtained debug beta:', rec_beta)
         if (rec_beta is not None) and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
             self.beta = rec_beta
 
@@ -283,21 +282,15 @@ class UserProfileHost():
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
             # here: big beta means more exploration, outside recommender: big beta means more exploitation
             valid_beta = 1 - get_valid_beta(self.beta)  # beta in [0, 1]
-            unnormalized_beta = get_unnormalized_value(valid_beta, 20, 0)  # beta in [0, 20]
-            print('Bayesian: unnormalized Beta used in next generation of images (in [0,20]):', unnormalized_beta)
-            return unnormalized_beta
+            return get_unnormalized_value(valid_beta, 20, 0)  # beta in [0, 20]
 
         elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
             # here: init beta=1, but outside recommender beta an element of [0, 1]
             # hence: we have to multiply it by 10, minimal beta is 1
-            unnormalized_beta = max(1, 50 * get_valid_beta(self.beta))
-            print('Dirichlet beta used in this generation of images (in [0,infinity)):', unnormalized_beta)
-            return unnormalized_beta
+            return max(1, 50 * get_valid_beta(self.beta))
 
         elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-            valid_beta = get_valid_beta(self.beta)
-            print('Weighted Axes: Beta used in this generation of images (in [0,1]):', valid_beta)
-            return valid_beta
+            return get_valid_beta(self.beta)
 
         else:
             return self.beta
@@ -306,15 +299,12 @@ class UserProfileHost():
         if self.beta < 1.:  # only increase beta (i.e. more exploitation) if it is not already 1
             if self.recommendation_type == RecommendationType.FUNCTION_BASED:
                 self.beta += 0.1
-                print('BO: Altered Beta for next iteration (in [0,1]):', min(self.beta, 1.))
 
             elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
                 self.beta += self.di_beta_increase
-                print('Dirichlet: Beta used in next generation of images (in [0,1]):', min(self.beta, 1.))
 
             elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
                 self.beta += 0.1
-                print('Weighted Axes: Beta used in next generation of images (in [0,1]):', min(self.beta, 1.))
 
             self.beta = min(self.beta, 1.)
 
