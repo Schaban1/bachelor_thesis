@@ -189,10 +189,14 @@ class DirichletRecommender(Recommender):
         # initial beta is 1, thus, we add 1 to it, since we uniformly make beta origin from [0, 1]
         alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) *
                  ((10 * get_valid_beta(beta if beta else self.beta)) + 1))
+
+        print('Dirichlet alpha used in this generation of images (in [0,infinity)):', alpha)
+
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
         if self.beta < 1.:  # increase beta if beta is within [0, 1)
             self.beta += self.increase_beta
+            print('Beta used in next generation of images (in [0,1]):', self.beta)
         return search_space
 
 
