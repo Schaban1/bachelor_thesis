@@ -190,7 +190,8 @@ class DirichletRecommender(Recommender):
         alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) *
                  ((10 * get_valid_beta(beta if beta else self.beta)) + 1))
 
-        print('Dirichlet alpha used in this generation of images (in [0,infinity)):', alpha)
+        print('Dirichlet beta used in this generation of images (in [0,infinity)):',
+              ((10 * get_valid_beta(beta if beta else self.beta)) + 1))
 
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
