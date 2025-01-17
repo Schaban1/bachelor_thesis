@@ -289,7 +289,7 @@ class BayesianRecommender(Recommender):
         search_space = (search_space - mean) / std
 
         unnormalized_beta = self.obtain_bo_beta(rec_beta=beta)
-        print('unnormalized Beta:', unnormalized_beta)
+        print('unnormalized Beta used in next generation of images (in [0,20]):', unnormalized_beta)
 
         # Get new acquisitions step by step
         for _ in range(n_recommendations):
@@ -315,7 +315,7 @@ class BayesianRecommender(Recommender):
         # Increase beta if settings require it & beta is within [0, 1)
         if self.reduce_exploration and (self.beta < 1.):
             self.beta += 0.1
-            print('Altered Beta:', self.beta)
+            print('Altered Beta for next iteration (in [0,1]):', self.beta)
 
         # Return most promising candidates
         candidates_std = embeddings_std[-n_recommendations:]
