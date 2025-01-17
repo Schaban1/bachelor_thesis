@@ -37,7 +37,7 @@ class DebugMenu(ngUI.element):
                     ngUI.number(label="num_images_to_generate", min=0, precision=0, step=1, on_change=self.webUI.reload_userinterface).props(self.input_props).bind_value(self.webUI, 'num_images_to_generate', forward=int)
                     ngUI.select({m.value: m.value for m in ScoreMode}, label='score_mode', on_change=self.webUI.reload_userinterface).style("width: 100px;").props(self.input_props).bind_value(self.webUI, 'score_mode')
                     ngUI.number(label="image_display_width", min=0, precision=0, step=1, on_change=self.webUI.reload_userinterface).props(self.input_props).bind_value(self.webUI, 'image_display_width', forward=int)
-                    ngUI.number(label="beta", min=-0.1, max=1.0, precision=0, step=0.1).props(self.input_props).bind_value(self.webUI, 'beta', forward=float)
+                    ngUI.number(label="beta", min=-0.1, max=1.0, precision=1, step=0.1).props(self.input_props).bind_value(self.webUI, 'beta', forward=float)
                     ngUI.number(label="image_display_height", min=0, precision=0, step=1, on_change=self.webUI.reload_userinterface).props(self.input_props).bind_value(self.webUI, 'image_display_height', forward=int)
                     ngUI.number(label="active_image", min=0, precision=0, step=1).props(self.input_props).bind_value(self.webUI, 'active_image', forward=int)
                     ngUI.input(label="save_path").props(self.input_props).bind_value(self.webUI, 'save_path')
