@@ -288,8 +288,8 @@ class UserProfileHost():
 
         elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
             # here: init beta=1, but outside recommender beta an element of [0, 1]
-            # hence: we have to multiply it by 10 & add 1
-            unnormalized_beta = (10 * get_valid_beta(self.beta)) + 1
+            # hence: we have to multiply it by 10, minimal beta is 1
+            unnormalized_beta = max(1, 10 * get_valid_beta(self.beta))
             print('Dirichlet beta used in this generation of images (in [0,infinity)):', unnormalized_beta)
             return unnormalized_beta
 
