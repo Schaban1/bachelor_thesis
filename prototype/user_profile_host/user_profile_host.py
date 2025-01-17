@@ -275,6 +275,7 @@ class UserProfileHost():
         :param rec_beta: The beta value to check and adjust.
         :return: A beta value clamped within the range [min, max].
         """
+        print('obtained debug beta:', rec_beta)
         if rec_beta and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
             self.beta = rec_beta
 
