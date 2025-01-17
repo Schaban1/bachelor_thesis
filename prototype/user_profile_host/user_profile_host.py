@@ -23,7 +23,7 @@ class UserProfileHost():
     use_latent_center = binding.BindableProperty()
     n_recommendations = binding.BindableProperty()
     ema_alpha = binding.BindableProperty()
-    weighted_axis_exploration_factor = binding.BindableProperty()   # TODO: rename to weighted_axis_beta
+    weighted_axis_exploration_factor = binding.BindableProperty()   # TODO: rename to weighted_axis_beta @Henry
     bo_beta = binding.BindableProperty()
     di_beta = binding.BindableProperty()
     di_beta_increase = binding.BindableProperty()
@@ -44,7 +44,7 @@ class UserProfileHost():
             use_latent_center: bool = False,
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
-            weighted_axis_exploration_factor: float = 0.,   # TODO: rename to weighted_axis_beta
+            weighted_axis_exploration_factor: float = 0.,   # TODO: rename to weighted_axis_beta @Henry
             bo_beta: float = 0.,
             di_beta: float = 0.,
             di_beta_increase: float = 0.3,
@@ -68,7 +68,7 @@ class UserProfileHost():
         :param n_recommendations: Number of recommendations to be generated each iteration.
         :param ema_alpha: Used for an exponential moving average to update the user profile.
             Factor for the exponential moving average. Higher values give more weight to recent recommendations.
-        :param weighted_axis_exploration_factor: Used for the weighted axes recommender. 0 -> high exploration, 1 -> high exploitation  # TODO: rename to weighted_axis_beta
+        :param weighted_axis_exploration_factor: Used for the weighted axes recommender. 0 -> high exploration, 1 -> high exploitation  # TODO: rename to weighted_axis_beta @Henry
         :param bo_beta: initial beta for BayesianRecommender
         :param di_beta: initial beta for DirichletRecommender
         :param di_beta_increase: increase beta by this amount after each iteration (DirichletRecommender)
@@ -92,7 +92,7 @@ class UserProfileHost():
         self.n_recommendations = n_recommendations
         self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
-        self.weighted_axis_beta = weighted_axis_exploration_factor  # TODO: rename to weighted_axis_beta
+        self.weighted_axis_beta = weighted_axis_exploration_factor  # TODO: rename to weighted_axis_beta @Henry
         self.bo_beta = bo_beta
         self.di_beta = di_beta
         self.beta = 0.
