@@ -186,7 +186,7 @@ class DirichletRecommender(Recommender):
         alpha = self.get_dirichlet_alpha(beta, user_profile)
 
         print('Dirichlet beta used in this generation of images (in [0,infinity)):',
-              ((10 * get_valid_beta(beta if beta else self.beta)) + 1))
+              ((10 * get_valid_beta(self.beta)) + 1))
 
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
