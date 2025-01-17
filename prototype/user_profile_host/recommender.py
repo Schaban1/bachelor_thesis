@@ -321,6 +321,7 @@ class BayesianRecommender(Recommender):
         # Increase beta if settings require it & beta is within [0, 1)
         if self.reduce_exploration and (self.beta < 1.):
             self.beta += 0.1
+            self.beta = min(self.beta, 1.)
             print('Altered Beta for next iteration (in [0,1]):', self.beta)
 
         # Return most promising candidates
