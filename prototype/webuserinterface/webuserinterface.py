@@ -28,10 +28,12 @@ class WebUI:
     recommendation_type = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
     score_mode = binding.BindableProperty()
+    beta = binding.BindableProperty()
     image_display_width = binding.BindableProperty()
     image_display_height = binding.BindableProperty()
     active_image = binding.BindableProperty()
     save_path = binding.BindableProperty()
+    blind_mode = binding.BindableProperty()
 
     @classmethod
     async def create(cls, args):
@@ -83,6 +85,8 @@ class WebUI:
         # Image saving
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
+
+        self.blind_mode = False
 
         # Set UI root & load debug menu
         self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif')
