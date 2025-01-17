@@ -172,8 +172,6 @@ class DirichletRecommender(Recommender):
         self.beta = get_valid_beta(beta)
         self.increase_beta = max(increase_beta, 0.) if increase_beta < 1. else increase_beta * 0.1
 
-
-
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
         Recommends embeddings based on the user profile, the number of recommendations and the trade-off between
@@ -185,10 +183,7 @@ class DirichletRecommender(Recommender):
             Beta is increased by increase_beta after each recommendation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        # init beta=1, but since we uniformly make beta an element of [0, 1], we have to multiply it by 10
-        # initial beta is 1, thus, we add 1 to it, since we uniformly make beta origin from [0, 1]
-        alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) *
-                 ((10 * get_valid_beta(beta if beta else self.beta)) + 1))
+        alpha = self.get_dirichlet_alpha(beta, user_profile)
 
         print('Dirichlet beta used in this generation of images (in [0,infinity)):',
               ((10 * get_valid_beta(beta if beta else self.beta)) + 1))
@@ -200,6 +195,21 @@ class DirichletRecommender(Recommender):
             self.beta = min(self.beta, 1.)
             print('Beta used in next generation of images (in [0,1]):', self.beta)
         return search_space
+
+    def get_dirichlet_alpha(self, rec_beta: float, user_profile):
+        """ Get the alpha value for the Dirichlet distribution.
+        :param user_profile: Low-dimensional user profile containing embeddings and preferences.
+        :param rec_beta: Trade-off between exploration and exploitation. Higher beta means more exploitation.
+            Must be in [0, 1].
+        :return: The alpha value for the Dirichlet distribution.
+        """
+        if rec_beta and (rec_beta >= 0) and (rec_beta <= 1):    # new beta from debug menu
+            self.beta = rec_beta
+        # init beta=1, but since we uniformly make beta an element of [0, 1], we have to multiply it by 10
+        # initial beta is 1, thus, we add 1 to it, since we uniformly make beta origin from [0, 1]
+        alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) *
+                 ((10 * get_valid_beta(self.beta)) + 1))
+        return alpha
 
 
 class BayesianRecommender(Recommender):
@@ -262,8 +272,10 @@ class BayesianRecommender(Recommender):
         :param rec_beta: The beta value obtained from the function call of the recommender.
         :return: The beta value for the Bayesian Optimizer.
         """
+        if rec_beta and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
+            self.beta = rec_beta
         # here: big beta means more exploration, outside recommender: big beta means more exploitation
-        valid_beta = 1 - get_valid_beta(rec_beta if rec_beta else self.beta)  # beta in [0, 1]
+        valid_beta = 1 - get_valid_beta(self.beta)  # beta in [0, 1]
         return get_unnormalized_value(valid_beta, 20, 0)  # beta in [0, 20]
 
     def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5,
