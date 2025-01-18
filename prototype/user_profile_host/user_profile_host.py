@@ -23,7 +23,7 @@ class UserProfileHost():
     use_latent_center = binding.BindableProperty()
     n_recommendations = binding.BindableProperty()
     ema_alpha = binding.BindableProperty()
-    weighted_axis_exploration_factor = binding.BindableProperty()
+    weighted_axis_exploration_factor = binding.BindableProperty()   # TODO: rename to weighted_axis_beta @Henry
     bo_beta = binding.BindableProperty()
     di_beta = binding.BindableProperty()
     di_beta_increase = binding.BindableProperty()
@@ -44,10 +44,10 @@ class UserProfileHost():
             use_latent_center: bool = False,
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
-            weighted_axis_exploration_factor: float = 0.5,
-            bo_beta: int = 20,
-            di_beta: int = 1,
-            di_beta_increase: float = 3,
+            weighted_axis_exploration_factor: float = 0.,   # TODO: rename to weighted_axis_beta @Henry
+            bo_beta: float = 0.,
+            di_beta: float = 0.,
+            di_beta_increase: float = 0.3,
             search_space_type: str = 'dirichlet'
     ):
         """
@@ -68,7 +68,7 @@ class UserProfileHost():
         :param n_recommendations: Number of recommendations to be generated each iteration.
         :param ema_alpha: Used for an exponential moving average to update the user profile.
             Factor for the exponential moving average. Higher values give more weight to recent recommendations.
-        :param weighted_axis_exploration_factor: Used for the weighted axes recommender. 1 -> high exploration, 0 -> high exploitation
+        :param weighted_axis_exploration_factor: Used for the weighted axes recommender. 0 -> high exploration, 1 -> high exploitation  # TODO: rename to weighted_axis_beta @Henry
         :param bo_beta: initial beta for BayesianRecommender
         :param di_beta: initial beta for DirichletRecommender
         :param di_beta_increase: increase beta by this amount after each iteration (DirichletRecommender)
@@ -92,10 +92,11 @@ class UserProfileHost():
         self.n_recommendations = n_recommendations
         self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
-        self.weighted_axis_exploration_factor = weighted_axis_exploration_factor
+        self.weighted_axis_beta = weighted_axis_exploration_factor  # TODO: rename to weighted_axis_beta @Henry
         self.bo_beta = bo_beta
         self.di_beta = di_beta
-        self.di_beta_increase = di_beta_increase
+        self.beta = 0.
+        self.di_beta_increase = min(di_beta_increase, 0.4)  # avoid too high increase
         self.search_space_type = search_space_type
 
         # Placeholder for the already evaluated embeddings of the current user
@@ -168,26 +169,26 @@ class UserProfileHost():
 
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
+            self.beta = self.bo_beta
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
                                                    latent_bounds=self.latent_bounds,
-                                                   search_space_type=self.search_space_type,
-                                                   beta=self.bo_beta)
+                                                   search_space_type=self.search_space_type)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
+            self.beta = self.weighted_axis_beta
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
-                                                                  latent_bounds=self.latent_bounds,
-                                                                  exploration_factor=self.weighted_axis_exploration_factor)
+                                                                  latent_bounds=self.latent_bounds)
             self.optimizer = WeightedSumOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
+            self.beta = self.weighted_axis_beta
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
-                                                                  latent_bounds=self.latent_bounds,
-                                                                  exploration_factor=self.weighted_axis_exploration_factor)
+                                                                  latent_bounds=self.latent_bounds)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         elif self.recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
@@ -196,9 +197,9 @@ class UserProfileHost():
                                                  latent_bounds=self.latent_bounds)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
+            self.beta = self.di_beta
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis,
-                                                    beta=self.di_beta,
                                                     increase_beta=self.di_beta_increase)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         else:
@@ -267,21 +268,71 @@ class UserProfileHost():
         prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
         return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
 
+    def obtain_valid_beta(self, rec_beta: float):
+        """
+        If valid rec_beta is given, update self.beta.
+        Afterwards, compute the unnormalized beta value for the recommender.
+        :param rec_beta: The beta value to check and adjust.
+        :return: A beta value clamped within the range [min, max].
+        """
+        if (rec_beta is not None) and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
+            self.beta = rec_beta
+
+        # compute beta based on recommender types
+        if self.recommendation_type == RecommendationType.FUNCTION_BASED:
+            # here: big beta means more exploration, outside recommender: big beta means more exploitation
+            valid_beta = 1 - get_valid_beta(self.beta)  # beta in [0, 1]
+            return get_unnormalized_value(valid_beta, 20, 0)  # beta in [0, 20]
+
+        elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
+            # here: init beta=1, but outside recommender beta an element of [0, 1]
+            # hence: we have to multiply it by 10, minimal beta is 1
+            return max(1, 50 * get_valid_beta(self.beta))
+
+        elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
+            return get_valid_beta(self.beta)
+
+        else:
+            return self.beta
+
+    def update_beta(self):
+        if self.beta < 1.:  # only increase beta (i.e. more exploitation) if it is not already 1
+            if self.recommendation_type == RecommendationType.FUNCTION_BASED:
+                self.beta += 0.1
+
+            elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
+                self.beta += self.di_beta_increase
+
+            elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
+                self.beta += 0.1
+
+            self.beta = min(self.beta, 1.)
+
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
         """
         This function generates recommendations based on the previously fit user-profile.
 
         Parameters:
             num_recommendations (int): Defines the number of embeddings that will be returned for user evaluation.
-            beta (float): Defines the trade-off between exploration and exploitation when using the BayesRecommender
-            or the weighted axes Recommender.
+            beta (float): Trade-off between exploration and exploitation.
+                Must be in [0, 1]. 0 means exploration, 1 means exploitation.
+                Beta is increased after each recommendation (i.e. more exploitation).
+                Optional, if given (by the debug menu), it will be used for the next generation of images.
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
+
         # Generate recommendations in the user_space
-        if self.user_profile is not None:
+        if ((self.user_profile is not None) and  # User profile is initialized
+                # if bayesian recommender: at least one non-zero preference
+                ((torch.count_nonzero(self.preferences) > 0) or
+                 self.recommendation_type != RecommendationType.FUNCTION_BASED)):
+            # obtain beta from the recommender if not given
+            valid_beta = self.obtain_valid_beta(beta)
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                                          n_recommendations=num_recommendations)
+                                                                          n_recommendations=num_recommendations,
+                                                                          beta=valid_beta)
+            self.update_beta()
         else:
             # Start initially with some random embeddings and take into account the bounds
             user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
