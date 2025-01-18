@@ -46,7 +46,12 @@ class MainLoopUI(UIComponent):
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.webUI.scorer.build_scorer(i)
             ngUI.space()
-            self.beta_slider = ngUI.slider(min=0, max=1, step=0.1)
+            with ngUI.column().classes('w-full'):
+                with ngUI.row().classes('w-full'):
+                    ngUI.label('Exploration')
+                    ngUI.space()
+                    ngUI.label('Exploitation')
+                self.beta_slider = ngUI.slider(min=0., max=1., step=0.1)
             ngUI.space()
             self.webUI.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
