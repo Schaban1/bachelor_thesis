@@ -46,6 +46,8 @@ class MainLoopUI(UIComponent):
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.webUI.scorer.build_scorer(i)
             ngUI.space()
+            self.beta_slider = ngUI.slider(min=0, max=1, step=0.1)
+            ngUI.space()
             self.webUI.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
             with ngUI.row().classes('w-full justify-end'):
                 ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
@@ -102,3 +104,6 @@ class MainLoopUI(UIComponent):
         self.webUI.prev_images = []
 
         seed_everything(self.webUI.args.random_seed)
+    
+    def set_user_profile_host_beta_updater(self):
+        self.beta_slider.bind_value(self.webUI.user_profile_host, 'weighted_axis_beta')
