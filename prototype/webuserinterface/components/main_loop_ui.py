@@ -106,4 +106,7 @@ class MainLoopUI(UIComponent):
         seed_everything(self.webUI.args.random_seed)
     
     def set_user_profile_host_beta_updater(self):
+        """
+        Sets the value binding of the beta_slider.
+        """
         self.beta_slider.bind_value(self.webUI.user_profile_host, 'beta')
