@@ -23,7 +23,7 @@ class UserProfileHost():
     use_latent_center = binding.BindableProperty()
     n_recommendations = binding.BindableProperty()
     ema_alpha = binding.BindableProperty()
-    weighted_axis_exploration_factor = binding.BindableProperty()   # TODO: rename to weighted_axis_beta @Henry
+    weighted_axis_beta = binding.BindableProperty()
     bo_beta = binding.BindableProperty()
     di_beta = binding.BindableProperty()
     di_beta_increase = binding.BindableProperty()
@@ -44,7 +44,7 @@ class UserProfileHost():
             use_latent_center: bool = False,
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
-            weighted_axis_exploration_factor: float = 0.,   # TODO: rename to weighted_axis_beta @Henry
+            weighted_axis_beta: float = 0.,
             bo_beta: float = 0.,
             di_beta: float = 0.,
             di_beta_increase: float = 0.3,
@@ -92,7 +92,7 @@ class UserProfileHost():
         self.n_recommendations = n_recommendations
         self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
-        self.weighted_axis_beta = weighted_axis_exploration_factor  # TODO: rename to weighted_axis_beta @Henry
+        self.weighted_axis_beta = weighted_axis_beta
         self.bo_beta = bo_beta
         self.di_beta = di_beta
         self.beta = 0.
