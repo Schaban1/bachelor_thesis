@@ -275,6 +275,7 @@ class UserProfileHost():
         :param rec_beta: The beta value to check and adjust.
         :return: A beta value clamped within the range [min, max].
         """
+        # TODO: (@Klara) Move this into the different recommender so they handle it themselfes?
         if (rec_beta is not None) and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
             self.beta = rec_beta
 
@@ -307,6 +308,8 @@ class UserProfileHost():
                 self.beta += 0.1
 
             self.beta = min(self.beta, 1.)
+        # TODO: (@Klara) simplification? Also, is 10 different steps all we want?
+        # self.beta = min(self.beta+0.1, 1.)
 
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
         """
@@ -336,10 +339,7 @@ class UserProfileHost():
         else:
             # Start initially with some random embeddings and take into account the bounds
             user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                      n_latent_axis=self.n_latent_axis,
-                                                      embedding_bounds=self.embedding_bounds,
-                                                      latent_bounds=self.latent_bounds).recommend_embeddings(None,
-                                                                                                             self.n_recommendations)
+                                                      n_latent_axis=self.n_latent_axis).recommend_embeddings(None, 50)
 
         # Safe the user_space_embeddings
         if self.embeddings is not None:
@@ -350,6 +350,10 @@ class UserProfileHost():
         # Transform embeddings from user_space to CLIP space
         clip_embeddings, latents = self.inv_transform(user_space_embeddings)
         return clip_embeddings, latents
+    
+    def generate_image_wall(self):
+        # TODO: (Paul) Is yet to be implemented!
+        return None
 
     def plotting_utils(self, algorithm: str = 'pca'):
         """
