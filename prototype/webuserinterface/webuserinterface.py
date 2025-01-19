@@ -156,14 +156,14 @@ class WebUI:
             self.main_loop_ui = MainLoopUI(self)
             LoadingSpinnerUI(self)
             self.plot_ui = PlotUI(self)
-            ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
+            ngUI.space().classes('w-full h-[calc(50vh)]')
             ngUI.html(webis_template_bottom).classes('w-full')
     
     def setup_root(self):
         """
         Setups the root element, where all the other UI elements will be placed.
         """
-        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif;')
+        self.root = ngUI.column().classes('w-full h-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif;')
         ngUI.add_head_html('''
         <style>
         .nicegui-content {
