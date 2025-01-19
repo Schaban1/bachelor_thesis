@@ -9,6 +9,8 @@ from .optimizer import *
 from ..constants import RecommendationType
 from diffusers import StableDiffusionPipeline
 
+from user_profile_host.utils import get_valid_beta, get_unnormalized_value
+
 
 class UserProfileHost():
     original_prompt = binding.BindableProperty()
@@ -29,6 +31,7 @@ class UserProfileHost():
     di_beta_increase = binding.BindableProperty()
     search_space_type = binding.BindableProperty()
 
+    # TODO: Group together Recommender Args and just pass them to the recommender, should simplyfy this arg list
     def __init__(
             self,
             original_prompt: str,
@@ -276,6 +279,8 @@ class UserProfileHost():
         :return: A beta value clamped within the range [min, max].
         """
         # TODO: (@Klara) Move this into the different recommender so they handle it themselfes?
+        # Or put differently: Shouldnt we just adapt the recommender to all work with a value betwenn 0 and 1? Than this could go
+        # and extensions would be easier
         if (rec_beta is not None) and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
             self.beta = rec_beta
 
