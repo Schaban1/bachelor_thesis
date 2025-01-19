@@ -89,7 +89,14 @@ class WebUI:
         self.blind_mode = False
 
         # Set UI root & load debug menu
-        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif')
+        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif;')
+        ngUI.add_head_html('''
+        <style>
+        .nicegui-content {
+            padding: 0;
+        }
+        </style>
+        ''')
         self.debug_menu = DebugMenu(self)
 
         self.keyboard = ngUI.keyboard(on_key=self.handle_key)
