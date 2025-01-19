@@ -89,14 +89,7 @@ class WebUI:
         self.blind_mode = False
 
         # Set UI root & load debug menu
-        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif;')
-        ngUI.add_head_html('''
-        <style>
-        .nicegui-content {
-            padding: 0;
-        }
-        </style>
-        ''')
+        self.setup_root()
         self.debug_menu = DebugMenu(self)
 
         self.keyboard = ngUI.keyboard(on_key=self.handle_key)
@@ -165,6 +158,19 @@ class WebUI:
             self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
+    
+    def setup_root(self):
+        """
+        Setups the root element, where all the other UI elements will be placed.
+        """
+        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif;')
+        ngUI.add_head_html('''
+        <style>
+        .nicegui-content {
+            padding: 0;
+        }
+        </style>
+        ''')
 
     # <--------------------------------->
     # <---------- Initialize other non-UI components ---------->
