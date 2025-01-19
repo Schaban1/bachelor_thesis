@@ -16,9 +16,11 @@ class InitialIterationUI(UIComponent):
         Builds the UI for the initial iteration state.
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_initial_iteration', value=True):
-            prompt_field = ngUI.input(label='Your prompt:', validation={'Please type in a prompt!': lambda value: len(value) > 0}) \
-                                .props("size=100 autofocus outlined rounded item-aligned") \
-                                .classes('self-center mt-24 transition-all') \
+            ngUI.label('Generate images using our system.').classes('mt-8').style('font-size: 200%; font-weight: bold;')
+            prompt_field = ngUI.input(placeholder='Type in your prompt', validation={'Please type in a prompt!': lambda value: len(value) > 0}) \
+                                .props("size=80 autofocus outlined rounded item-aligned") \
+                                .classes('self-center mt-2 transition-all') \
+                                .style('font-size: 16px;') \
                                 .bind_value(self.webUI, 'user_prompt')
             with prompt_field.add_slot("append"):
                 with ngUI.button(icon='more_vert').props('flat fab color=black'):
