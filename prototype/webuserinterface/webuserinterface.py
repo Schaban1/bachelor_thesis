@@ -65,6 +65,8 @@ class WebUI:
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
+        assert self.num_images_to_generate%2 == 0, "We need an even num images to generate (num_recommendations)!"
+
         self.score_mode = self.args.score_mode
         self.scorer = Scorer(self)
 
