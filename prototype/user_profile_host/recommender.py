@@ -174,6 +174,7 @@ class BayesianRecommender(Recommender):
         self.n_axis = n_embedding_axis + n_latent_axis
         self.n_points_per_axis = n_points_per_axis
         self.search_space_type = search_space_type
+        self.bounds = [0., 1.]
 
     def build_search_space(self):
         if self.search_space_type == 'dirichlet':
@@ -187,8 +188,8 @@ class BayesianRecommender(Recommender):
 
         elif self.search_space_type == 'linspace':
             # Build search space and filter for embeddings that are on a sphere in CLIP space
-            x_embed = torch.linspace(self.embedding_bounds[0], self.embedding_bounds[1], self.n_points_per_axis)
-            x_latent = torch.linspace(self.latent_bounds[0], self.latent_bounds[1], self.n_points_per_axis)
+            x_embed = torch.linspace(self.bounds[0], self.bounds[1], self.n_points_per_axis)
+            x_latent = torch.linspace(self.bounds[0], self.bounds[1], self.n_points_per_axis)
             vectors = torch.meshgrid([x_embed for i in range(self.n_embedding_axis - 1)] +
                                      [x_latent for i in range(self.n_latent_axis)], indexing='ij')
             vectors = [v.flatten() for v in vectors]
