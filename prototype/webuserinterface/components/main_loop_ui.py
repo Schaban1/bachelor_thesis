@@ -35,11 +35,11 @@ class MainLoopUI(UIComponent):
                     )).props('flat fab color=black')
             with ngUI.column().classes('mx-auto items-center'):
                 with ngUI.row().classes('w-full items-center justify-start').bind_visibility_from(self.webUI, 'blind_mode', value=False):
-                    ngUI.icon('settings_suggest', size='3rem').classes('mr-2')
-                    ngUI.label(self.webUI.recommendation_type).style('font-size: 150%;').bind_text_from(self.webUI, 'recommendation_type')
+                    ngUI.icon('settings_suggest', size='2rem').classes('mr-2')
+                    ngUI.label(self.webUI.recommendation_type).style('font-size: 120%;').bind_text_from(self.webUI, 'recommendation_type')
                 with ngUI.row().classes('w-full items-center justify-start'):
-                    ngUI.icon('description', size='3rem').classes('mr-2')
-                    ngUI.label(self.webUI.user_prompt).style('font-size: 150%;').bind_text_from(self.webUI, 'user_prompt')
+                    ngUI.icon('description', size='2rem').classes('mr-2')
+                    ngUI.label(self.webUI.user_prompt).style('font-size: 120%;').bind_text_from(self.webUI, 'user_prompt')
             with ngUI.row().classes('mx-auto items-center mt-4'):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
