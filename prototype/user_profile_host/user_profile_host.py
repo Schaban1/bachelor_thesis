@@ -9,7 +9,7 @@ from .optimizer import *
 from ..constants import RecommendationType
 from diffusers import StableDiffusionPipeline
 
-from user_profile_host.utils import get_valid_beta, get_unnormalized_value
+from .utils import get_valid_beta, get_unnormalized_value
 
 
 class UserProfileHost():
