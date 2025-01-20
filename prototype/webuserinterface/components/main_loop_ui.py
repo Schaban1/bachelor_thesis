@@ -53,7 +53,7 @@ class MainLoopUI(UIComponent):
                     ngUI.label('Exploration')
                     ngUI.space()
                     ngUI.label('Exploitation')
-                self.beta_slider = ngUI.slider(min=0., max=1., step=0.1)
+                self.beta_slider = ngUI.slider(min=0., max=1., step=0.01)
             ngUI.space()
             with ngUI.row().classes('w-full mt-8'):
                 ngUI.button('Restart process', icon='restart_alt', on_click=self.on_restart_process_button_click, color='red').style('font-weight: bold;').props('unelevated rounded')
@@ -117,4 +117,4 @@ class MainLoopUI(UIComponent):
         """
         Sets the value binding of the beta_slider.
         """
-        self.beta_slider.bind_value(self.webUI.user_profile_host, 'beta')
+        self.beta_slider.bind_value_from(self.webUI.user_profile_host, 'beta')

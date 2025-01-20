@@ -273,7 +273,9 @@ class WebUI:
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
+        Additionally, the beta is updated based on the slider on the UI.
         """
+        self.user_profile_host.beta = self.main_loop_ui.beta_slider.value
         normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
 
