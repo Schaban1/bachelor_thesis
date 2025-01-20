@@ -171,6 +171,9 @@ class UserProfileHost():
         else:
             self.num_axis = self.embedding_axis.shape[0]
 
+        # Generally required througout this programm
+        self.random_recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis)
+
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
             self.beta = self.bo_beta
@@ -254,6 +257,9 @@ class UserProfileHost():
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
+        
+        # TODO: Discuss checking for all zero preferences only here and keep the user profile on None if this
+        # is the case, leading to more random suggestions
         self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
     def clip_embedding(self, prompt: str):
@@ -315,7 +321,7 @@ class UserProfileHost():
 
             self.beta = min(self.beta, 1.)
         # TODO: (@Klara) simplification? Also, is 10 different steps all we want?
-        # self.beta = min(self.beta+0.1, 1.)
+        # self.beta = min(self.beta+self.beta_step_size, 1.)
 
     def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
         """
@@ -330,7 +336,6 @@ class UserProfileHost():
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
-
         # Generate recommendations in the user_space
         if ((self.user_profile is not None) and  # User profile is initialized
                 # if bayesian recommender: at least one non-zero preference
@@ -341,11 +346,14 @@ class UserProfileHost():
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
                                                                           n_recommendations=num_recommendations,
                                                                           beta=valid_beta)
+            
+            # Include some random user_space_embeddings througout each iteration
+            random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, 5)
+            user_space_embeddings = torch.cat(user_space_embeddings, random_user_space_embeddings)
             self.update_beta()
         else:
-            # Start initially with some random embeddings and take into account the bounds
-            user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                      n_latent_axis=self.n_latent_axis).recommend_embeddings(None, 50)
+            # Start initially with a lot of random embeddings to build a foundation for the user profile
+            user_space_embeddings = self.random_recommender.recommend_embeddings(None, 50)
 
         # Safe the user_space_embeddings
         if self.embeddings is not None:
