@@ -33,11 +33,13 @@ class MainLoopUI(UIComponent):
                         multi_line=True,
                         classes='multi-line-notification'
                     )).props('flat fab color=black')
-            with ngUI.row().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'blind_mode', value=False):
-                ngUI.icon('settings_suggest', size='3rem').classes('mr-2')
-                ngUI.label(self.webUI.recommendation_type).style('font-size: 150%;').bind_text_from(self.webUI, 'recommendation_type')
-            ngUI.label(f'Your initial prompt:').style('font-size: 150%; font-weight: bold;')
-            ngUI.label(self.webUI.user_prompt).style('font-size: 150%;').bind_text_from(self.webUI, 'user_prompt')
+            with ngUI.column().classes('mx-auto items-center'):
+                with ngUI.row().classes('w-full justify-start').bind_visibility_from(self.webUI, 'blind_mode', value=False):
+                    ngUI.icon('settings_suggest', size='3rem').classes('mr-2')
+                    ngUI.label(self.webUI.recommendation_type).style('font-size: 150%;').bind_text_from(self.webUI, 'recommendation_type')
+                with ngUI.row().classes('w-full justify-start wrap'):
+                    ngUI.icon('description', size='3rem').classes('mr-2')
+                    ngUI.label(self.webUI.user_prompt).style('font-size: 150%;').bind_text_from(self.webUI, 'user_prompt')
             with ngUI.row().classes('mx-auto items-center'):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
