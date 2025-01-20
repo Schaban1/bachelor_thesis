@@ -26,13 +26,15 @@ class InitialIterationUI(UIComponent):
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     recommendation_field = ngUI.select({t: t.value for t in RecommendationType}).props("size=80 borderless dense item-aligned").props('popup-content-class="max-w-[200px]"').bind_value(self.webUI, 'recommendation_type').bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     with prompt_field.add_slot("append"):
-                        with ngUI.button(icon='more_vert').props('flat fab color=black'):
-                            with ngUI.menu():
-                                ngUI.switch("Blind Mode").classes('mr-8').bind_value(self.webUI, "blind_mode")
+                        with ngUI.row().classes('p-0 gap-0'):
+                            ngUI.button(icon='start', on_click=self.on_generate_images_button_click).props('flat fab color=black').tooltip('Generate images')
+                            with ngUI.button(icon='more_vert').props('flat fab color=black'):
+                                with ngUI.menu():
+                                    ngUI.switch("Blind Mode").classes('mr-8').bind_value(self.webUI, "blind_mode")
                     with recommendation_field.add_slot("prepend"):
                         ngUI.icon('settings_suggest').classes('mr-2')
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
+            ngUI.button('Generate images', on_click=self.on_generate_images_button_click).style('font-weight: bold;').props('icon-right="start" color=grey-8')
     
     async def on_generate_images_button_click(self):
         """
