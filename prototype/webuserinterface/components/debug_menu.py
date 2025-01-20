@@ -70,7 +70,6 @@ class DebugMenu(ngUI.element):
                     ("use_latent_center", ngUI.checkbox('use_latent_center').style(self.checkbox_style)),
                     ("n_recommendations", ngUI.number(label="n_recommendations", min=0, precision=0, step=1).props(self.input_props)),
                     ("ema_alpha", ngUI.number(label="ema_alpha", min=0, step=0.01).props(self.input_props)),
-                    ("weighted_axis_exploration_factor", ngUI.number(label="weighted_axis_exploration_factor", min=0, step=0.01).props(self.input_props)),
                     ("beta", ngUI.number(label="beta", min=0, precision=2, step=.01).props(self.input_props)),
                     ("beta_step_size", ngUI.number(label="beta_step_size", min=0, precision=2, step=.01).props(self.input_props)),
                     ("search_space_type", ngUI.input(label="search_space_type").props(self.input_props)),
