@@ -17,7 +17,7 @@ class PlotUI(UIComponent):
         with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
                                                                                   value=True))):
             with ngUI.row().classes('w-full justify-start mb-8'):
-                ngUI.button('Back', icon='arrow_back', on_click=self.on_back_to_main_loop_button_click).style('font-weight: bold;').props('color=grey-8 unelevated rounded')
+                ngUI.button('Back', icon='arrow_back', on_click=self.on_back_to_main_loop_button_click).style('font-weight: bold;').props('color=secondary unelevated rounded')
             with ngUI.row().classes('mx-auto items-center'):
                 self.fig = go.Figure()
                 self.fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))

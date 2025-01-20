@@ -20,7 +20,7 @@ class MainLoopUI(UIComponent):
         ngUI.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
             with ngUI.row().classes('w-full justify-end'):
-                ngUI.button('Interactive plot', icon='o_scatter_plot', on_click=self.on_show_interactive_plot_button_click).style('font-weight: bold;').props('color=grey-8 unelevated rounded')
+                ngUI.button('Interactive plot', icon='o_scatter_plot', on_click=self.on_show_interactive_plot_button_click).style('font-weight: bold;').props('color=secondary unelevated rounded')
             with ngUI.row().classes('mx-auto items-center'):
                 ngUI.label('Please rate these images based on your satisfaction.').style('font-size: 200%;')
                 if self.webUI.score_mode == ScoreMode.EMOJI.value:
