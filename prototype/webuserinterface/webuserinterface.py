@@ -28,10 +28,12 @@ class WebUI:
     recommendation_type = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
     score_mode = binding.BindableProperty()
+    beta = binding.BindableProperty()
     image_display_width = binding.BindableProperty()
     image_display_height = binding.BindableProperty()
     active_image = binding.BindableProperty()
     save_path = binding.BindableProperty()
+    blind_mode = binding.BindableProperty()
 
     @classmethod
     async def create(cls, args):
@@ -69,6 +71,7 @@ class WebUI:
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
+        self.beta = -0.1 # Required for debugging purposes: <0 means beta is not used
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.init_generator)
 
@@ -82,6 +85,8 @@ class WebUI:
         # Image saving
         self.save_path = f"{self.args.path.images_save_dir}/{self.session_id}"
         self.num_images_saved = 0
+
+        self.blind_mode = False
 
         # Set UI root & load debug menu
         self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif')
@@ -122,7 +127,7 @@ class WebUI:
         """
         self.state = new_state
         self.update_state_variables()
-    
+
     def update_state_variables(self):
         """
         Updates the boolean state variables (used for component visibility) based on the current state of the web UI.
@@ -131,7 +136,7 @@ class WebUI:
         self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
         self.is_generating = self.state == WebUIState.GENERATING_STATE
         self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
-    
+
     # <------------------------------------>
     # <---------- Building UI ---------->
     def build_userinterface(self):
@@ -153,7 +158,7 @@ class WebUI:
             self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
             ngUI.html(webis_template_bottom).classes('w-full')
-    
+
     # <--------------------------------->
     # <---------- Initialize other non-UI components ---------->
     def init_generator(self):
@@ -185,8 +190,6 @@ class WebUI:
             **self.args.recommender
         )
 
-        self.generator.setup(self.user_prompt, self.args.random_seed)
-    
     # <------------------------------------------------------->
     # <---------- Keyboard controls ---------->
     def handle_key(self, e: KeyEventArguments):
@@ -209,7 +212,7 @@ class WebUI:
                 self.submit_button.run_method('click')
             if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
                 self.on_number_keystroke(e.key.number)
-    
+
     def update_active_image(self, idx=0):
         """
         Updates the active image and its visuals on the UI (currently only used in emoji ScoreMode).
@@ -222,7 +225,7 @@ class WebUI:
             self.images_display[self.active_image].style('border-color: lightgray')
             self.active_image = idx
             self.images_display[idx].style('border-color: red')
-    
+
     def on_number_keystroke(self, key):
         """
         Updates the score for the active image upon typing one of the valid number keys.
@@ -232,7 +235,7 @@ class WebUI:
         """
         self.scorer.scores_toggles[self.active_image].value = key - 1
         self.update_active_image(self.active_image + 1)
-    
+
     # <--------------------------------------->
     # <---------- Image generation & User profile ---------->
     def generate_images(self):
@@ -258,7 +261,7 @@ class WebUI:
         """
         normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
-    
+
     # <----------------------------------------------------->
     # <---------- Misc. ---------->
     def get_webis_demo_template_html(self):
