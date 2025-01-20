@@ -35,7 +35,7 @@ class InitialIterationUI(UIComponent):
                                     ngUI.switch("Blind Mode").classes('ml-2 mr-8').props('color=grey-8 checked-icon=visibility_off unchecked-icon=visibility').bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     self.recommendation_field = ngUI.select({t: t.value for t in RecommendationType}) \
-                                            .props('size=80 borderless dense item-aligned popup-content-class="max-w-[200px]"') \
+                                            .props('size=80 borderless dense item-aligned color=secondary popup-content-class="max-w-[200px]"') \
                                             .bind_value(self.webUI, 'recommendation_type') \
                                             .bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     with self.recommendation_field.add_slot("prepend"):
