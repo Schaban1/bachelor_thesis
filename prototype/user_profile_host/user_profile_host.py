@@ -170,7 +170,6 @@ class UserProfileHost():
 
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
-            self.beta = self.bo_beta
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
                                                    embedding_bounds=self.embedding_bounds,
@@ -178,14 +177,12 @@ class UserProfileHost():
                                                    search_space_type=self.search_space_type)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-            self.beta = self.weighted_axis_beta
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
                                                                   latent_bounds=self.latent_bounds)
             self.optimizer = WeightedSumOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
-            self.beta = self.weighted_axis_beta
             self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
                                                                   n_embedding_axis=self.n_embedding_axis,
                                                                   n_latent_axis=self.n_latent_axis,
@@ -193,12 +190,9 @@ class UserProfileHost():
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         elif self.recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                 n_latent_axis=self.n_latent_axis,
-                                                 embedding_bounds=self.embedding_bounds,
-                                                 latent_bounds=self.latent_bounds)
+                                                 n_latent_axis=self.n_latent_axis)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
-            self.beta = self.di_beta
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
