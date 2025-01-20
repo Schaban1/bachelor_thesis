@@ -5,8 +5,9 @@ from nicegui import binding
 import torch
 from PIL.Image import Image
 from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler, AutoencoderKL, AutoencoderTiny
-from streamdiffusion import StreamDiffusion
+#from streamdiffusion import StreamDiffusion
 from streamdiffusion.image_utils import postprocess_image
+from prototype.generator.stream_diffusion import StreamDiffusion
 import time
 
 class GeneratorBase(ABC):
@@ -77,6 +78,7 @@ class Generator(GeneratorBase):
             t_index_list=[0, 16, 32, 45],
             torch_dtype=torch.float16,
             cfg_type="none",
+            use_denoising_batch=False
         )
         self.stream.load_lcm_lora()
         self.stream.fuse_lora()
@@ -111,16 +113,6 @@ class Generator(GeneratorBase):
                                                          return_tensors="pt", ).to(self.pipe.text_encoder.device)
             self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
 
-    def setup(self, prompt: str, seed: int):
-        self.stream.prepare(prompt=prompt,
-                            negative_prompt=self.negative_prompt,
-                            guidance_scale=self.guidance_scale,
-                            num_inference_steps=self.num_inference_steps,
-                            seed=seed)
-        for _ in range(4):
-            self.stream()
-
-
     @torch.no_grad()
     def generate_image_stream(self, embeddings: Tensor | tuple[Tensor, Tensor], latents: Tensor = None) -> list[Image]:
         start = time.time()
@@ -142,14 +134,26 @@ class Generator(GeneratorBase):
 
         image_list = []
         for embedding, latent in zip(embeddings, latents):
-            embedding = embedding.repeat(self.stream.batch_size, 1, 1)
+            #embedding = embedding.repeat(self.stream.batch_size, 1, 1)
             latent = latent.unsqueeze(0)
 
-            self.stream.prompt_embeds = embedding
+            self.stream.prepare(
+                prompt_embed=embedding,
+                num_inference_steps=self.num_inference_steps,  # or your desired steps
+                guidance_scale=self.guidance_scale,  # or your desired CFG scale
+            )
+
+            # for _ in range(self.stream.batch_size - 1):
+            #     self.stream()
+
+            #self.stream.prompt_embeds = embedding
             x_0_pred_out = self.stream.predict_x0_batch(latent)
 
             x_output = self.stream.decode_image(x_0_pred_out).detach().clone()
             image_list += postprocess_image(x_output, output_type="pil")
+
+            #self.stream.x_t_latent_buffer = None
+            #self.stream.stock_noise = None
         print(f"generation done in {time.time() - start}")
         return image_list
 
@@ -227,6 +231,7 @@ if __name__ == "__main__":
                                    device=gen.pipe.device,
                                    num_images_per_prompt=1,
                                    do_classifier_free_guidance=False)[0]
+
     embed = embed.repeat(n_images, 1, 1)
     print(f"{embed.shape=}")
 

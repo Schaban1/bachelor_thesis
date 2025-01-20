@@ -259,16 +259,21 @@ class UserProfileHost():
         Embeds a given prompt using CLIP.
 
         Returns:
-            embedding (Tensor) : An embedding for the prompt in shape (1, 77, 768)
+            embedding (Tensor) : An embedding for the prompt in shape (77, 768)
         """
-        prompt_tokens = self.tokenizer(prompt,
-                                       padding="max_length",
-                                       max_length=self.tokenizer.model_max_length,
-                                       truncation=True,
-                                       return_tensors="pt", ).to(self.text_encoder.device)
+        # prompt_tokens = self.tokenizer(prompt,
+        #                                padding="max_length",
+        #                                max_length=self.tokenizer.model_max_length,
+        #                                truncation=True,
+        #                                return_tensors="pt", ).to(self.text_encoder.device)
+        #
+        # prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
+        prompt_embeds = self.stable_dif_pipe.encode_prompt(prompt,
+                                                          device=self.text_encoder.device,
+                                                          num_images_per_prompt=1,
+                                                          do_classifier_free_guidance=False)[0].cpu()
 
-        prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
-        return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
+        return prompt_embeds.squeeze()
 
     def obtain_valid_beta(self, rec_beta: float):
         """
