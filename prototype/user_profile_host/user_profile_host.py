@@ -282,7 +282,7 @@ class UserProfileHost():
             
             # Include some random user_space_embeddings througout each iteration
             random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
-            user_space_embeddings = torch.cat(user_space_embeddings, random_user_space_embeddings)
+            user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
 
             # Update Beta
             self.beta = min(self.beta+self.beta_step_size, 1.)
