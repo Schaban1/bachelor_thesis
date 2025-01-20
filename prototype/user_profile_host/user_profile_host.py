@@ -300,7 +300,7 @@ class UserProfileHost():
         clip_embeddings, latents = self.inv_transform(user_space_embeddings)
         return clip_embeddings, latents
     
-    def generate_image_wall(self):
+    def generate_image_grid(self):
         """
         This function creates a set of user embeddings for the creation of the image wall. In general, the 
         user profile in form of a weighted center is approximatly in the middle.
@@ -309,7 +309,7 @@ class UserProfileHost():
                 (-1, -0.677), (-1, -0.5), ...
         """
         # Calculate the PCA for current embeddings 
-        matrix = self.embeddings #TODO: Does it make sense to factorize the embeddings with their preferences here?
+        matrix = self.embeddings
         pca = PCA(n_components=2).fit(matrix)
 
         # Create a meshgrid in the 2D space
@@ -360,7 +360,7 @@ class UserProfileHost():
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile,
                                                           user_space=user_space).reshape(grid_x.shape)
 
-                return (grid_x, grid_y, scores), transformed_embeddings, self.preferences
+                return (low_d_user_space[:,0], low_d_user_space[:,1], scores), transformed_embeddings, self.preferences
 
             else:
                 matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
