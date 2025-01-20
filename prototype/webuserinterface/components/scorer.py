@@ -55,7 +55,7 @@ class Scorer:
         Args:
             idx: The index of the toggle object.
         """
-        self.scores_toggles[idx] = ngUI.toggle({0: '😢1', 1: '🙁2', 2: '😐3', 3: '😄4', 4: '😍5'}, value=0).props('rounded')
+        self.scores_toggles[idx] = ngUI.toggle({0: '😢1', 1: '🙁2', 2: '😐3', 3: '😄4', 4: '😍5'}, value=0).props('toggle-color=grey-8 rounded')
     
     def get_scores_slider(self):
         """
