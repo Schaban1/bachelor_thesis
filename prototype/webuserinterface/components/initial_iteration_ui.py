@@ -19,7 +19,7 @@ class InitialIterationUI(UIComponent):
             ngUI.label('Generate images using our system.').classes('mt-8').style('font-size: 200%; font-weight: bold;')
             with ngUI.card().classes('self-center no-box-shadow bg-grey-2 p-0 m-0 gap-0').style('border-radius: 30px;').tight():
                 with ngUI.column().classes('items-stretch p-0 gap-0'):
-                    prompt_field = ngUI.input(placeholder='Type in your prompt', validation={'Please type in a prompt!': lambda value: len(value) > 0}) \
+                    prompt_field = ngUI.input(placeholder='Type in your prompt') \
                                         .props("size=80 autofocus borderless dense item-aligned") \
                                         .style('font-size: 16px;') \
                                         .bind_value(self.webUI, 'user_prompt')
