@@ -28,7 +28,6 @@ class WebUI:
     recommendation_type = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
     score_mode = binding.BindableProperty()
-    beta = binding.BindableProperty()
     image_display_width = binding.BindableProperty()
     image_display_height = binding.BindableProperty()
     active_image = binding.BindableProperty()
@@ -71,7 +70,6 @@ class WebUI:
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        self.beta = -0.1 # Required for debugging purposes: <0 means beta is not used
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.init_generator)
 
@@ -243,7 +241,7 @@ class WebUI:
         images of the generator in self.images.
         """
         with self.queue_lock:
-            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate, beta=(self.beta if self.beta >= 0 else None))
+            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
             self.prev_images.extend(self.images)
 

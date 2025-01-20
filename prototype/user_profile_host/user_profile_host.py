@@ -9,8 +9,6 @@ from .optimizer import *
 from ..constants import RecommendationType
 from diffusers import StableDiffusionPipeline
 
-from .utils import get_valid_beta, get_unnormalized_value
-
 
 class UserProfileHost():
     original_prompt = binding.BindableProperty()
@@ -25,10 +23,8 @@ class UserProfileHost():
     use_latent_center = binding.BindableProperty()
     n_recommendations = binding.BindableProperty()
     ema_alpha = binding.BindableProperty()
-    weighted_axis_exploration_factor = binding.BindableProperty()   # TODO: rename to weighted_axis_beta @Henry
-    bo_beta = binding.BindableProperty()
-    di_beta = binding.BindableProperty()
-    di_beta_increase = binding.BindableProperty()
+    beta = binding.BindableProperty()
+    beta_step_size = binding.BindableProperty()
     search_space_type = binding.BindableProperty()
 
     # TODO: Group together Recommender Args and just pass them to the recommender, should simplyfy this arg list
@@ -47,10 +43,8 @@ class UserProfileHost():
             use_latent_center: bool = False,
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
-            weighted_axis_exploration_factor: float = 0.,   # TODO: rename to weighted_axis_beta @Henry
-            bo_beta: float = 0.,
-            di_beta: float = 0.,
-            di_beta_increase: float = 0.3,
+            beta: float = 0.,
+            beta_step_size: float = 0.1,
             search_space_type: str = 'dirichlet'
     ):
         """
@@ -95,13 +89,13 @@ class UserProfileHost():
         self.n_recommendations = n_recommendations
         self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
-        # TODO: All can go, only single variable beta-increase would suffice
-        self.weighted_axis_beta = weighted_axis_exploration_factor  # TODO: rename to weighted_axis_beta @Henry
-        self.bo_beta = bo_beta
-        self.di_beta = di_beta
-        self.beta = 0.
-        self.di_beta_increase = min(di_beta_increase, 0.4)  # avoid too high increase
+        self.beta = min(beta, 1.)
+        self.beta_step_size = beta_step_size
         self.search_space_type = search_space_type
+
+        # Check for valid values
+        assert self.beta >= 0., "Beta should be in range [0., 1.]"
+        assert self.beta_step_size >= 0. and self.beta_step_size < 1., "Beta Step Size should be in [0., 1.]"
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
@@ -257,9 +251,9 @@ class UserProfileHost():
         else:
             self.preferences = torch.cat((self.preferences, preferences))
         
-        # TODO: Discuss checking for all zero preferences only here and keep the user profile on None if this
-        # is the case, leading to more random suggestions
-        self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
+        # Only fit user profile if preferences are not all zero
+        if torch.count_nonzero(self.preferences) > 0:
+            self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
     def clip_embedding(self, prompt: str):
         """
@@ -277,52 +271,7 @@ class UserProfileHost():
         prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
         return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
 
-    def obtain_valid_beta(self, rec_beta: float):
-        """
-        If valid rec_beta is given, update self.beta.
-        Afterwards, compute the unnormalized beta value for the recommender.
-        :param rec_beta: The beta value to check and adjust.
-        :return: A beta value clamped within the range [min, max].
-        """
-        # TODO: (@Klara) Move this into the different recommender so they handle it themselfes?
-        # Or put differently: Shouldnt we just adapt the recommender to all work with a value betwenn 0 and 1? Than this could go
-        # and extensions would be easier
-        if (rec_beta is not None) and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
-            self.beta = rec_beta
-
-        # compute beta based on recommender types
-        if self.recommendation_type == RecommendationType.FUNCTION_BASED:
-            # here: big beta means more exploration, outside recommender: big beta means more exploitation
-            valid_beta = 1 - get_valid_beta(self.beta)  # beta in [0, 1]
-            return get_unnormalized_value(valid_beta, 20, 0)  # beta in [0, 20]
-
-        elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
-            # here: init beta=1, but outside recommender beta an element of [0, 1]
-            # hence: we have to multiply it by 10, minimal beta is 1
-            return max(1, 50 * get_valid_beta(self.beta))
-
-        elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-            return get_valid_beta(self.beta)
-
-        else:
-            return self.beta
-
-    def update_beta(self):
-        if self.beta < 1.:  # only increase beta (i.e. more exploitation) if it is not already 1
-            if self.recommendation_type == RecommendationType.FUNCTION_BASED:
-                self.beta += 0.1
-
-            elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
-                self.beta += self.di_beta_increase
-
-            elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-                self.beta += 0.1
-
-            self.beta = min(self.beta, 1.)
-        # TODO: (@Klara) simplification? Also, is 10 different steps all we want?
-        # self.beta = min(self.beta+self.beta_step_size, 1.)
-
-    def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
+    def generate_recommendations(self, num_recommendations: int = 1):
         """
         This function generates recommendations based on the previously fit user-profile.
 
@@ -336,23 +285,21 @@ class UserProfileHost():
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
         # Generate recommendations in the user_space
-        if ((self.user_profile is not None) and  # User profile is initialized
-                # if bayesian recommender: at least one non-zero preference
-                ((torch.count_nonzero(self.preferences) > 0) or
-                 self.recommendation_type != RecommendationType.FUNCTION_BASED)):
+        if self.user_profile is not None:
             # obtain beta from the recommender if not given
-            valid_beta = self.obtain_valid_beta(beta)
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
                                                                           n_recommendations=num_recommendations,
-                                                                          beta=valid_beta)
+                                                                          beta=self.beta)
             
             # Include some random user_space_embeddings througout each iteration
             random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, 5)
             user_space_embeddings = torch.cat(user_space_embeddings, random_user_space_embeddings)
-            self.update_beta()
+
+            # Update Beta
+            self.beta = min(self.beta+self.beta_step_size, 1.)
         else:
             # Start initially with a lot of random embeddings to build a foundation for the user profile
-            user_space_embeddings = self.random_recommender.recommend_embeddings(None, 50)
+            user_space_embeddings = self.random_recommender.recommend_embeddings(None, 25)
 
         # Safe the user_space_embeddings
         if self.embeddings is not None:

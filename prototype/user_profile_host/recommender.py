@@ -13,6 +13,8 @@ from botorch.models import SingleTaskGP
 
 import warnings
 
+from utils import get_unnormalized_value
+
 warnings.simplefilter("ignore", category=InputDataWarning)
 
 
@@ -122,9 +124,6 @@ class SinglePointWeightedAxesRecommender(Recommender):
         lower_sampling_ranges = self.bounds[0] - user_profile
         upper_sampling_ranges = self.bounds[1] - user_profile
 
-        # OLD: random weights for axes for each recommendation in bounds
-        # weights = torch.rand(size=(n_recommendations, self.n_axis))  # in [0, 1]
-
         alpha = torch.ones(self.n_axis)  # Concentration parameter (uniform)
         distribution = torch.distributions.dirichlet.Dirichlet(alpha)
         weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
@@ -159,8 +158,7 @@ class DirichletRecommender(Recommender):
             Must be in [0, 1]. 0 means full exploration, 1 means full exploitation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        # TODO: Rework the beta to span the intervall [1, 500] with [0, 1]
-        # beta = beta * 150 - 1
+        beta = get_unnormalized_value(beta, 1, 150)
         alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) * beta)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
@@ -249,8 +247,7 @@ class BayesianRecommender(Recommender):
             mll = fit_gpytorch_mll(mll)
 
             # Initialize the acquisition function
-            # TODO: Rework beta
-            # beta = 20 - (beta*20)
+            beta = 20 - get_unnormalized_value(beta, 0, 20)
             acqf = UpperConfidenceBound(model=model, beta=beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
@@ -304,8 +301,7 @@ class BayesianRecommender(Recommender):
         mll = fit_gpytorch_mll(mll)
 
         # Initialize the acquisition function
-        # TODO: Same rework as above required
-        # beta = 20 - beta*20
+        beta = 20 - get_unnormalized_value(beta, 0, 20)
         acqf = UpperConfidenceBound(model=model, beta=beta, maximize=True)
 
         # Get the highest scoring candidates out of meshgrid

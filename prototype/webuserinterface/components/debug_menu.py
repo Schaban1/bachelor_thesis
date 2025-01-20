@@ -36,7 +36,6 @@ class DebugMenu(ngUI.element):
                     ngUI.select({t: t.value for t in RecommendationType}, label='recommendation_type').props(self.input_props).bind_value(self.webUI, 'recommendation_type')
                     ngUI.number(label="num_images_to_generate", min=0, precision=0, step=1, on_change=self.webUI.reload_userinterface).props(self.input_props).bind_value(self.webUI, 'num_images_to_generate', forward=int)
                     ngUI.select({m.value: m.value for m in ScoreMode}, label='score_mode', on_change=self.webUI.reload_userinterface).style("width: 100px;").props(self.input_props).bind_value(self.webUI, 'score_mode')
-                    ngUI.number(label="beta", min=-0.1, max=1.0, precision=1, step=0.1).props(self.input_props).bind_value(self.webUI, 'beta', forward=float)
                     ngUI.number(label="image_display_width", min=0, precision=0, step=1, on_change=self.webUI.reload_userinterface).props(self.input_props).bind_value(self.webUI, 'image_display_width', forward=int)
                     ngUI.number(label="image_display_height", min=0, precision=0, step=1, on_change=self.webUI.reload_userinterface).props(self.input_props).bind_value(self.webUI, 'image_display_height', forward=int)
                     ngUI.number(label="active_image", min=0, precision=0, step=1).props(self.input_props).bind_value(self.webUI, 'active_image', forward=int)
@@ -72,9 +71,8 @@ class DebugMenu(ngUI.element):
                     ("n_recommendations", ngUI.number(label="n_recommendations", min=0, precision=0, step=1).props(self.input_props)),
                     ("ema_alpha", ngUI.number(label="ema_alpha", min=0, step=0.01).props(self.input_props)),
                     ("weighted_axis_exploration_factor", ngUI.number(label="weighted_axis_exploration_factor", min=0, step=0.01).props(self.input_props)),
-                    ("bo_beta", ngUI.number(label="bo_beta", min=0, precision=0, step=1).props(self.input_props)),
-                    ("di_beta", ngUI.number(label="di_beta", min=0, precision=0, step=1).props(self.input_props)),
-                    ("di_beta_increase", ngUI.number(label="di_beta_increase", min=0, precision=0, step=1).props(self.input_props)),
+                    ("beta", ngUI.number(label="beta", min=0, precision=2, step=.01).props(self.input_props)),
+                    ("beta_step_size", ngUI.number(label="beta_step_size", min=0, precision=2, step=.01).props(self.input_props)),
                     ("search_space_type", ngUI.input(label="search_space_type").props(self.input_props)),
                     ]
         self.toggle_visibility()
