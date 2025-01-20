@@ -18,7 +18,7 @@ class InitialIterationUI(UIComponent):
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_initial_iteration', value=True):
             ngUI.label('Generate images using our system.').classes('mt-8').style('font-size: 200%; font-weight: bold;')
             with ngUI.card() \
-                        .classes('self-center no-box-shadow bg-grey-2 p-0 m-0 gap-0') \
+                        .classes('self-center no-box-shadow bg-grey-3 p-0 m-0 mt-4 gap-0') \
                         .style('border-radius: 30px;') \
                         .tight():
                 with ngUI.column().classes('items-stretch p-0 gap-0'):
@@ -32,7 +32,7 @@ class InitialIterationUI(UIComponent):
                             ngUI.button(icon='start', on_click=self.on_generate_images_button_click).props('flat fab color=black').tooltip('Generate images')
                             with ngUI.button(icon='more_vert').props('flat fab color=black'):
                                 with ngUI.menu():
-                                    ngUI.switch("Blind Mode").classes('mr-8').bind_value(self.webUI, "blind_mode")
+                                    ngUI.switch("Blind Mode").classes('ml-2 mr-8').bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     self.recommendation_field = ngUI.select({t: t.value for t in RecommendationType}) \
                                             .props('size=80 borderless dense item-aligned popup-content-class="max-w-[200px]"') \
