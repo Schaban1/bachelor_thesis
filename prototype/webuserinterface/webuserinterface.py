@@ -152,11 +152,12 @@ class WebUI:
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
+            ngUI.space().classes('w-full h-full')
             InitialIterationUI(self)
             self.main_loop_ui = MainLoopUI(self)
             LoadingSpinnerUI(self)
             self.plot_ui = PlotUI(self)
-            ngUI.space().classes('w-full h-[calc(50vh)]')
+            ngUI.space().classes('w-full h-full')
             ngUI.html(webis_template_bottom).classes('w-full')
     
     def setup_root(self):
@@ -171,6 +172,8 @@ class WebUI:
         }
         </style>
         ''')
+        ngUI.query('.nicegui-content').classes('w-full')
+        ngUI.query('.q-page').classes('flex')
 
     # <--------------------------------->
     # <---------- Initialize other non-UI components ---------->
