@@ -22,25 +22,26 @@ class InitialIterationUI(UIComponent):
                         .style('border-radius: 30px;') \
                         .tight():
                 with ngUI.column().classes('items-stretch p-0 gap-0'):
-                    prompt_field = ngUI.input(placeholder='Type in your prompt') \
+                    self.prompt_field = ngUI.input(placeholder='Type in your prompt') \
                                         .props("size=80 autofocus borderless dense item-aligned") \
                                         .style('font-size: 16px;') \
-                                        .bind_value(self.webUI, 'user_prompt')
-                    with prompt_field.add_slot("append"):
+                                        .bind_value(self.webUI, 'user_prompt') \
+                                        .on('keypress.enter', self.on_generate_images_button_click)
+                    with self.prompt_field.add_slot("append"):
                         with ngUI.row().classes('p-0 gap-0'):
                             ngUI.button(icon='start', on_click=self.on_generate_images_button_click).props('flat fab color=black').tooltip('Generate images')
                             with ngUI.button(icon='more_vert').props('flat fab color=black'):
                                 with ngUI.menu():
                                     ngUI.switch("Blind Mode").classes('mr-8').bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
-                    recommendation_field = ngUI.select({t: t.value for t in RecommendationType}) \
+                    self.recommendation_field = ngUI.select({t: t.value for t in RecommendationType}) \
                                             .props('size=80 borderless dense item-aligned popup-content-class="max-w-[200px]"') \
                                             .bind_value(self.webUI, 'recommendation_type') \
                                             .bind_visibility_from(self.webUI, 'blind_mode', value=False)
-                    with recommendation_field.add_slot("prepend"):
+                    with self.recommendation_field.add_slot("prepend"):
                         ngUI.icon('settings_suggest').classes('mr-2')
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.button('Generate images', on_click=self.on_generate_images_button_click).style('font-weight: bold;').props('icon-right="start" color=grey-8')
+            self.generate_button = ngUI.button('Generate images', on_click=self.on_generate_images_button_click).style('font-weight: bold;').props('icon-right="start" color=grey-8')
     
     async def on_generate_images_button_click(self):
         """
