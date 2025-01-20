@@ -34,7 +34,7 @@ class MainLoopUI(UIComponent):
                         classes='multi-line-notification'
                     )).props('flat fab color=black')
             with ngUI.row().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'blind_mode', value=False):
-                ngUI.label(f'Your selected recommendation type:').style('font-size: 150%; font-weight: bold;')
+                ngUI.icon('settings_suggest', size='3rem').classes('mr-2')
                 ngUI.label(self.webUI.recommendation_type).style('font-size: 150%;').bind_text_from(self.webUI, 'recommendation_type')
             ngUI.label(f'Your initial prompt:').style('font-size: 150%; font-weight: bold;')
             ngUI.label(self.webUI.user_prompt).style('font-size: 150%;').bind_text_from(self.webUI, 'user_prompt')
