@@ -100,10 +100,10 @@ class SinglePointWeightedAxesRecommender(Recommender):
         # Define bounds for search space
         self.bounds = torch.tensor([
             # lower bounds (1, n_axis)
-            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.bounds[0] for i in
+            [self.bounds[0] for i in range(self.n_embedding_axis)] + [self.bounds[0] for i in
                                                                                 range(self.n_latent_axis)],
             # upper bounds (1, n_axis)
-            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.bounds[1] for i in
+            [self.bounds[1] for i in range(self.n_embedding_axis)] + [self.bounds[1] for i in
                                                                                 range(self.n_latent_axis)]
         ])
 
