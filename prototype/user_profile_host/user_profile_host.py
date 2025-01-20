@@ -23,12 +23,11 @@ class UserProfileHost():
     use_latent_center = binding.BindableProperty()
     n_recommendations = binding.BindableProperty()
     ema_alpha = binding.BindableProperty()
-    weighted_axis_beta = binding.BindableProperty()
-    bo_beta = binding.BindableProperty()
-    di_beta = binding.BindableProperty()
-    di_beta_increase = binding.BindableProperty()
+    beta = binding.BindableProperty()
+    beta_step_size = binding.BindableProperty()
     search_space_type = binding.BindableProperty()
 
+    # TODO: Group together Recommender Args and just pass them to the recommender, should simplyfy this arg list
     def __init__(
             self,
             original_prompt: str,
@@ -44,10 +43,8 @@ class UserProfileHost():
             use_latent_center: bool = False,
             n_recommendations: int = 5,
             ema_alpha: float = 0.5,
-            weighted_axis_beta: float = 0.,
-            bo_beta: float = 0.,
-            di_beta: float = 0.,
-            di_beta_increase: float = 0.3,
+            beta: float = 0.,
+            beta_step_size: float = 0.1,
             search_space_type: str = 'dirichlet'
     ):
         """
@@ -92,12 +89,13 @@ class UserProfileHost():
         self.n_recommendations = n_recommendations
         self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
-        self.weighted_axis_beta = weighted_axis_beta
-        self.bo_beta = bo_beta
-        self.di_beta = di_beta
-        self.beta = 0.
-        self.di_beta_increase = min(di_beta_increase, 0.4)  # avoid too high increase
+        self.beta = min(beta, 1.)
+        self.beta_step_size = beta_step_size
         self.search_space_type = search_space_type
+
+        # Check for valid values
+        assert self.beta >= 0., "Beta should be in range [0., 1.]"
+        assert self.beta_step_size >= 0. and self.beta_step_size < 1., "Beta Step Size should be in [0., 1.]"
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
@@ -167,40 +165,31 @@ class UserProfileHost():
         else:
             self.num_axis = self.embedding_axis.shape[0]
 
+        # Generally required througout this programm
+        self.random_recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis)
+
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
-            self.beta = self.bo_beta
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis,
-                                                   embedding_bounds=self.embedding_bounds,
-                                                   latent_bounds=self.latent_bounds,
                                                    search_space_type=self.search_space_type)
             self.optimizer = NoOptimizer()
+            #TODO: Remove use of bound ares as they are not really variable anymore (fixed to [0., 1.])
         elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-            self.beta = self.weighted_axis_beta
-            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
-                                                                  n_embedding_axis=self.n_embedding_axis,
-                                                                  n_latent_axis=self.n_latent_axis,
-                                                                  latent_bounds=self.latent_bounds)
+            self.recommender = SinglePointWeightedAxesRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                                  n_latent_axis=self.n_latent_axis)
             self.optimizer = WeightedSumOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
-            self.beta = self.weighted_axis_beta
-            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
-                                                                  n_embedding_axis=self.n_embedding_axis,
-                                                                  n_latent_axis=self.n_latent_axis,
-                                                                  latent_bounds=self.latent_bounds)
+            self.recommender = SinglePointWeightedAxesRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                                  n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         elif self.recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                 n_latent_axis=self.n_latent_axis,
-                                                 embedding_bounds=self.embedding_bounds,
-                                                 latent_bounds=self.latent_bounds)
+                                                 n_latent_axis=self.n_latent_axis)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
-            self.beta = self.di_beta
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                    n_latent_axis=self.n_latent_axis,
-                                                    increase_beta=self.di_beta_increase)
+                                                    n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
@@ -250,7 +239,10 @@ class UserProfileHost():
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
-        self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
+        
+        # Only fit user profile if preferences are not all zero
+        if torch.count_nonzero(self.preferences) > 0:
+            self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
     def clip_embedding(self, prompt: str):
         """
@@ -268,47 +260,7 @@ class UserProfileHost():
         prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
         return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
 
-    def obtain_valid_beta(self, rec_beta: float):
-        """
-        If valid rec_beta is given, update self.beta.
-        Afterwards, compute the unnormalized beta value for the recommender.
-        :param rec_beta: The beta value to check and adjust.
-        :return: A beta value clamped within the range [min, max].
-        """
-        if (rec_beta is not None) and (rec_beta >= 0) and (rec_beta <= 1):  # new beta from debug menu
-            self.beta = rec_beta
-
-        # compute beta based on recommender types
-        if self.recommendation_type == RecommendationType.FUNCTION_BASED:
-            # here: big beta means more exploration, outside recommender: big beta means more exploitation
-            valid_beta = 1 - get_valid_beta(self.beta)  # beta in [0, 1]
-            return get_unnormalized_value(valid_beta, 20, 0)  # beta in [0, 20]
-
-        elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
-            # here: init beta=1, but outside recommender beta an element of [0, 1]
-            # hence: we have to multiply it by 10, minimal beta is 1
-            return max(1, 50 * get_valid_beta(self.beta))
-
-        elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-            return get_valid_beta(self.beta)
-
-        else:
-            return self.beta
-
-    def update_beta(self):
-        if self.beta < 1.:  # only increase beta (i.e. more exploitation) if it is not already 1
-            if self.recommendation_type == RecommendationType.FUNCTION_BASED:
-                self.beta += 0.1
-
-            elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
-                self.beta += self.di_beta_increase
-
-            elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-                self.beta += 0.1
-
-            self.beta = min(self.beta, 1.)
-
-    def generate_recommendations(self, num_recommendations: int = 1, beta: float = None):
+    def generate_recommendations(self, num_recommendations: int = 2):
         """
         This function generates recommendations based on the previously fit user-profile.
 
@@ -321,25 +273,22 @@ class UserProfileHost():
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
-
         # Generate recommendations in the user_space
-        if ((self.user_profile is not None) and  # User profile is initialized
-                # if bayesian recommender: at least one non-zero preference
-                ((torch.count_nonzero(self.preferences) > 0) or
-                 self.recommendation_type != RecommendationType.FUNCTION_BASED)):
+        if self.user_profile is not None:
             # obtain beta from the recommender if not given
-            valid_beta = self.obtain_valid_beta(beta)
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                                          n_recommendations=num_recommendations,
-                                                                          beta=valid_beta)
-            self.update_beta()
+                                                                          n_recommendations=num_recommendations//2,
+                                                                          beta=self.beta)
+            
+            # Include some random user_space_embeddings througout each iteration
+            random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
+            user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
+
+            # Update Beta
+            self.beta = min(self.beta+self.beta_step_size, 1.)
         else:
-            # Start initially with some random embeddings and take into account the bounds
-            user_space_embeddings = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                      n_latent_axis=self.n_latent_axis,
-                                                      embedding_bounds=self.embedding_bounds,
-                                                      latent_bounds=self.latent_bounds).recommend_embeddings(None,
-                                                                                                             self.n_recommendations)
+            # Start initially with a lot of random embeddings to build a foundation for the user profile
+            user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations)
 
         # Safe the user_space_embeddings
         if self.embeddings is not None:
@@ -350,8 +299,33 @@ class UserProfileHost():
         # Transform embeddings from user_space to CLIP space
         clip_embeddings, latents = self.inv_transform(user_space_embeddings)
         return clip_embeddings, latents
+    
+    def generate_image_grid(self):
+        """
+        This function creates a set of user embeddings for the creation of the image wall. In general, the 
+        user profile in form of a weighted center is approximatly in the middle.
+        Returns:
+            Meshgrid (Tensor) : A meshgrid of samples going from lower left to upper right column-wise. So (-1, -1)
+                (-1, -0.677), (-1, -0.5), ...
+        """
+        # Calculate the PCA for current embeddings 
+        matrix = self.embeddings
+        pca = PCA(n_components=2).fit(matrix)
+
+        # Create a meshgrid in the 2D space
+        grid_x = torch.linspace(-1, 1, 7)
+        grid_y = torch.linspace(-1, 1, 7)
+        grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')
+        grid_xy = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
+
+        # Retransform back into User-Space
+        grid_xy_re = pca.inverse_transform(grid_xy)
+
+        # Return the grid to be plottet
+        return grid_xy_re
 
     def plotting_utils(self, algorithm: str = 'pca'):
+        # TODO: Discuss removing tsne as it has no backwards compatibility
         """
         This function creates a reduction of the user embeddings into a two-dimensional space, so we can plot the
         embedding space and the respective images in our application.
@@ -380,12 +354,13 @@ class UserProfileHost():
                 # Retrieve scores for heatmap (function-based recommender)
                 grid_x = torch.linspace(-1, 1, 200)
                 grid_y = torch.linspace(-1, 1, 200)
+                grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
                 user_space = pca.inverse_transform(low_d_user_space).float()
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile,
                                                           user_space=user_space).reshape(grid_x.shape)
 
-                return (grid_x, grid_y, scores), transformed_embeddings, self.preferences
+                return (low_d_user_space[:,0], low_d_user_space[:,1], scores), transformed_embeddings, self.preferences
 
             else:
                 matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
