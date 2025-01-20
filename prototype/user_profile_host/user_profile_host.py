@@ -95,6 +95,7 @@ class UserProfileHost():
         self.n_recommendations = n_recommendations
         self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
+        # TODO: All can go, only single variable beta-increase would suffice
         self.weighted_axis_beta = weighted_axis_exploration_factor  # TODO: rename to weighted_axis_beta @Henry
         self.bo_beta = bo_beta
         self.di_beta = di_beta
@@ -357,10 +358,31 @@ class UserProfileHost():
         return clip_embeddings, latents
     
     def generate_image_wall(self):
-        # TODO: (Paul) Is yet to be implemented!
-        return None
+        """
+        This function creates a set of user embeddings for the creation of the image wall. In general, the 
+        user profile in form of a weighted center is approximatly in the middle.
+        Returns:
+            Meshgrid (Tensor) : A meshgrid of samples going from lower left to upper right column-wise. So (-1, -1)
+                (-1, -0.677), (-1, -0.5), ...
+        """
+        # Calculate the PCA for current embeddings 
+        matrix = self.embeddings #TODO: Does it make sense to factorize the embeddings with their preferences here?
+        pca = PCA(n_components=2).fit(matrix)
+
+        # Create a meshgrid in the 2D space
+        grid_x = torch.linspace(-1, 1, 7)
+        grid_y = torch.linspace(-1, 1, 7)
+        grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')
+        grid_xy = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
+
+        # Retransform back into User-Space
+        grid_xy_re = pca.inverse_transform(grid_xy)
+
+        # Return the grid to be plottet
+        return grid_xy_re
 
     def plotting_utils(self, algorithm: str = 'pca'):
+        # TODO: Discuss removing tsne as it has no backwards compatibility
         """
         This function creates a reduction of the user embeddings into a two-dimensional space, so we can plot the
         embedding space and the respective images in our application.
@@ -389,6 +411,7 @@ class UserProfileHost():
                 # Retrieve scores for heatmap (function-based recommender)
                 grid_x = torch.linspace(-1, 1, 200)
                 grid_y = torch.linspace(-1, 1, 200)
+                grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
                 user_space = pca.inverse_transform(low_d_user_space).float()
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile,

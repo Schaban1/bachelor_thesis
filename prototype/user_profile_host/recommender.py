@@ -160,6 +160,7 @@ class DirichletRecommender(Recommender):
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
         # TODO: Rework the beta to span the intervall [1, 500] with [0, 1]
+        # beta = beta * 150 - 1
         alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) * beta)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
@@ -248,7 +249,9 @@ class BayesianRecommender(Recommender):
             mll = fit_gpytorch_mll(mll)
 
             # Initialize the acquisition function
-            acqf = UpperConfidenceBound(model=model, beta=np.exp(beta).item(), maximize=True)
+            # TODO: Rework beta
+            # beta = 20 - (beta*20)
+            acqf = UpperConfidenceBound(model=model, beta=beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
             scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
@@ -301,7 +304,9 @@ class BayesianRecommender(Recommender):
         mll = fit_gpytorch_mll(mll)
 
         # Initialize the acquisition function
-        acqf = UpperConfidenceBound(model=model, beta=np.exp(beta).item(), maximize=True)
+        # TODO: Same rework as above required
+        # beta = 20 - beta*20
+        acqf = UpperConfidenceBound(model=model, beta=beta, maximize=True)
 
         # Get the highest scoring candidates out of meshgrid
         scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1])).detach()
