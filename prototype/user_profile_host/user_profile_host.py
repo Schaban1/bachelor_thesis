@@ -264,7 +264,7 @@ class UserProfileHost():
         prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
         return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
 
-    def generate_recommendations(self, num_recommendations: int = 1):
+    def generate_recommendations(self, num_recommendations: int = 2):
         """
         This function generates recommendations based on the previously fit user-profile.
 
@@ -281,18 +281,18 @@ class UserProfileHost():
         if self.user_profile is not None:
             # obtain beta from the recommender if not given
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                                          n_recommendations=num_recommendations,
+                                                                          n_recommendations=num_recommendations//2,
                                                                           beta=self.beta)
             
             # Include some random user_space_embeddings througout each iteration
-            random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, 5)
+            random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
             user_space_embeddings = torch.cat(user_space_embeddings, random_user_space_embeddings)
 
             # Update Beta
             self.beta = min(self.beta+self.beta_step_size, 1.)
         else:
             # Start initially with a lot of random embeddings to build a foundation for the user profile
-            user_space_embeddings = self.random_recommender.recommend_embeddings(None, 25)
+            user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations)
 
         # Safe the user_space_embeddings
         if self.embeddings is not None:
