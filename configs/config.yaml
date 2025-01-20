@@ -24,7 +24,6 @@ recommender:
   use_embedding_center : False
   n_latent_axis : 13
   use_latent_center : False
-  weighted_axis_beta : 0.5
   ema_alpha : 0.5
   search_space_type : dirichlet
   beta: 0.1
