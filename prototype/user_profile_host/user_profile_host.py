@@ -206,8 +206,7 @@ class UserProfileHost():
         elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
             self.beta = self.di_beta
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                    n_latent_axis=self.n_latent_axis,
-                                                    increase_beta=self.di_beta_increase)
+                                                    n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
