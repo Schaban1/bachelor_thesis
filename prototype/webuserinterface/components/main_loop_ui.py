@@ -49,10 +49,12 @@ class MainLoopUI(UIComponent):
                         self.webUI.scorer.build_scorer(i)
             ngUI.space()
             with ngUI.column().classes('w-full'):
-                with ngUI.row().classes('w-full'):
+                with ngUI.row().classes('w-full items-center'):
+                    ngUI.icon('explore')
                     ngUI.label('Exploration')
                     ngUI.space()
                     ngUI.label('Exploitation')
+                    ngUI.icon('emoji_events')
                 self.beta_slider = ngUI.slider(min=0., max=1., step=0.01)
             ngUI.space()
             with ngUI.row().classes('w-full mt-8'):
