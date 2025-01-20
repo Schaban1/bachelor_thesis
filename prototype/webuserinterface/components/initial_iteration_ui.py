@@ -41,7 +41,7 @@ class InitialIterationUI(UIComponent):
                     with self.recommendation_field.add_slot("prepend"):
                         ngUI.icon('settings_suggest').classes('mr-2')
             ngUI.space().classes('w-full h-[2vh]')
-            self.generate_button = ngUI.button('Generate images', on_click=self.on_generate_images_button_click).style('font-weight: bold;').props('icon-right="start" color=grey-8')
+            self.generate_button = ngUI.button('Generate images', on_click=self.on_generate_images_button_click).style('font-weight: bold;').props('icon-right="start" color=grey-8 unelevated rounded')
     
     async def on_generate_images_button_click(self):
         """
