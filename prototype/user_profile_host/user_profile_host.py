@@ -176,16 +176,12 @@ class UserProfileHost():
             self.optimizer = NoOptimizer()
             #TODO: Remove use of bound ares as they are not really variable anymore (fixed to [0., 1.])
         elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
-                                                                  n_embedding_axis=self.n_embedding_axis,
-                                                                  n_latent_axis=self.n_latent_axis,
-                                                                  latent_bounds=self.latent_bounds)
+            self.recommender = SinglePointWeightedAxesRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                                  n_latent_axis=self.n_latent_axis)
             self.optimizer = WeightedSumOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
-            self.recommender = SinglePointWeightedAxesRecommender(embedding_bounds=self.embedding_bounds,
-                                                                  n_embedding_axis=self.n_embedding_axis,
-                                                                  n_latent_axis=self.n_latent_axis,
-                                                                  latent_bounds=self.latent_bounds)
+            self.recommender = SinglePointWeightedAxesRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                                  n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         elif self.recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,

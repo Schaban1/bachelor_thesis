@@ -84,7 +84,7 @@ class RandomRecommender(Recommender):
 
 class SinglePointWeightedAxesRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis: int, n_latent_axis: int, embedding_bounds=(0., 1.), latent_bounds=(0., 1.)):
+    def __init__(self, n_embedding_axis: int, n_latent_axis: int):
         """
         :param n_embedding_axis: Number of axes in the embedding space.
         :param n_latent_axis: Number of axes in the latent space.
@@ -95,16 +95,15 @@ class SinglePointWeightedAxesRecommender(Recommender):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
-        self.embedding_bounds = embedding_bounds
-        self.latent_bounds = latent_bounds
+        self.bounds = (0., 1.)
 
         # Define bounds for search space
         self.bounds = torch.tensor([
             # lower bounds (1, n_axis)
-            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in
+            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.bounds[0] for i in
                                                                                 range(self.n_latent_axis)],
             # upper bounds (1, n_axis)
-            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in
+            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.bounds[1] for i in
                                                                                 range(self.n_latent_axis)]
         ])
 
