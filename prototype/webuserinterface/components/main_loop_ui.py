@@ -19,7 +19,7 @@ class MainLoopUI(UIComponent):
         """
         ngUI.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
-            with ngUI.row().classes('w-full justify-end'):
+            with ngUI.row().classes('w-full justify-end mb-8'):
                 ngUI.button('Interactive plot', icon='o_scatter_plot', on_click=self.on_show_interactive_plot_button_click).style('font-weight: bold;').props('color=secondary unelevated rounded')
             with ngUI.row().classes('mx-auto items-center'):
                 ngUI.label('Please rate these images based on your satisfaction.').style('font-size: 200%;')
@@ -53,9 +53,10 @@ class MainLoopUI(UIComponent):
                     ngUI.label('Exploitation')
                 self.beta_slider = ngUI.slider(min=0., max=1., step=0.1)
             ngUI.space()
-            self.webUI.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click).style('font-weight: bold;').props('icon-right="navigate_next" color=grey-8 unelevated rounded')
-            with ngUI.row().classes('w-full justify-end'):
+            with ngUI.row().classes('w-full mt-8'):
                 ngUI.button('Restart process', icon='restart_alt', on_click=self.on_restart_process_button_click, color='red').style('font-weight: bold;').props('unelevated rounded')
+                ngUI.space()
+                self.webUI.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click).style('font-weight: bold;').props('icon-right="navigate_next" color=grey-8 unelevated rounded')
     
     def on_show_interactive_plot_button_click(self):
         """
