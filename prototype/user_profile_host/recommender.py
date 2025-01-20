@@ -13,7 +13,7 @@ from botorch.models import SingleTaskGP
 
 import warnings
 
-from utils import get_unnormalized_value
+from .utils import get_unnormalized_value
 
 warnings.simplefilter("ignore", category=InputDataWarning)
 
