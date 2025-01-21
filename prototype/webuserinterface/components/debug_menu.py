@@ -81,7 +81,8 @@ class DebugMenu(ngUI.element):
         """
         for attribute, ui_element in self.up_info:
             ui_element.bind_value(self.webUI.user_profile_host, attribute)
-            ui_element.on_value_change(self.webUI.user_profile_host.load_user_profile_host)
+            if attribute not in ["beta", "beta_step_size"]:
+                ui_element.on_value_change(self.webUI.user_profile_host.load_user_profile_host)
     
     def toggle_visibility(self):
         """
