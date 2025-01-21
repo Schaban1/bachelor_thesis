@@ -29,10 +29,15 @@ class InitialIterationUI(UIComponent):
                                         .on('keypress.enter', self.on_generate_images_button_click)
                     with self.prompt_field.add_slot("append"):
                         with ngUI.row().classes('p-0 gap-0'):
-                            ngUI.button(icon='start', on_click=self.on_generate_images_button_click).props('flat fab color=black').tooltip('Generate images')
+                            ngUI.button(icon='start', on_click=self.on_generate_images_button_click) \
+                                .props('flat fab color=black') \
+                                .tooltip('Generate images')
                             with ngUI.button(icon='more_vert').props('flat fab color=black'):
                                 with ngUI.menu():
-                                    ngUI.switch("Blind Mode").classes('ml-2 mr-8').props('color=grey-8 checked-icon=visibility_off unchecked-icon=visibility').bind_value(self.webUI, "blind_mode")
+                                    ngUI.switch("Blind Mode") \
+                                        .classes('ml-2 mr-8') \
+                                        .props('color=grey-8 checked-icon=visibility_off unchecked-icon=visibility') \
+                                        .bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     self.recommendation_field = ngUI.select({t: t.value for t in RecommendationType}) \
                                             .props('size=80 borderless dense item-aligned color=secondary popup-content-class="max-w-[200px]"') \
@@ -41,7 +46,9 @@ class InitialIterationUI(UIComponent):
                     with self.recommendation_field.add_slot("prepend"):
                         ngUI.icon('settings_suggest').classes('mr-2')
             ngUI.space().classes('w-full h-[2vh]')
-            self.generate_button = ngUI.button('Generate images', on_click=self.on_generate_images_button_click).style('font-weight: bold;').props('icon-right="start" color=grey-8 unelevated rounded')
+            self.generate_button = ngUI.button('Generate images', on_click=self.on_generate_images_button_click) \
+                                        .style('font-weight: bold;') \
+                                        .props('icon-right="start" color=grey-8 unelevated rounded')
     
     async def on_generate_images_button_click(self):
         """
