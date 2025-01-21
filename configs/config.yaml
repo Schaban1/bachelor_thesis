@@ -5,7 +5,7 @@ defaults:
 
 num_recommendations : 8
 port: 8080
-reconnect_timeout: 10
+reconnect_timeout: 30
 score_mode: emoji
 device: cuda
 image_display_size : [256, 256]
