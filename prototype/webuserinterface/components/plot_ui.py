@@ -15,7 +15,9 @@ class PlotUI(UIComponent):
         """
         Builds the UI for the interactive plot state.
         """
-        print('Building interactive plot UI...')
+        if self.webUI.user_profile_host is None:
+            return
+
         with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
                                                                                   value=True))):
             with ngUI.row().classes('w-full justify-start mb-8'):
@@ -27,13 +29,6 @@ class PlotUI(UIComponent):
                 self.plot.on('plotly_click', self.on_plot_click)
 
                 self.clicked_image = ngUI.image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
-
-            if self.webUI.user_profile_host is not None and self.webUI.user_profile_host.user_profile is not None:
-                self.user_profile, self.embeddings, self.preferences = self.webUI.user_profile_host.plotting_utils()
-                self.preferences = self.preferences * 4
-                self.preferences = self.preferences.tolist()
-                ngUI.separator()
-                self.build_image_grid()
 
     def build_image_grid(self):
         """
@@ -66,14 +61,17 @@ class PlotUI(UIComponent):
         """
         Updates the figure with the new embeddings.
         """
-        print('Updating plot...')
+        if self.webUI.user_profile_host is None:
+            return
+
+        user_profile, embeddings, _ = self.webUI.user_profile_host.plotting_utils()
         self.fig.data = []
         self.clicked_image.set_source(None)
 
-        if self.user_profile is not None and len(self.user_profile) == 3:  # Heatmap for function-based recommender
-            fig = self.create_contour_plot(self.user_profile, self.embeddings)
+        if user_profile is not None and len(user_profile) == 3:  # Heatmap for function-based recommender
+            fig = self.create_contour_plot(user_profile, embeddings)
         else:
-            fig = self.create_scatter_plot(self.user_profile, self.embeddings)
+            fig = self.create_scatter_plot(user_profile, embeddings)
 
         self.plot.update_figure(fig)
 

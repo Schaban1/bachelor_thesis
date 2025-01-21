@@ -352,7 +352,9 @@ class UserProfileHost():
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
                 user_space = pca.inverse_transform(low_d_user_space).float()
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile,
-                                                          user_space=user_space).reshape(grid_x.shape)
+                                                          user_space=user_space)
+                if scores is not None:
+                    scores = scores.reshape(grid_x.shape)
 
                 return (low_d_user_space[:,0], low_d_user_space[:,1], scores), transformed_embeddings, self.preferences
 
