@@ -13,7 +13,7 @@ from botorch.models import SingleTaskGP
 
 import warnings
 
-from prototype.user_profile_host.utils import get_valid_beta, get_unnormalized_value
+from .utils import get_unnormalized_value
 
 warnings.simplefilter("ignore", category=InputDataWarning)
 
@@ -62,12 +62,10 @@ class Recommender(ABC):  # ABC = Abstract Base Class
 
 class RandomRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.)):
+    def __init__(self, n_embedding_axis, n_latent_axis):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
-        self.embedding_bounds = embedding_bounds
-        self.latent_bounds = latent_bounds
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
@@ -81,19 +79,12 @@ class RandomRecommender(Recommender):
         alpha = torch.ones(self.n_axis)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         random_user_embeddings = dist.sample(sample_shape=(n_recommendations,))
-
-        # If latent bounds are negative, allow for them to be negative
-        if self.latent_bounds[0] < 0.:
-            factor = torch.cat((torch.ones(n_recommendations, self.n_embedding_axis),
-                                (torch.randint(low=0, high=2, size=(n_recommendations, self.n_latent_axis)) * 2 - 1)),
-                               dim=1)
-            random_user_embeddings = random_user_embeddings * factor
         return random_user_embeddings
 
 
 class SinglePointWeightedAxesRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis: int, n_latent_axis: int, embedding_bounds=(0., 1.), latent_bounds=(0., 1.)):
+    def __init__(self, n_embedding_axis: int, n_latent_axis: int):
         """
         :param n_embedding_axis: Number of axes in the embedding space.
         :param n_latent_axis: Number of axes in the latent space.
@@ -104,16 +95,15 @@ class SinglePointWeightedAxesRecommender(Recommender):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
-        self.embedding_bounds = embedding_bounds
-        self.latent_bounds = latent_bounds
+        self.bounds = (0., 1.)
 
         # Define bounds for search space
         self.bounds = torch.tensor([
             # lower bounds (1, n_axis)
-            [self.embedding_bounds[0] for i in range(self.n_embedding_axis)] + [self.latent_bounds[0] for i in
+            [self.bounds[0] for i in range(self.n_embedding_axis)] + [self.bounds[0] for i in
                                                                                 range(self.n_latent_axis)],
             # upper bounds (1, n_axis)
-            [self.embedding_bounds[1] for i in range(self.n_embedding_axis)] + [self.latent_bounds[1] for i in
+            [self.bounds[1] for i in range(self.n_embedding_axis)] + [self.bounds[1] for i in
                                                                                 range(self.n_latent_axis)]
         ])
 
@@ -133,9 +123,6 @@ class SinglePointWeightedAxesRecommender(Recommender):
         lower_sampling_ranges = self.bounds[0] - user_profile
         upper_sampling_ranges = self.bounds[1] - user_profile
 
-        # OLD: random weights for axes for each recommendation in bounds
-        # weights = torch.rand(size=(n_recommendations, self.n_axis))  # in [0, 1]
-
         alpha = torch.ones(self.n_axis)  # Concentration parameter (uniform)
         distribution = torch.distributions.dirichlet.Dirichlet(alpha)
         weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
@@ -150,20 +137,15 @@ class SinglePointWeightedAxesRecommender(Recommender):
 
 class DirichletRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis, n_latent_axis, increase_beta: float = 0.3):
+    def __init__(self, n_embedding_axis, n_latent_axis):
         """
         Initializes the Dirichlet Recommender.
         :param n_embedding_axis: Number of embedding axes (i.e. derived from prompt).
         :param n_latent_axis: Number of latent axes (i.e. 'noise').
-        :param beta: Trade-off between exploration and exploitation. Higher beta means more exploitation.
-            Must be in [0, 1]. If not in [0, 1], it is set to the 0 (if < 0) or 1 (if > 1).
-        :param increase_beta: Amount by which beta is increased after each recommendation. Must be in [0, 1].
-            If > 1, it is multiplied by 0.1 (please don't use values > 99).
         """
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
-        self.increase_beta = max(increase_beta, 0.) if increase_beta < 1. else increase_beta * 0.1
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = 0) -> Tensor:
         """
@@ -175,8 +157,8 @@ class DirichletRecommender(Recommender):
             Must be in [0, 1]. 0 means full exploration, 1 means full exploitation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
+        beta = get_unnormalized_value(beta, 1, 150)
         alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) * beta)
-
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
 
@@ -185,53 +167,20 @@ class DirichletRecommender(Recommender):
 
 class BayesianRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis, n_latent_axis, embedding_bounds=(0., 1.), latent_bounds=(-1., 1.),
-                 n_points_per_axis: int = 3, search_space_type: str = 'dirichlet'):
+    def __init__(self, n_embedding_axis, n_latent_axis, n_points_per_axis: int = 3):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
-        self.embedding_bounds = embedding_bounds
-        self.latent_bounds = latent_bounds
-        self.cand_indices = []
-        self.reduce_exploration = True
         self.n_points_per_axis = n_points_per_axis
-        self.search_space_type = search_space_type
+        self.bounds = [0., 1.]
 
     def build_search_space(self):
-        if self.search_space_type == 'dirichlet':
-            n_samples = min(max(self.n_axis * 5 ** (self.n_axis // 2), 1000), 500000)
-            alpha = torch.ones(self.n_axis)
-            dist = torch.distributions.dirichlet.Dirichlet(alpha)
-            factor = torch.cat((torch.ones(n_samples, self.n_embedding_axis),
-                                (torch.randint(low=0, high=2, size=(n_samples, self.n_latent_axis)) * 2 - 1)), dim=1)
-            search_space = dist.sample(sample_shape=(n_samples,)) * factor
-            return search_space
+        n_samples = min(max(self.n_axis * 5 ** (self.n_axis // 2), 1000), 500000)
+        alpha = torch.ones(self.n_axis)
+        dist = torch.distributions.dirichlet.Dirichlet(alpha)
+        search_space = dist.sample(sample_shape=(n_samples,))
+        return search_space
 
-        elif self.search_space_type == 'linspace':
-            # Build search space and filter for embeddings that are on a sphere in CLIP space
-            x_embed = torch.linspace(self.embedding_bounds[0], self.embedding_bounds[1], self.n_points_per_axis)
-            x_latent = torch.linspace(self.latent_bounds[0], self.latent_bounds[1], self.n_points_per_axis)
-            vectors = torch.meshgrid([x_embed for i in range(self.n_embedding_axis - 1)] +
-                                     [x_latent for i in range(self.n_latent_axis)], indexing='ij')
-            vectors = [v.flatten() for v in vectors]
-            embed_grid = torch.stack(vectors[:self.n_embedding_axis - 1], dim=1)
-            latent_grid = torch.stack(vectors[self.n_embedding_axis - 1:], dim=1)
-            embed_grid_sum = torch.sum(embed_grid, dim=1)
-
-            # Mask out the points where x + y > 1 to ensure they lie on the plane x + y + z = 1
-            mask = embed_grid_sum <= 1
-
-            # Get the corresponding z values
-            final_embed_vector = 1 - embed_grid_sum
-
-            # Apply the mask to filter out points outside the region 0 <= x + y + z <= 1
-            embed_grid = embed_grid[mask]
-            latent_grid = latent_grid[mask]
-            final_embed_vector = final_embed_vector[mask]
-            search_space = torch.cat((embed_grid, final_embed_vector.reshape(-1, 1), latent_grid), dim=-1)
-            return search_space
-        else:
-            raise NotImplementedError('Invalid Search Space.')
 
     def recommend_embeddings(self, user_profile: Tensor = None, n_recommendations: int = 5,
                              beta: float = 0.) -> Tensor:
@@ -269,7 +218,8 @@ class BayesianRecommender(Recommender):
             mll = fit_gpytorch_mll(mll)
 
             # Initialize the acquisition function
-            acqf = UpperConfidenceBound(model=model, beta=np.exp(beta).item(), maximize=True)
+            beta = 20 - get_unnormalized_value(beta, 0, 20)
+            acqf = UpperConfidenceBound(model=model, beta=beta, maximize=True)
 
             # Get the highest scoring candidates out of meshgrid
             scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
@@ -322,7 +272,8 @@ class BayesianRecommender(Recommender):
         mll = fit_gpytorch_mll(mll)
 
         # Initialize the acquisition function
-        acqf = UpperConfidenceBound(model=model, beta=np.exp(beta).item(), maximize=True)
+        beta = 20 - get_unnormalized_value(beta, 0, 20)
+        acqf = UpperConfidenceBound(model=model, beta=beta, maximize=True)
 
         # Get the highest scoring candidates out of meshgrid
         scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1])).detach()

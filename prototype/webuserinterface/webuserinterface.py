@@ -2,7 +2,6 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from nicegui.events import KeyEventArguments
 from PIL import Image
-import torch
 import asyncio
 import threading
 import secrets
@@ -28,7 +27,6 @@ class WebUI:
     recommendation_type = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
     score_mode = binding.BindableProperty()
-    beta = binding.BindableProperty()
     image_display_width = binding.BindableProperty()
     image_display_height = binding.BindableProperty()
     active_image = binding.BindableProperty()
@@ -66,12 +64,13 @@ class WebUI:
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
+        assert self.num_images_to_generate%2 == 0, "We need an even num images to generate (num_recommendations)!"
+
         self.score_mode = self.args.score_mode
         self.scorer = Scorer(self)
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        self.beta = -0.1 # Required for debugging purposes: <0 means beta is not used
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.init_generator)
 
