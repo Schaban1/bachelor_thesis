@@ -1,6 +1,5 @@
 from nicegui import ui as ngUI
 import plotly.graph_objects as go
-import torch
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 from prototype.constants import WebUIState, RecommendationType
@@ -47,7 +46,6 @@ class PlotUI(UIComponent):
         """
         images = self.webUI.prev_images
         preferences.extend([None] * self.webUI.num_images_to_generate)  # Latest images not rated yet
-        print(f'preferences: {preferences}')
 
         ngUI.label('Your generation history:').style('font-size: 150%; font-weight: bold;')
         with ngUI.grid(columns=5):

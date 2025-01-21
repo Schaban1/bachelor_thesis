@@ -99,6 +99,9 @@ class UserProfileHost():
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
 
+        # Holds previous low dimensional user profiles
+        self.user_profile_history = []
+
         # Bounds remain fixed to 0., 1. for simplicity
         self.embedding_bounds = [0., 1.]
         self.latent_bounds = [0., 1.]
@@ -236,6 +239,7 @@ class UserProfileHost():
         
         # Only fit user profile if preferences are not all zero
         if torch.count_nonzero(self.preferences) > 0:
+            self.user_profile_history.append(self.user_profile)
             self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
     def clip_embedding(self, prompt: str):
@@ -378,6 +382,7 @@ class UserProfileHost():
                     return None, transformed_embeddings, self.preferences
 
                 else:
+                    print(f'User profile history: {self.user_profile_history}')
                     low_d_user_profile = transformed_embeddings[0]
                     low_d_embeddings = transformed_embeddings[1:]
                     return low_d_user_profile, low_d_embeddings, self.preferences
