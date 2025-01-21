@@ -130,7 +130,7 @@ class UserProfileHost():
         if not self.add_ons:
             data = []
             # https://stackoverflow.com/questions/12451431/loading-and-parsing-a-json-file-with-multiple-json-objects
-            with open('add_ons.json') as f:
+            with open('/prototype/user_profile_host/add_ons.json') as f:
                 for line in f:
                     data.append(json.loads(line))
 
