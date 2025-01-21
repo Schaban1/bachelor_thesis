@@ -48,7 +48,7 @@ class MainLoopUI(UIComponent):
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.webUI.scorer.build_scorer(i)
             ngUI.space()
-            with ngUI.column().classes('w-full'):
+            with ngUI.column().classes('w-full m-8'):
                 with ngUI.row().classes('w-full items-center'):
                     ngUI.icon('explore')
                     ngUI.label('Exploration')
@@ -59,7 +59,7 @@ class MainLoopUI(UIComponent):
                 if self.webUI.user_profile_host is not None:
                     self.set_user_profile_host_beta_updater()
             ngUI.space()
-            with ngUI.row().classes('w-full mt-8'):
+            with ngUI.row().classes('w-full'):
                 ngUI.button('Restart process', icon='restart_alt', on_click=self.on_restart_process_button_click, color='red').style('font-weight: bold;').props('unelevated rounded')
                 ngUI.space()
                 self.webUI.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click).style('font-weight: bold;').props('icon-right="navigate_next" color=grey-8 unelevated rounded')
