@@ -94,7 +94,7 @@ class UserProfileHost():
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
-        self.preferences = None
+        self.preferences = torch.tensor([])
 
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
@@ -229,7 +229,7 @@ class UserProfileHost():
             user_profile (Variable) : The fitted user profile depending on the optimizer.
         """
         # Initialize or extend the available user related data 
-        if self.preferences is None:
+        if len(self.preferences) == 0:
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))

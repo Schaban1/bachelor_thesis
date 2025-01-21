@@ -1,5 +1,6 @@
 from nicegui import ui as ngUI
 import plotly.graph_objects as go
+import torch
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 from prototype.constants import WebUIState, RecommendationType
@@ -34,16 +35,23 @@ class PlotUI(UIComponent):
                 self.clicked_image = ngUI.image().style(
                     f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
 
-    def build_image_grid(self):
+            ngUI.separator()
+            preferences = self.webUI.user_profile_host.preferences
+            preferences = (preferences * 4).tolist()
+            ngUI.separator()
+            self.build_image_grid(preferences)
+
+    def build_image_grid(self, preferences):
         """
         Displays all previous generated images in a wall.
         """
         images = self.webUI.prev_images
-        self.preferences.extend([None] * self.webUI.num_images_to_generate)  # Latest images not rated yet
+        preferences.extend([None] * self.webUI.num_images_to_generate)  # Latest images not rated yet
+        print(f'preferences: {preferences}')
 
         ngUI.label('Your generation history:').style('font-size: 150%; font-weight: bold;')
-        with ngUI.grid(columns=self.webUI.num_images_to_generate):
-            for img, pref in zip(images[::-1], self.preferences[::-1]):
+        with ngUI.grid(columns=5):
+            for img, pref in zip(images[::-1], preferences[::-1]):
                 with ngUI.row().classes('mx-auto items-center'):
                     with ngUI.image(img).style(
                             f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;'):
