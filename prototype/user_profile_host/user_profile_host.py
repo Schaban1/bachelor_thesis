@@ -63,7 +63,7 @@ class UserProfileHost():
         :param n_recommendations: Number of recommendations to be generated each iteration.
         :param ema_alpha: Used for an exponential moving average to update the user profile.
             Factor for the exponential moving average. Higher values give more weight to recent recommendations.
-        :param weighted_axis_exploration_factor: Used for the weighted axes recommender. 0 -> high exploration, 1 -> high exploitation  # TODO: rename to weighted_axis_beta @Henry
+        :param weighted_axis_beta: Used for the weighted axes recommender. 0 -> high exploration, 1 -> high exploitation
         :param bo_beta: initial beta for BayesianRecommender
         :param di_beta: initial beta for DirichletRecommender
         :param di_beta_increase: increase beta by this amount after each iteration (DirichletRecommender)
@@ -84,7 +84,6 @@ class UserProfileHost():
         self.use_embedding_center = use_embedding_center
         self.use_latent_center = use_latent_center
         self.n_recommendations = n_recommendations
-        self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size

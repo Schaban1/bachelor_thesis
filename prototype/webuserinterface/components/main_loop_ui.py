@@ -18,9 +18,9 @@ class MainLoopUI(UIComponent):
         Builds the UI for the main loop iteration state.
         """
         ngUI.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
-        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
-            with ngUI.row().classes('w-full justify-end'):
-                ngUI.button('Interactive plot', on_click=self.on_show_interactive_plot_button_click)
+        with ngUI.column().classes('mx-auto items-center pl-24 pr-24').bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
+            with ngUI.row().classes('w-full justify-end mb-8'):
+                ngUI.button('Interactive plot', icon='o_scatter_plot', on_click=self.on_show_interactive_plot_button_click).style('font-weight: bold;').props('color=secondary unelevated rounded')
             with ngUI.row().classes('mx-auto items-center'):
                 ngUI.label('Please rate these images based on your satisfaction.').style('font-size: 200%;')
                 if self.webUI.score_mode == ScoreMode.EMOJI.value:
@@ -33,12 +33,14 @@ class MainLoopUI(UIComponent):
                         multi_line=True,
                         classes='multi-line-notification'
                     )).props('flat fab color=black')
-            with ngUI.row().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'blind_mode', value=False):
-                ngUI.label(f'Your selected recommendation type:').style('font-size: 150%; font-weight: bold;')
-                ngUI.label(self.webUI.recommendation_type).style('font-size: 150%;').bind_text_from(self.webUI, 'recommendation_type')
-            ngUI.label(f'Your initial prompt:').style('font-size: 150%; font-weight: bold;')
-            ngUI.label(self.webUI.user_prompt).style('font-size: 150%;').bind_text_from(self.webUI, 'user_prompt')
-            with ngUI.row().classes('mx-auto items-center'):
+            with ngUI.column().classes('mx-auto items-center'):
+                with ngUI.row().classes('w-full items-center justify-start').bind_visibility_from(self.webUI, 'blind_mode', value=False):
+                    ngUI.icon('settings_suggest', size='2rem').classes('mr-2')
+                    ngUI.label(self.webUI.recommendation_type).style('font-size: 120%;').bind_text_from(self.webUI, 'recommendation_type')
+                with ngUI.row().classes('w-full items-center justify-start'):
+                    ngUI.icon('subject', size='2rem').classes('mr-2')
+                    ngUI.label(self.webUI.user_prompt).style('font-size: 120%;').bind_text_from(self.webUI, 'user_prompt')
+            with ngUI.row().classes('mx-auto items-center mt-4'):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
                         self.webUI.images_display[i] = ngUI.interactive_image(self.webUI.images[i]).style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
@@ -46,9 +48,21 @@ class MainLoopUI(UIComponent):
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.webUI.scorer.build_scorer(i)
             ngUI.space()
-            self.webUI.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click)
-            with ngUI.row().classes('w-full justify-end'):
-                ngUI.button('Restart process', on_click=self.on_restart_process_button_click, color='red')
+            with ngUI.column().classes('w-full m-8'):
+                with ngUI.row().classes('w-full items-center'):
+                    ngUI.icon('explore')
+                    ngUI.label('Exploration')
+                    ngUI.space()
+                    ngUI.label('Exploitation')
+                    ngUI.icon('emoji_events')
+                self.beta_slider = ngUI.slider(min=0, max=1, step=0.01).props('color=secondary label')
+                if self.webUI.user_profile_host is not None:
+                    self.set_user_profile_host_beta_updater()
+            ngUI.space()
+            with ngUI.row().classes('w-full'):
+                ngUI.button('Restart process', icon='restart_alt', on_click=self.on_restart_process_button_click, color='red').style('font-weight: bold;').props('unelevated rounded')
+                ngUI.space()
+                self.webUI.submit_button = ngUI.button('Submit scores', on_click=self.on_submit_scores_button_click).style('font-weight: bold;').props('icon-right="navigate_next" color=grey-8 unelevated rounded')
     
     def on_show_interactive_plot_button_click(self):
         """
@@ -102,3 +116,9 @@ class MainLoopUI(UIComponent):
         self.webUI.prev_images = []
 
         seed_everything(self.webUI.args.random_seed)
+    
+    def set_user_profile_host_beta_updater(self):
+        """
+        Sets the value binding of the beta_slider.
+        """
+        self.beta_slider.bind_value(self.webUI.user_profile_host, 'beta', backward=lambda x: round(x, 2))
