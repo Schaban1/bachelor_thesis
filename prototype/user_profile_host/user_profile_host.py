@@ -25,7 +25,6 @@ class UserProfileHost():
     ema_alpha = binding.BindableProperty()
     beta = binding.BindableProperty()
     beta_step_size = binding.BindableProperty()
-    search_space_type = binding.BindableProperty()
 
     # TODO: Group together Recommender Args and just pass them to the recommender, should simplyfy this arg list
     def __init__(
@@ -45,7 +44,6 @@ class UserProfileHost():
             ema_alpha: float = 0.5,
             beta: float = 0.,
             beta_step_size: float = 0.1,
-            search_space_type: str = 'dirichlet'
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -69,7 +67,6 @@ class UserProfileHost():
         :param bo_beta: initial beta for BayesianRecommender
         :param di_beta: initial beta for DirichletRecommender
         :param di_beta_increase: increase beta by this amount after each iteration (DirichletRecommender)
-        :param search_space_type: describes the search space; must be 'dirichlet' or 'linspace'
         """
         # Some Clip Hyperparameters
         self.original_prompt = original_prompt
@@ -91,7 +88,6 @@ class UserProfileHost():
         self.ema_alpha = ema_alpha
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
-        self.search_space_type = search_space_type
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
@@ -171,8 +167,7 @@ class UserProfileHost():
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                   n_latent_axis=self.n_latent_axis,
-                                                   search_space_type=self.search_space_type)
+                                                   n_latent_axis=self.n_latent_axis)
             self.optimizer = NoOptimizer()
             #TODO: Remove use of bound ares as they are not really variable anymore (fixed to [0., 1.])
         elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
