@@ -263,13 +263,6 @@ class WebUI:
             self.images = self.generator.generate_image(embeddings, latents)
             self.prev_images.extend(self.images)
 
-    def update_image_displays(self):
-        """
-        Updates the image displays with the current images in self.images.
-        """
-        [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
-        self.reload_userinterface()
-
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
