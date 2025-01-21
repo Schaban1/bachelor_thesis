@@ -38,7 +38,7 @@ class MainLoopUI(UIComponent):
                     ngUI.icon('settings_suggest', size='2rem').classes('mr-2')
                     ngUI.label(self.webUI.recommendation_type).style('font-size: 120%;').bind_text_from(self.webUI, 'recommendation_type')
                 with ngUI.row().classes('w-full items-center justify-start'):
-                    ngUI.icon('description', size='2rem').classes('mr-2')
+                    ngUI.icon('subject', size='2rem').classes('mr-2')
                     ngUI.label(self.webUI.user_prompt).style('font-size: 120%;').bind_text_from(self.webUI, 'user_prompt')
             with ngUI.row().classes('mx-auto items-center mt-4'):
                 for i in range(self.webUI.num_images_to_generate):
