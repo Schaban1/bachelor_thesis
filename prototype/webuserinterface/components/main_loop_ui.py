@@ -98,7 +98,7 @@ class MainLoopUI(UIComponent):
         ngUI.notify('Generating new images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
-        self.webUI.update_image_displays()
+        await loop.run_in_executor(None, self.webUI.update_image_displays)
         self.webUI.scorer.reset_scorers()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.update_active_image()
