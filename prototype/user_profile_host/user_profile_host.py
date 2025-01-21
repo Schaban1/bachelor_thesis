@@ -84,7 +84,6 @@ class UserProfileHost():
         self.use_embedding_center = use_embedding_center
         self.use_latent_center = use_latent_center
         self.n_recommendations = n_recommendations
-        self.recommendation_type = recommendation_type
         self.ema_alpha = ema_alpha
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
