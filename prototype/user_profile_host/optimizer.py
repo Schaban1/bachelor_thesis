@@ -57,8 +57,8 @@ class WeightedSumOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        if torch.count_nonzero(preferences) == 0:  # if only zeros in preferences, black images are generated
-            user_profile = torch.rand(size=(embeddings.shape[1],))  # fix: return a random user profile
+        if torch.count_nonzero(preferences) == 0:
+            user_profile = None  # This will trigger the random recommender in embeddings
         else:
             user_profile = (preferences.reshape(-1) @ embeddings) / preferences.sum()
         return user_profile
@@ -66,7 +66,7 @@ class WeightedSumOptimizer:
 
 class EMAWeightedSumOptimizer:
 
-    def __init__(self, n_recommendations: int = 5, alpha: int = 0.2):
+    def __init__(self, n_recommendations: int = 5, alpha: float = 0.2):
         """
         Initialize the EMAWeightedSumOptimizer. This optimizer uses an exponential moving average to update the user profile.
         :param n_recommendations: Number of recommendations to be considered recent each iteration.
@@ -84,7 +84,7 @@ class EMAWeightedSumOptimizer:
         # If this is the first optimization step, just create a new user profile based on current embeddings
         if user_profile == None:
             if torch.count_nonzero(preferences) == 0:
-                user_profile = torch.rand(size=(embeddings.shape[1],))
+                user_profile = None  # This will trigger the random recommender in embeddings
             else:
                 user_profile = (preferences.reshape(-1) @ embeddings) / preferences.sum()
         else:

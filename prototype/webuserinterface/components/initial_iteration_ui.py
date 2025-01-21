@@ -1,5 +1,6 @@
 from nicegui import ui as ngUI
 import asyncio
+import random
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 from prototype.constants import RecommendationType, WebUIState
@@ -15,11 +16,40 @@ class InitialIterationUI(UIComponent):
         Builds the UI for the initial iteration state.
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_initial_iteration', value=True):
-            ngUI.input(label='Your prompt:', validation={'Please type in a prompt!': lambda value: len(value) > 0}).props("size=100").bind_value(self.webUI, 'user_prompt')
+            ngUI.label('Generate images using our system.').classes('mt-8').style('font-size: 200%; font-weight: bold;')
+            with ngUI.card() \
+                        .classes('self-center no-box-shadow bg-grey-3 p-0 m-0 mt-4 gap-0') \
+                        .style('border-radius: 30px;') \
+                        .tight():
+                with ngUI.column().classes('items-stretch p-0 gap-0'):
+                    self.prompt_field = ngUI.input(placeholder='Type in your prompt') \
+                                        .props("size=80 autofocus borderless dense item-aligned") \
+                                        .style('font-size: 16px;') \
+                                        .bind_value(self.webUI, 'user_prompt') \
+                                        .on('keypress.enter', self.on_generate_images_button_click)
+                    with self.prompt_field.add_slot("append"):
+                        with ngUI.row().classes('p-0 gap-0'):
+                            ngUI.button(icon='start', on_click=self.on_generate_images_button_click) \
+                                .props('flat fab color=black') \
+                                .tooltip('Generate images')
+                            with ngUI.button(icon='more_vert').props('flat fab color=black'):
+                                with ngUI.menu():
+                                    ngUI.switch("Blind Mode") \
+                                        .classes('ml-2 mr-8') \
+                                        .props('color=grey-8 checked-icon=visibility_off unchecked-icon=visibility') \
+                                        .tooltip('Randomly selects a recommendation type and keeps it hidden') \
+                                        .bind_value(self.webUI, "blind_mode")
+                    ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
+                    self.recommendation_field = ngUI.select({t: t.value for t in RecommendationType}) \
+                                            .props('size=80 borderless dense item-aligned color=secondary popup-content-class="max-w-[200px]"') \
+                                            .bind_value(self.webUI, 'recommendation_type') \
+                                            .bind_visibility_from(self.webUI, 'blind_mode', value=False)
+                    with self.recommendation_field.add_slot("prepend"):
+                        ngUI.icon('settings_suggest').classes('mr-2')
             ngUI.space().classes('w-full h-[2vh]')
-            ngUI.select({t: t.value for t in RecommendationType}).props('popup-content-class="max-w-[200px]"').bind_value(self.webUI, 'recommendation_type')
-            ngUI.space().classes('w-full h-[2vh]')
-            ngUI.button('Generate images', on_click=self.on_generate_images_button_click)
+            self.generate_button = ngUI.button('Generate images', on_click=self.on_generate_images_button_click) \
+                                        .style('font-weight: bold;') \
+                                        .props('icon-right="start" color=grey-8 unelevated rounded')
     
     async def on_generate_images_button_click(self):
         """
@@ -28,6 +58,8 @@ class InitialIterationUI(UIComponent):
         if not self.webUI.user_prompt:
             ngUI.notify('Please type in a prompt!')
             return
+        if self.webUI.blind_mode:
+            self.setup_blind_mode()
         self.webUI.change_state(WebUIState.GENERATING_STATE)
         ngUI.notify('Generating images...')
         loop = asyncio.get_event_loop()
@@ -36,4 +68,12 @@ class InitialIterationUI(UIComponent):
         self.webUI.update_image_displays()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.debug_menu.set_user_profile_updater()
+        self.webUI.main_loop_ui.set_user_profile_host_beta_updater()
         self.webUI.update_active_image()
+    
+    def setup_blind_mode(self):
+        """
+        Setups blind mode by selecting a random recommender.
+        """
+        random.seed()
+        self.webUI.recommendation_type = random.choice([t for t in RecommendationType])
