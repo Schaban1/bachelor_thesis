@@ -121,4 +121,4 @@ class MainLoopUI(UIComponent):
         """
         Sets the value binding of the beta_slider.
         """
-        self.beta_slider.bind_value_from(self.webUI.user_profile_host, 'beta')
+        self.beta_slider.bind_value(self.webUI.user_profile_host, 'beta')
