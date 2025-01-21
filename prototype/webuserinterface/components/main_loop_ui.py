@@ -55,7 +55,7 @@ class MainLoopUI(UIComponent):
                     ngUI.space()
                     ngUI.label('Exploitation')
                     ngUI.icon('emoji_events')
-                self.beta_slider = ngUI.slider(min=0, max=1, step=0.01)
+                self.beta_slider = ngUI.slider(min=0, max=1, step=0.01).props('color=secondary label')
                 if self.webUI.user_profile_host is not None:
                     self.set_user_profile_host_beta_updater()
             ngUI.space()
