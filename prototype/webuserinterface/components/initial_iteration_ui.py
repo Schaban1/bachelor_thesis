@@ -65,7 +65,7 @@ class InitialIterationUI(UIComponent):
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.init_user_profile_host)
         await loop.run_in_executor(None, self.webUI.generate_images)
-        self.webUI.update_image_displays()
+        await loop.run_in_executor(None, self.webUI.update_image_displays)
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.debug_menu.set_user_profile_updater()
         self.webUI.main_loop_ui.set_user_profile_host_beta_updater()
