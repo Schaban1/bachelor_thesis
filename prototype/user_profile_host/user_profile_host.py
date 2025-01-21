@@ -359,7 +359,13 @@ class UserProfileHost():
                 return (low_d_user_space[:,0], low_d_user_space[:,1], scores), transformed_embeddings, self.preferences
 
             else:
-                matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+                # First iteration, no user profile yet
+                if self.user_profile is None:
+                    matrix = self.embeddings
+
+                else:
+                    matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+
                 if algorithm == 'pca':
                     pca = PCA(n_components=2)
                     transformed_embeddings = pca.fit_transform(matrix)
@@ -368,6 +374,10 @@ class UserProfileHost():
                 else:
                     raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
 
-                low_d_user_profile = transformed_embeddings[0]
-                low_d_embeddings = transformed_embeddings[1:]
-                return low_d_user_profile, low_d_embeddings, self.preferences
+                if self.user_profile is None:
+                    return None, transformed_embeddings, self.preferences
+
+                else:
+                    low_d_user_profile = transformed_embeddings[0]
+                    low_d_embeddings = transformed_embeddings[1:]
+                    return low_d_user_profile, low_d_embeddings, self.preferences
