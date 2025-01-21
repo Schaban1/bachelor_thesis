@@ -72,7 +72,6 @@ class DebugMenu(ngUI.element):
                     ("ema_alpha", ngUI.number(label="ema_alpha", min=0, step=0.01).props(self.input_props)),
                     ("beta", ngUI.number(label="beta", min=0, precision=2, step=.01).props(self.input_props)),
                     ("beta_step_size", ngUI.number(label="beta_step_size", min=0, precision=2, step=.01).props(self.input_props)),
-                    ("search_space_type", ngUI.input(label="search_space_type").props(self.input_props)),
                     ]
         self.toggle_visibility()
 
