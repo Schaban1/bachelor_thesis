@@ -43,7 +43,7 @@ class MainLoopUI(UIComponent):
             with ngUI.row().classes('mx-auto items-center mt-4'):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
-                        self.webUI.images_display[i] = ngUI.interactive_image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;').bind_source_from(self.webUI, f'images', backward=lambda x: x[i])
+                        self.webUI.images_display[i] = ngUI.interactive_image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                         with self.webUI.images_display[i]:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
                         self.webUI.scorer.build_scorer(i)
@@ -98,6 +98,7 @@ class MainLoopUI(UIComponent):
         ngUI.notify('Generating new images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
+        self.webUI.update_image_displays()
         self.webUI.scorer.reset_scorers()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.update_active_image()
