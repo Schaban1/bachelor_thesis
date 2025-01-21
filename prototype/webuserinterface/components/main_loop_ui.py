@@ -18,7 +18,7 @@ class MainLoopUI(UIComponent):
         Builds the UI for the main loop iteration state.
         """
         ngUI.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
-        with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
+        with ngUI.column().classes('mx-auto items-center pl-24 pr-24').bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
             with ngUI.row().classes('w-full justify-end mb-8'):
                 ngUI.button('Interactive plot', icon='o_scatter_plot', on_click=self.on_show_interactive_plot_button_click).style('font-weight: bold;').props('color=secondary unelevated rounded')
             with ngUI.row().classes('mx-auto items-center'):
