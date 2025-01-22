@@ -27,6 +27,7 @@ recommender:
   ema_alpha : 0.5
   beta: 0.1
   beta_step_size: 0.1
+  realism_factor: 0.8
 
 path:
   output_dir: ./output/

@@ -46,6 +46,7 @@ class UserProfileHost():
             ema_alpha: float = 0.5,
             beta: float = 0.,
             beta_step_size: float = 0.1,
+            realism_factor: float = 0.8,
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -65,10 +66,11 @@ class UserProfileHost():
         :param n_recommendations: Number of recommendations to be generated each iteration.
         :param ema_alpha: Used for an exponential moving average to update the user profile.
             Factor for the exponential moving average. Higher values give more weight to recent recommendations.
-        :param weighted_axis_beta: Used for the weighted axes recommender. 0 -> high exploration, 1 -> high exploitation
-        :param bo_beta: initial beta for BayesianRecommender
-        :param di_beta: initial beta for DirichletRecommender
-        :param di_beta_increase: increase beta by this amount after each iteration (DirichletRecommender)
+        :param beta: Trade-off between exploration and exploitation. Must be in [0, 1]. 0 means exploration, 1 means
+            exploitation. Beta is increased after each recommendation (i.e. more exploitation).
+        :param beta_step_size: The step size for the beta increase.
+        :param realism_factor: Factor to determine the number of realistic add-ons to be used. The bigger the factor, the
+            more realistic add-ons will be used.
         """
         # Some Clip Hyperparameters
         self.original_prompt = original_prompt
@@ -89,9 +91,11 @@ class UserProfileHost():
         self.ema_alpha = ema_alpha
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
+        self.realism_factor = min(realism_factor, 1.)
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
+        assert self.realism_factor >= 0., "Realism factor should be in range [0., 1.]"
         assert self.beta_step_size >= 0. and self.beta_step_size < 1., "Beta Step Size should be in [0., 1.]"
 
         # Placeholder for the already evaluated embeddings of the current user
@@ -136,7 +140,7 @@ class UserProfileHost():
 
             # adapt this factor to the number of sur-/realistic add-ons
             realistic_add_ons = [d['description'] for d in data if d['realistic']]
-            num_realistic_add_ons = min(int(self.n_embedding_axis * .8), len(realistic_add_ons))
+            num_realistic_add_ons = min(int(self.n_embedding_axis * self.realism_factor), len(realistic_add_ons))
             self.add_ons = random.choices(population=realistic_add_ons, k=num_realistic_add_ons)
             self.add_ons.extend(random.choices(population=[d['description'] for d in data if not d['realistic']],
                                                k=(self.n_embedding_axis-num_realistic_add_ons)))
