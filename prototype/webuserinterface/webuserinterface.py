@@ -217,9 +217,9 @@ class WebUI:
         if e.key.f9 and e.action.keydown:
             self.debug_menu.toggle_visibility()
         if self.score_mode == ScoreMode.EMOJI.value and self.state == WebUIState.MAIN_STATE:
-            if e.key.arrow_right and e.action.keydown:
+            if e.key.location != 3 and e.key.arrow_right and e.action.keydown:
                 self.update_active_image(self.active_image + 1)
-            if e.key.arrow_left and e.action.keydown:
+            if e.key.location != 3 and e.key.arrow_left and e.action.keydown:
                 self.update_active_image(self.active_image - 1)
             if e.key == 's' and e.action.keydown:
                 self.main_loop_ui.on_save_button_click(self.images_display[self.active_image])
@@ -227,6 +227,8 @@ class WebUI:
                 self.submit_button.run_method('click')
             if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
                 self.on_number_keystroke(e.key.number)
+            if e.key.location == 3 and e.key.code in [f'Numpad{i}' for i in range(1, 1+5)] and e.action.keydown:
+                self.on_number_keystroke(int(e.key.code[-1]))
 
     def update_active_image(self, idx=0):
         """
