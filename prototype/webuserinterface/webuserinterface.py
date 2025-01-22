@@ -89,7 +89,7 @@ class WebUI:
         self.blind_mode = False
 
         # Set UI root & load debug menu
-        self.root = ngUI.column().classes('w-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif')
+        self.setup_root()
         self.debug_menu = DebugMenu(self)
 
         self.keyboard = ngUI.keyboard(on_key=self.handle_key)
@@ -152,12 +152,28 @@ class WebUI:
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
+            ngUI.space().classes('w-full h-full')
             InitialIterationUI(self)
             self.main_loop_ui = MainLoopUI(self)
             LoadingSpinnerUI(self)
             self.plot_ui = PlotUI(self)
-            ngUI.space().classes('w-full h-[calc(80vh-2rem)]')
+            ngUI.space().classes('w-full h-full')
             ngUI.html(webis_template_bottom).classes('w-full')
+    
+    def setup_root(self):
+        """
+        Setups the root element, where all the other UI elements will be placed.
+        """
+        self.root = ngUI.column().classes('w-full h-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif;')
+        ngUI.add_head_html('''
+        <style>
+        .nicegui-content {
+            padding: 0;
+        }
+        </style>
+        ''')
+        ngUI.query('.nicegui-content').classes('w-full')
+        ngUI.query('.q-page').classes('flex')
 
     # <--------------------------------->
     # <---------- Initialize other non-UI components ---------->
@@ -246,13 +262,12 @@ class WebUI:
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
             self.prev_images.extend(self.images)
-
+    
     def update_image_displays(self):
         """
         Updates the image displays with the current images in self.images.
         """
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
-        self.reload_userinterface()
 
     def update_user_profile(self):
         """
