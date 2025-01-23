@@ -181,14 +181,14 @@ class WebUI:
         """
         Initializes the generator and performs a warm-start.
         """
-        self.generator = Generator(
-            n_images=self.num_images_to_generate,
-            cache_dir=self.args.path.cache_dir,
-            device=self.args.device,
-            **self.args.generator
-        )
-        if self.args.generator_warm_start:
-            with self.queue_lock:
+        with self.queue_lock:
+            self.generator = Generator(
+                n_images=self.num_images_to_generate,
+                cache_dir=self.args.path.cache_dir,
+                device=self.args.device,
+                **self.args.generator
+            )
+            if self.args.generator_warm_start:
                 self.generator.generate_image(torch.zeros(1, 77, 768))
 
     def init_user_profile_host(self):
