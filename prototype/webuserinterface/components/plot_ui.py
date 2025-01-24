@@ -16,11 +16,8 @@ class PlotUI(UIComponent):
         """
         Builds the UI for the interactive plot state.
         """
-        if self.webUI.user_profile_host is None:
-            return
-
-        with ((ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot',
-                                                                                  value=True))):
+        self.plot_ui = ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot', value=True)
+        with self.plot_ui:
             with ngUI.row().classes('w-full justify-start mb-8'):
                 ngUI.button('Back', icon='arrow_back', on_click=self.on_back_to_main_loop_button_click).style(
                     'font-weight: bold;').props('color=secondary unelevated rounded')
@@ -35,10 +32,7 @@ class PlotUI(UIComponent):
                     f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
 
             ngUI.separator()
-            preferences = self.webUI.user_profile_host.preferences
-            preferences = (preferences * 4).tolist()
-            ngUI.separator()
-            self.build_image_grid(preferences)
+
 
     def build_image_grid(self, preferences):
         """
@@ -46,7 +40,6 @@ class PlotUI(UIComponent):
         """
         images = self.webUI.prev_images
         preferences.extend([None] * self.webUI.num_images_to_generate)  # Latest images not rated yet
-
         ngUI.label('Your generation history:').style('font-size: 150%; font-weight: bold;')
         with ngUI.grid(columns=5):
             for img, pref in zip(images[::-1], preferences[::-1]):
@@ -78,8 +71,6 @@ class PlotUI(UIComponent):
             return
 
         user_profile, embeddings, _ = self.webUI.user_profile_host.plotting_utils()
-        self.fig.data = []
-        self.clicked_image.set_source(None)
 
         if user_profile is not None and len(user_profile) == 3:  # Heatmap for function-based recommender
             fig = self.create_contour_plot(user_profile, embeddings)
@@ -88,6 +79,18 @@ class PlotUI(UIComponent):
 
         self.plot.update_figure(fig)
         self.plot.update()
+
+    def update_view(self):
+        """
+        Updates the view with the new embeddings.
+        """
+        self.update_plot()
+        preferences = self.webUI.user_profile_host.preferences
+        preferences = (preferences * 4).tolist()
+
+        with self.plot_ui:
+            ngUI.separator()
+            self.build_image_grid(preferences)
 
     def on_plot_click(self, data):
         idx = data.args['points'][0]['pointIndex']
