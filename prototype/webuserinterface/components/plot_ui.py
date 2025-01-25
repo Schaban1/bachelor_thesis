@@ -34,8 +34,8 @@ class PlotUI(UIComponent):
                     f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
 
             ngUI.separator()
-            ngUI.label('Your generation history:').style('font-size: 150%; font-weight: bold;')
-            self.image_grid = ngUI.grid(columns=5)
+            with ngUI.expansion('Your generation history', icon='history').classes('w-full').style('font-size: 150%; font-weight: bold;'):
+                self.image_grid = ngUI.grid(columns=5)
 
     def build_image_grid(self, preferences):
         """
