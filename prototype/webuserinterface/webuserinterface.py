@@ -190,6 +190,7 @@ class WebUI:
             )
             if self.args.generator_warm_start:
                 self.generator.generate_image(torch.zeros(1, 77, 768))
+                self.generator.latest_images = []
 
     def init_user_profile_host(self):
         """

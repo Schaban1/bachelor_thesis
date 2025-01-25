@@ -17,6 +17,8 @@ class PlotUI(UIComponent):
         Builds the UI for the interactive plot state.
         """
         self.plot_ui = ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_interactive_plot', value=True)
+        self.unlabeled_images = []
+
         with self.plot_ui:
             with ngUI.row().classes('w-full justify-start mb-8'):
                 ngUI.button('Back', icon='arrow_back', on_click=self.on_back_to_main_loop_button_click).style(
@@ -28,26 +30,40 @@ class PlotUI(UIComponent):
                 self.plot = ngUI.plotly(self.fig)
                 self.plot.on('plotly_click', self.on_plot_click)
 
-                self.clicked_image = ngUI.image().style(
+                self.clicked_image = ngUI.interactive_image().style(
                     f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
 
             ngUI.separator()
-
+            ngUI.label('Your generation history:').style('font-size: 150%; font-weight: bold;')
+            self.image_grid = ngUI.grid(columns=5)
 
     def build_image_grid(self, preferences):
         """
         Displays all previous generated images in a wall.
         """
-        images = self.webUI.prev_images
+        images = self.webUI.generator.get_latest_images()
         preferences.extend([None] * self.webUI.num_images_to_generate)  # Latest images not rated yet
-        ngUI.label('Your generation history:').style('font-size: 150%; font-weight: bold;')
-        with ngUI.grid(columns=5):
-            for img, pref in zip(images[::-1], preferences[::-1]):
-                with ngUI.row().classes('mx-auto items-center'):
-                    with ngUI.image(img).style(
-                            f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;'):
-                        if pref is not None:
-                            ngUI.label(MAPPING[pref]).classes('absolute bottom-0 right-0 m-2')
+        preferences = preferences[-(len(self.unlabeled_images) + len(images)):]
+
+        for idx, display in enumerate(self.unlabeled_images):
+            with display:
+                if preferences[idx] is not None:
+                    ngUI.label(MAPPING[preferences[idx]]).classes('absolute bottom-0 right-0 m-2')
+
+        n = len(self.unlabeled_images)
+        self.unlabeled_images = []
+
+        with self.image_grid:
+            for img, pref in zip(images, preferences[n:]):
+                display = ngUI.image(img).style(
+                        f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
+                with display:
+                    if pref is not None:
+                        ngUI.label(MAPPING[pref]).classes('absolute bottom-0 right-0 m-2')
+                    else:
+                        self.unlabeled_images.append(display)
+
+                display.move(target_index=0)
 
     def create_contour_plot(self, user_profile, embeddings):
         fig = go.Figure(data=go.Contour(x=user_profile[0], y=user_profile[1], z=user_profile[2], opacity=0.4))
@@ -89,7 +105,6 @@ class PlotUI(UIComponent):
         preferences = (preferences * 4).tolist()
 
         with self.plot_ui:
-            ngUI.separator()
             self.build_image_grid(preferences)
 
     def on_plot_click(self, data):
