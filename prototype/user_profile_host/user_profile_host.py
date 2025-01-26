@@ -350,9 +350,9 @@ class UserProfileHost():
                     return None, transformed_embeddings, self.preferences
 
                 # Retrieve scores for heatmap (function-based recommender)
-                grid_x = torch.linspace(-1, 1, 200)
-                grid_y = torch.linspace(-1, 1, 200)
-                grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')
+                x = torch.linspace(-1, 1, 200)
+                y = torch.linspace(-1, 1, 200)
+                grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
                 user_space = pca.inverse_transform(low_d_user_space).float()
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile,
@@ -360,7 +360,7 @@ class UserProfileHost():
                 if scores is not None:
                     scores = scores.reshape(grid_x.shape)
 
-                return (low_d_user_space[:,0], low_d_user_space[:,1], scores), transformed_embeddings, self.preferences
+                return (x, y, scores), transformed_embeddings, self.preferences
 
             else:
                 # First iteration, no user profile yet

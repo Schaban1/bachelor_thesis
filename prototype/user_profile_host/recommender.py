@@ -250,7 +250,6 @@ class BayesianRecommender(Recommender):
         :return: Tensor containing the values of the acquisition function.
         """
         # Get embeddings and ratings from user profile
-        print('Generating heat map values')
         if user_profile is None:
             return None
         embeddings, preferences = user_profile

@@ -1,5 +1,6 @@
 from nicegui import ui as ngUI
 import plotly.graph_objects as go
+import torch
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 from prototype.constants import WebUIState, RecommendationType
@@ -11,6 +12,9 @@ class PlotUI(UIComponent):
     """
     Contains the code for the interactive plot UI.
     """
+
+    def __init__(self, webUI):
+        super().__init__(webUI)
 
     def build_userinterface(self):
         """
@@ -24,6 +28,8 @@ class PlotUI(UIComponent):
                 ngUI.button('Back', icon='arrow_back', on_click=self.on_back_to_main_loop_button_click).style(
                     'font-weight: bold;').props('color=secondary unelevated rounded')
 
+            switch = ngUI.switch('Show user profile history', on_change=self.on_switch_change).style('font-size: 150%;')
+
             with ngUI.row().classes('mx-auto items-center'):
                 self.fig = go.Figure()
                 self.fig.update_layout(margin=dict(l=0, r=0, t=0, b=0), width=1000, height=600)
@@ -36,6 +42,9 @@ class PlotUI(UIComponent):
             ngUI.separator()
             with ngUI.expansion('Your generation history', icon='history').classes('w-full').style('font-size: 150%; font-weight: bold;'):
                 self.image_grid = ngUI.grid(columns=5)
+
+    def on_switch_change(self, event):
+        print(event.value)
 
     def build_image_grid(self, preferences):
         """
@@ -66,7 +75,7 @@ class PlotUI(UIComponent):
                 display.move(target_index=0)
 
     def create_contour_plot(self, user_profile, embeddings):
-        fig = go.Figure(data=go.Contour(x=user_profile[0], y=user_profile[1], z=user_profile[2], opacity=0.4))
+        fig = go.Figure(data=go.Contour(x=user_profile[0], y=user_profile[1], z=user_profile[2], opacity=0.5))
         fig.add_trace(go.Scatter(x=embeddings[:, 0], y=embeddings[:, 1], mode='markers', name='embeddings'))
         return fig
 
@@ -85,8 +94,6 @@ class PlotUI(UIComponent):
         """
         if self.webUI.user_profile_host is None:
             return
-
-        print(self.image_grid.default_slot.children)
 
         user_profile, embeddings, _ = self.webUI.user_profile_host.plotting_utils()
 
