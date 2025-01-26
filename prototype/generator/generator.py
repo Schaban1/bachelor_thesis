@@ -162,6 +162,9 @@ class Generator(GeneratorBase):
         self.latest_images = []
         return latest_images
 
+    def clear_latest_images(self):
+        self.latest_images = []
+
 
 if __name__ == "__main__":
     n_images = 3

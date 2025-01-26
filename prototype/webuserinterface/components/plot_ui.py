@@ -86,6 +86,8 @@ class PlotUI(UIComponent):
         if self.webUI.user_profile_host is None:
             return
 
+        print(self.image_grid.default_slot.children)
+
         user_profile, embeddings, _ = self.webUI.user_profile_host.plotting_utils()
 
         if user_profile is not None and len(user_profile) == 3:  # Heatmap for function-based recommender
@@ -107,10 +109,16 @@ class PlotUI(UIComponent):
         with self.plot_ui:
             self.build_image_grid(preferences)
 
+    def clear_view(self):
+        """
+        Clears the view (for restarting generation process).
+        """
+        self.unlabeled_images = []
+        self.image_grid.clear()
+
     def on_plot_click(self, data):
         idx = data.args['points'][0]['pointIndex']
-        image = self.webUI.prev_images[idx]
-        self.clicked_image.set_source(image)
+        self.clicked_image.set_source(self.image_grid.default_slot.children[::-1][idx].source)
 
     def on_back_to_main_loop_button_click(self):
         """
