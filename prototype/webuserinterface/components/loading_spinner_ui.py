@@ -14,4 +14,5 @@ class LoadingSpinnerUI(UIComponent):
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_generating', value=True):
             ngUI.label('Generating images...').style('font-size: 200%;')
-            ngUI.spinner(size='128px')
+            ngUI.space().classes('m-4')
+            ngUI.spinner(size='10em', color='#323232')
