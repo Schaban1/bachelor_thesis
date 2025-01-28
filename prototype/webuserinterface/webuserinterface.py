@@ -2,7 +2,6 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from nicegui.events import KeyEventArguments
 from PIL import Image
-import torch
 import asyncio
 import threading
 import secrets
@@ -199,9 +198,9 @@ class WebUI:
                     **self.args.generator
                 )
 
-            if self.args.generator_warm_start:
-                self.generator.generate_image(torch.zeros(1, 77, 768))
-                self.generator.latest_images = []
+            # if self.args.generator_warm_start:
+            #     self.generator.generate_image(torch.zeros(1, 77, 768))
+            #     self.generator.latest_images = []
 
     def init_user_profile_host(self):
         """
