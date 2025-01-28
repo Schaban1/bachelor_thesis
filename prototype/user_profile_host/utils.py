@@ -127,3 +127,13 @@ def display_heatmap_user_profile_2d(low_d_embeddings: Tensor, grid_x: Tensor, gr
         plt.savefig(save_path + f"generated_points_compressed_using_{compression_technique}.svg",
                     dpi=300, bbox_inches='tight', format='svg')
     plt.show()
+
+def get_unnormalized_value(x_norm:float, or_min:float, or_max:float):
+    """
+    Get the unnormalized value of x_norm given the original max and min values.
+    :param x_norm: The normalized value.
+    :param or_max: The original max value.
+    :param or_min: The original min value.
+    :return: The unnormalized value.
+    """
+    return x_norm * (or_max - or_min) + or_min

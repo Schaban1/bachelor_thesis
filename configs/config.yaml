@@ -3,9 +3,9 @@ defaults:
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled
 
-num_recommendations : 5
+num_recommendations : 8
 port: 8080
-reconnect_timeout: 3
+reconnect_timeout: 30
 score_mode: emoji
 device: cuda
 image_display_size : [256, 256]
@@ -24,10 +24,9 @@ recommender:
   use_embedding_center : False
   n_latent_axis : 13
   use_latent_center : False
-  weighted_axis_exploration_factor : 0.5
   ema_alpha : 0.5
-  search_space_type : dirichlet
-  di_beta_increase: 3.
+  beta: 0.1
+  beta_step_size: 0.1
 
 path:
   output_dir: ./output/
