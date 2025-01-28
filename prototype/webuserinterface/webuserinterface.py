@@ -77,7 +77,6 @@ class WebUI:
 
         # Lists / UI components
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
-        self.prev_images = []
         self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
@@ -188,8 +187,9 @@ class WebUI:
                 device=self.args.device,
                 **self.args.generator
             )
-            #if self.args.generator_warm_start:
-            #    self.generator.generate_image(torch.zeros(1, 77, 768))
+            if self.args.generator_warm_start:
+                self.generator.generate_image(torch.zeros(1, 77, 768))
+                self.generator.latest_images = []
 
     def init_user_profile_host(self):
         """
@@ -262,8 +262,7 @@ class WebUI:
         """
         with self.queue_lock:
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
-            self.images = self.generator.generate_image_stream(embeddings, latents)
-            self.prev_images.extend(self.images)
+            self.images = self.generator.generate_image(embeddings, latents)
 
     def update_image_displays(self):
         """

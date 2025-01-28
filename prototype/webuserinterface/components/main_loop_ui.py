@@ -71,7 +71,7 @@ class MainLoopUI(UIComponent):
         self.webUI.change_state(WebUIState.PLOT_STATE)
 
         # Initialize or update the plot
-        self.webUI.plot_ui.update_plot()
+        self.webUI.plot_ui.update_view()
     
     def on_save_button_click(self, image_display):
         """
@@ -112,8 +112,8 @@ class MainLoopUI(UIComponent):
         self.webUI.user_profile_host = None
 
         # Clear plot ui for new process
-        self.webUI.plot_ui.update_plot()
-        self.webUI.prev_images = []
+        self.webUI.generator.clear_latest_images()
+        self.webUI.plot_ui.clear_view()
 
         seed_everything(self.webUI.args.random_seed)
     
