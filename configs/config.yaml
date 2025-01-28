@@ -35,11 +35,8 @@ recommender:
   ema_alpha : 0.5
   beta: 0.1
   beta_step_size: 0.1
-<<<<<<< HEAD
   include_random_recommendations: False
-=======
   realism_factor: 0.8
->>>>>>> main
 
 path:
   output_dir: ./output/
