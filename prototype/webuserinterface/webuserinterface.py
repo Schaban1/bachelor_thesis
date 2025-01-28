@@ -2,14 +2,13 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from nicegui.events import KeyEventArguments
 from PIL import Image
-import torch
 import asyncio
 import threading
 import secrets
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
-from prototype.generator.generator import Generator
+from prototype.generator.generator import Generator, GeneratorStream
 from prototype.utils import seed_everything
 from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer, DebugMenu
 
@@ -77,7 +76,6 @@ class WebUI:
 
         # Lists / UI components
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
-        self.prev_images = []
         self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
@@ -159,7 +157,7 @@ class WebUI:
             self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-full')
             ngUI.html(webis_template_bottom).classes('w-full')
-    
+
     def setup_root(self):
         """
         Setups the root element, where all the other UI elements will be placed.
@@ -182,14 +180,27 @@ class WebUI:
         Initializes the generator and performs a warm-start.
         """
         with self.queue_lock:
-            self.generator = Generator(
-                n_images=self.num_images_to_generate,
-                cache_dir=self.args.path.cache_dir,
-                device=self.args.device,
-                **self.args.generator
-            )
-            if self.args.generator_warm_start:
-                self.generator.generate_image(torch.zeros(1, 77, 768))
+            if self.args.use_stream_diffusion:
+                print("using stream diffusion")
+                self.generator = GeneratorStream(
+                    n_images=self.num_images_to_generate,
+                    cache_dir=self.args.path.cache_dir,
+                    device=self.args.device,
+                    hf_model_name=self.args.hf_model_name,
+                    **self.args.generator
+                )
+            else:
+                self.generator = Generator(
+                    n_images=self.num_images_to_generate,
+                    cache_dir=self.args.path.cache_dir,
+                    device=self.args.device,
+                    hf_model_name=self.args.hf_model_name,
+                    **self.args.generator
+                )
+
+            # if self.args.generator_warm_start:
+            #     self.generator.generate_image(torch.zeros(1, 77, 768))
+            #     self.generator.latest_images = []
 
     def init_user_profile_host(self):
         """
@@ -202,6 +213,7 @@ class WebUI:
             cache_dir=self.args.path.cache_dir,
             stable_dif_pipe=self.generator.pipe,
             n_recommendations=self.num_images_to_generate,
+            hf_model_name=self.args.hf_model_name,
             **self.args.recommender
         )
 
@@ -263,8 +275,7 @@ class WebUI:
         with self.queue_lock:
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
-            self.prev_images.extend(self.images)
-    
+
     def update_image_displays(self):
         """
         Updates the image displays with the current images in self.images.

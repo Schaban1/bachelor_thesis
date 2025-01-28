@@ -297,6 +297,8 @@ class BayesianRecommender(Recommender):
         :return: Tensor containing the values of the acquisition function.
         """
         # Get embeddings and ratings from user profile
+        if user_profile is None:
+            return None
         embeddings, preferences = user_profile
 
         # Change Preference shape

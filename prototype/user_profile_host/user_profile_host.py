@@ -1,3 +1,5 @@
+import json
+import random
 import torch
 from torch import Tensor
 from sklearn.manifold import TSNE
@@ -46,6 +48,7 @@ class UserProfileHost():
             ema_alpha: float = 0.5,
             beta: float = 0.,
             beta_step_size: float = 0.1,
+            realism_factor: float = 0.8,
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -65,10 +68,11 @@ class UserProfileHost():
         :param n_recommendations: Number of recommendations to be generated each iteration.
         :param ema_alpha: Used for an exponential moving average to update the user profile.
             Factor for the exponential moving average. Higher values give more weight to recent recommendations.
-        :param weighted_axis_beta: Used for the weighted axes recommender. 0 -> high exploration, 1 -> high exploitation
-        :param bo_beta: initial beta for BayesianRecommender
-        :param di_beta: initial beta for DirichletRecommender
-        :param di_beta_increase: increase beta by this amount after each iteration (DirichletRecommender)
+        :param beta: Trade-off between exploration and exploitation. Must be in [0, 1]. 0 means exploration, 1 means
+            exploitation. Beta is increased after each recommendation (i.e. more exploitation).
+        :param beta_step_size: The step size for the beta increase.
+        :param realism_factor: Factor to determine the number of realistic add-ons to be used. The bigger the factor, the
+            more realistic add-ons will be used.
         """
         # Some Clip Hyperparameters
         self.original_prompt = original_prompt
@@ -90,17 +94,22 @@ class UserProfileHost():
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
         self.include_random_rec = include_random_recommendations
+        self.realism_factor = min(realism_factor, 1.)
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
+        assert self.realism_factor >= 0., "Realism factor should be in range [0., 1.]"
         assert self.beta_step_size >= 0. and self.beta_step_size < 1., "Beta Step Size should be in [0., 1.]"
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
-        self.preferences = None
+        self.preferences = torch.tensor([])
 
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
+
+        # Holds previous low dimensional user profiles
+        self.user_profile_history = []
 
         # Bounds remain fixed to 0., 1. for simplicity
         self.embedding_bounds = [0., 1.]
@@ -129,21 +138,19 @@ class UserProfileHost():
         # TODO: Discuss, if this could be improved.
         self.embedding_axis = []
         if not self.add_ons:
-            self.add_ons = [
-                               "beautiful, moody lighting, best quality, full body portrait, real picture, intricate details, depth of field, in a cold snowstorm, fujifilm xt3, outdoors, beautiful lighting, raw photo, 8k uhd, film grain, unreal engine 5, ray trace",
-                               "in the style of liquid metal, vray tracing, raw character, 32k uhd, schlieren photography, conceptual portraiture, wet - on - wet blending",
-                               "Detailed, vibrant illustration, full of plants, trees, by herge, in the style of tin-tin comics, vibrant colors, detailed, lots of people, sunny day, beautiful illustration",
-                               "Sun profile, halftone pattern, editorial illustration of the memento morti, higly textured, genre defining mixed media collage painting, fringe absurdism, award winning halftone pattern illustration, simple flowing shapes, subtle shadows, paper texture, minimalist color scheme, inspired by zdzisław beksiński",
-                               "3d illustration, in the style of fantasy, minimalistic, featuring multiple soft and rounded fractal, complex forms dressed as royal and glamorous in gold and white",
-                               "Black, thin lines, all lines have the same mass and weight, continuity can be seen in the common flow of all lines, the lines occupy only the central part of the image, white background",
-                               "a detailed painting by hirohiko araki, featured on pixiv, analytical art, detailed painting, 2d game art, official art",
-                               "A surreal picture, in the style of pop art bold graphics, collage-based, cassius marcellus coolidge, aaron jasinski, peter blake, travel, nyc explosion coverage",
-                               "Realistic, red white and black, made of red coral, mahogany, black obsidian, bloodstone, tourmaline and gold, elegant, diamonds, gold, elegant, masterpiece, concept art, tectonic, gold shiny background, nikon photography, shot photography by wes anderson, kodak color, hd, 300mm",
-                               "colored ink mikhail garmash, louis jover, victor cheleg, damien hirst, ivan aizovsky, claude joseph vernet, broken glass effect, no background, amazing, something that doesn’t even exist, mythical creature, energy, molecular, textures, shimmering and luminescent colors, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, three-dimensional light, auras, rays, vibrant colors, broken glass effect, no background, stunning, something that even doesn't exist, mythical being, energy, molecular, textures, iridescent and luminescent scales, breathtaking beauty, pure perfection, divine presence, unforgettable, impressive, breathtaking beauty, volumetric light, auras, rays, vivid colors reflects",
-                               "shot on leica, shadowplay, gorgeous lighting, subtle pastel hues, 8k, pretty freckles",
-                               "behind windwow, rainy, black and white photography surreal art blurry minimalistic",
-                               "at full height, is working on a beautiful design project, creating design projects, a beautiful workspace, aesthetics, correct proportions realism ultra high quality, real photo"
-                           ][:self.n_embedding_axis]
+            data = []
+            # https://stackoverflow.com/questions/12451431/loading-and-parsing-a-json-file-with-multiple-json-objects
+            with open('prototype/user_profile_host/add_ons.json') as f:
+                for line in f:
+                    data.append(json.loads(line))
+
+            # adapt this factor to the number of sur-/realistic add-ons
+            realistic_add_ons = [d['description'] for d in data if d['realistic']]
+            num_realistic_add_ons = min(int(self.n_embedding_axis * self.realism_factor), len(realistic_add_ons))
+            self.add_ons = random.choices(population=realistic_add_ons, k=num_realistic_add_ons)
+            self.add_ons.extend(random.choices(population=[d['description'] for d in data if not d['realistic']],
+                                               k=(self.n_embedding_axis-num_realistic_add_ons)))
+
         if self.extend_original_prompt:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
@@ -210,6 +217,8 @@ class UserProfileHost():
             user_embeddings = user_embeddings[:, :-self.latent_axis.shape[0]]
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
+        user_embeddings = user_embeddings.type(self.text_encoder.dtype)
+        self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
         product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
         embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
         clip_embeddings = (self.embedding_center + product)
@@ -236,30 +245,31 @@ class UserProfileHost():
             user_profile (Variable) : The fitted user profile depending on the optimizer.
         """
         # Initialize or extend the available user related data 
-        if self.preferences is None:
+        if len(self.preferences) == 0:
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
-        
+
         # Only fit user profile if preferences are not all zero
         if torch.count_nonzero(self.preferences) > 0:
+            if self.user_profile is not None:
+                self.user_profile_history.append(self.user_profile)
             self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
+    @torch.no_grad()
     def clip_embedding(self, prompt: str):
         """
         Embeds a given prompt using CLIP.
 
         Returns:
-            embedding (Tensor) : An embedding for the prompt in shape (1, 77, 768)
+            embedding (Tensor) : An embedding for the prompt in shape (77, 768)
         """
-        prompt_tokens = self.tokenizer(prompt,
-                                       padding="max_length",
-                                       max_length=self.tokenizer.model_max_length,
-                                       truncation=True,
-                                       return_tensors="pt", ).to(self.text_encoder.device)
+        prompt_embeds = self.stable_dif_pipe.encode_prompt(prompt,
+                                                          device=self.text_encoder.device,
+                                                          num_images_per_prompt=1,
+                                                          do_classifier_free_guidance=False)[0].cpu()
 
-        prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
-        return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
+        return prompt_embeds.squeeze()
 
     def generate_recommendations(self, num_recommendations: int = 2):
         """
@@ -280,7 +290,7 @@ class UserProfileHost():
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
                                                                           n_recommendations=num_recommendations//2 if self.include_random_rec else num_recommendations,
                                                                           beta=self.beta)
-            
+
             # Include some random user_space_embeddings througout each iteration
             if self.include_random_rec:
                 random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
@@ -292,6 +302,7 @@ class UserProfileHost():
             # Start initially with a lot of random embeddings to build a foundation for the user profile
             user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations)
 
+        user_space_embeddings.type(self.text_encoder.dtype)
         # Safe the user_space_embeddings
         if self.embeddings is not None:
             self.embeddings = torch.cat((self.embeddings, user_space_embeddings))
@@ -301,16 +312,16 @@ class UserProfileHost():
         # Transform embeddings from user_space to CLIP space
         clip_embeddings, latents = self.inv_transform(user_space_embeddings)
         return clip_embeddings, latents
-    
+
     def generate_image_grid(self):
         """
-        This function creates a set of user embeddings for the creation of the image wall. In general, the 
+        This function creates a set of user embeddings for the creation of the image wall. In general, the
         user profile in form of a weighted center is approximatly in the middle.
         Returns:
             Meshgrid (Tensor) : A meshgrid of samples going from lower left to upper right column-wise. So (-1, -1)
                 (-1, -0.677), (-1, -0.5), ...
         """
-        # Calculate the PCA for current embeddings 
+        # Calculate the PCA for current embeddings
         matrix = self.embeddings
         pca = PCA(n_components=2).fit(matrix)
 
@@ -345,27 +356,35 @@ class UserProfileHost():
 
         else:
             # Check for GP-User Embedding
-            if self.recommendation_type == RecommendationType.FUNCTION_BASED or self.recommendation_type == RecommendationType.RANDOM:
+            if self.recommendation_type == RecommendationType.FUNCTION_BASED or self.recommendation_type == RecommendationType.RANDOM or self.recommendation_type == RecommendationType.DIVERSE_DIRICHLET:
                 matrix = self.embeddings
                 pca = PCA(n_components=2).fit(matrix)
                 transformed_embeddings = pca.transform(matrix)
 
-                if self.recommendation_type == RecommendationType.RANDOM:
+                if self.recommendation_type == RecommendationType.RANDOM or self.recommendation_type == RecommendationType.DIVERSE_DIRICHLET:
                     return None, transformed_embeddings, self.preferences
 
                 # Retrieve scores for heatmap (function-based recommender)
-                grid_x = torch.linspace(-1, 1, 200)
-                grid_y = torch.linspace(-1, 1, 200)
-                grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')
+                x = torch.linspace(-1, 1, 200)
+                y = torch.linspace(-1, 1, 200)
+                grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
-                user_space = pca.inverse_transform(low_d_user_space).float()
+                user_space = pca.inverse_transform(low_d_user_space).type(self.text_encoder.dtype)
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile,
-                                                          user_space=user_space).reshape(grid_x.shape)
+                                                          user_space=user_space)
+                if scores is not None:
+                    scores = scores.reshape(grid_x.shape)
 
-                return (low_d_user_space[:,0], low_d_user_space[:,1], scores), transformed_embeddings, self.preferences
+                return (x, y, scores), transformed_embeddings, self.preferences
 
             else:
-                matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+                # First iteration, no user profile yet
+                if self.user_profile is None:
+                    matrix = self.embeddings
+
+                else:
+                    matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+
                 if algorithm == 'pca':
                     pca = PCA(n_components=2)
                     transformed_embeddings = pca.fit_transform(matrix)
@@ -374,6 +393,11 @@ class UserProfileHost():
                 else:
                     raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
 
-                low_d_user_profile = transformed_embeddings[0]
-                low_d_embeddings = transformed_embeddings[1:]
-                return low_d_user_profile, low_d_embeddings, self.preferences
+                if self.user_profile is None:
+                    return None, transformed_embeddings, self.preferences
+
+                else:
+                    print(f'User profile history: {self.user_profile_history}')
+                    low_d_user_profile = transformed_embeddings[0]
+                    low_d_embeddings = transformed_embeddings[1:]
+                    return low_d_user_profile, low_d_embeddings, self.preferences

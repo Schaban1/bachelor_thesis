@@ -10,13 +10,21 @@ score_mode: emoji
 device: cuda
 image_display_size : [256, 256]
 random_seed : 42
-generator_warm_start: True
+generator_warm_start: False
+hf_model_name: stable-diffusion-v1-5/stable-diffusion-v1-5
+#hf_model_name: stabilityai/stable-diffusion-3.5-large-turbo
+#hf_model_name: stabilityai/stable-diffusion-3.5-medium
+#hf_model_name: black-forest-labs/FLUX.1-dev
+
+
+use_stream_diffusion: False
 
 generator:
   num_inference_steps : 25
   guidance_scale: 7.5
   random_latents : False
   use_negative_prompt : False
+  batch_size: null
 
 recommender:
   extend_original_prompt : True
@@ -27,7 +35,11 @@ recommender:
   ema_alpha : 0.5
   beta: 0.1
   beta_step_size: 0.1
+<<<<<<< HEAD
   include_random_recommendations: False
+=======
+  realism_factor: 0.8
+>>>>>>> main
 
 path:
   output_dir: ./output/
