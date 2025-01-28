@@ -77,7 +77,6 @@ class WebUI:
 
         # Lists / UI components
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
-        self.prev_images = []
         self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
         self.active_image = 0
@@ -181,15 +180,16 @@ class WebUI:
         """
         Initializes the generator and performs a warm-start.
         """
-        self.generator = Generator(
-            n_images=self.num_images_to_generate,
-            cache_dir=self.args.path.cache_dir,
-            device=self.args.device,
-            **self.args.generator
-        )
-        if self.args.generator_warm_start:
-            with self.queue_lock:
+        with self.queue_lock:
+            self.generator = Generator(
+                n_images=self.num_images_to_generate,
+                cache_dir=self.args.path.cache_dir,
+                device=self.args.device,
+                **self.args.generator
+            )
+            if self.args.generator_warm_start:
                 self.generator.generate_image(torch.zeros(1, 77, 768))
+                self.generator.latest_images = []
 
     def init_user_profile_host(self):
         """
@@ -217,9 +217,9 @@ class WebUI:
         if e.key.f9 and e.action.keydown:
             self.debug_menu.toggle_visibility()
         if self.score_mode == ScoreMode.EMOJI.value and self.state == WebUIState.MAIN_STATE:
-            if e.key.arrow_right and e.action.keydown:
+            if e.key.location != 3 and e.key.arrow_right and e.action.keydown:
                 self.update_active_image(self.active_image + 1)
-            if e.key.arrow_left and e.action.keydown:
+            if e.key.location != 3 and e.key.arrow_left and e.action.keydown:
                 self.update_active_image(self.active_image - 1)
             if e.key == 's' and e.action.keydown:
                 self.main_loop_ui.on_save_button_click(self.images_display[self.active_image])
@@ -227,6 +227,8 @@ class WebUI:
                 self.submit_button.run_method('click')
             if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
                 self.on_number_keystroke(e.key.number)
+            if e.key.location == 3 and e.key.code in [f'Numpad{i}' for i in range(1, 1+5)] and e.action.keydown:
+                self.on_number_keystroke(int(e.key.code[-1]))
 
     def update_active_image(self, idx=0):
         """
@@ -261,8 +263,7 @@ class WebUI:
         with self.queue_lock:
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
-            self.prev_images.extend(self.images)
-    
+
     def update_image_displays(self):
         """
         Updates the image displays with the current images in self.images.

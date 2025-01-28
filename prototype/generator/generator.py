@@ -59,6 +59,7 @@ class Generator(GeneratorBase):
         self.guidance_scale = guidance_scale
         self.n_images = n_images
         self.use_negative_prompt = use_negative_prompt
+        self.latest_images = []
 
         scheduler = LMSDiscreteScheduler(
             beta_start=0.00085,
@@ -148,7 +149,21 @@ class Generator(GeneratorBase):
                                     latents=latents[i:i + batch_steps],
                                     ).images
                           )
+
+        self.latest_images.extend(images)
         return images
+
+    def get_latest_images(self):
+        """
+        Returns the latest generated images in the "cache" and clears the cache.
+        This is useful to remove already displayed images from the memory.
+        """
+        latest_images = self.latest_images
+        self.latest_images = []
+        return latest_images
+
+    def clear_latest_images(self):
+        self.latest_images = []
 
 
 if __name__ == "__main__":

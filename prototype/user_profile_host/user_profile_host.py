@@ -100,10 +100,13 @@ class UserProfileHost():
 
         # Placeholder for the already evaluated embeddings of the current user
         self.embeddings = None
-        self.preferences = None
+        self.preferences = torch.tensor([])
 
         # Placeholder until the user_profile is fit the first time
         self.user_profile = None
+
+        # Holds previous low dimensional user profiles
+        self.user_profile_history = []
 
         # Bounds remain fixed to 0., 1. for simplicity
         self.embedding_bounds = [0., 1.]
@@ -236,13 +239,15 @@ class UserProfileHost():
             user_profile (Variable) : The fitted user profile depending on the optimizer.
         """
         # Initialize or extend the available user related data 
-        if self.preferences is None:
+        if len(self.preferences) == 0:
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
         
         # Only fit user profile if preferences are not all zero
         if torch.count_nonzero(self.preferences) > 0:
+            if self.user_profile is not None:
+                self.user_profile_history.append(self.user_profile)
             self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
     def clip_embedding(self, prompt: str):
@@ -353,18 +358,26 @@ class UserProfileHost():
                     return None, transformed_embeddings, self.preferences
 
                 # Retrieve scores for heatmap (function-based recommender)
-                grid_x = torch.linspace(-1, 1, 200)
-                grid_y = torch.linspace(-1, 1, 200)
-                grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')
+                x = torch.linspace(-1, 1, 200)
+                y = torch.linspace(-1, 1, 200)
+                grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
                 user_space = pca.inverse_transform(low_d_user_space).float()
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile,
-                                                          user_space=user_space).reshape(grid_x.shape)
+                                                          user_space=user_space)
+                if scores is not None:
+                    scores = scores.reshape(grid_x.shape)
 
-                return (low_d_user_space[:,0], low_d_user_space[:,1], scores), transformed_embeddings, self.preferences
+                return (x, y, scores), transformed_embeddings, self.preferences
 
             else:
-                matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+                # First iteration, no user profile yet
+                if self.user_profile is None:
+                    matrix = self.embeddings
+
+                else:
+                    matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
+
                 if algorithm == 'pca':
                     pca = PCA(n_components=2)
                     transformed_embeddings = pca.fit_transform(matrix)
@@ -373,6 +386,11 @@ class UserProfileHost():
                 else:
                     raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
 
-                low_d_user_profile = transformed_embeddings[0]
-                low_d_embeddings = transformed_embeddings[1:]
-                return low_d_user_profile, low_d_embeddings, self.preferences
+                if self.user_profile is None:
+                    return None, transformed_embeddings, self.preferences
+
+                else:
+                    print(f'User profile history: {self.user_profile_history}')
+                    low_d_user_profile = transformed_embeddings[0]
+                    low_d_embeddings = transformed_embeddings[1:]
+                    return low_d_user_profile, low_d_embeddings, self.preferences
