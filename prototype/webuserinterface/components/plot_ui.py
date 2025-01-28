@@ -44,7 +44,7 @@ class PlotUI(UIComponent):
                 self.image_grid = ngUI.grid(columns=5)
 
     def on_switch_change(self, event):
-        print(event.value)
+        pass
 
     def build_image_grid(self, preferences):
         """

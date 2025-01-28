@@ -239,7 +239,8 @@ class UserProfileHost():
         
         # Only fit user profile if preferences are not all zero
         if torch.count_nonzero(self.preferences) > 0:
-            self.user_profile_history.append(self.user_profile)
+            if self.user_profile is not None:
+                self.user_profile_history.append(self.user_profile)
             self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
     def clip_embedding(self, prompt: str):
