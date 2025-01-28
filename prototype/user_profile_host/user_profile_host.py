@@ -213,6 +213,8 @@ class UserProfileHost():
             user_embeddings = user_embeddings[:, :-self.latent_axis.shape[0]]
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
+        user_embeddings = user_embeddings.type(self.text_encoder.dtype)
+        self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
         product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
         embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
         clip_embeddings = (self.embedding_center + product)
@@ -243,28 +245,27 @@ class UserProfileHost():
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
-        
+
         # Only fit user profile if preferences are not all zero
         if torch.count_nonzero(self.preferences) > 0:
             if self.user_profile is not None:
                 self.user_profile_history.append(self.user_profile)
             self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
+    @torch.no_grad()
     def clip_embedding(self, prompt: str):
         """
         Embeds a given prompt using CLIP.
 
         Returns:
-            embedding (Tensor) : An embedding for the prompt in shape (1, 77, 768)
+            embedding (Tensor) : An embedding for the prompt in shape (77, 768)
         """
-        prompt_tokens = self.tokenizer(prompt,
-                                       padding="max_length",
-                                       max_length=self.tokenizer.model_max_length,
-                                       truncation=True,
-                                       return_tensors="pt", ).to(self.text_encoder.device)
+        prompt_embeds = self.stable_dif_pipe.encode_prompt(prompt,
+                                                          device=self.text_encoder.device,
+                                                          num_images_per_prompt=1,
+                                                          do_classifier_free_guidance=False)[0].cpu()
 
-        prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
-        return prompt_embeds.reshape(self.n_clip_tokens, self.embedding_dim)
+        return prompt_embeds.squeeze()
 
     def generate_recommendations(self, num_recommendations: int = 2):
         """
@@ -285,7 +286,7 @@ class UserProfileHost():
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
                                                                           n_recommendations=num_recommendations//2,
                                                                           beta=self.beta)
-            
+
             # Include some random user_space_embeddings througout each iteration
             random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
             user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
@@ -296,6 +297,7 @@ class UserProfileHost():
             # Start initially with a lot of random embeddings to build a foundation for the user profile
             user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations)
 
+        user_space_embeddings.type(self.text_encoder.dtype)
         # Safe the user_space_embeddings
         if self.embeddings is not None:
             self.embeddings = torch.cat((self.embeddings, user_space_embeddings))
@@ -305,16 +307,16 @@ class UserProfileHost():
         # Transform embeddings from user_space to CLIP space
         clip_embeddings, latents = self.inv_transform(user_space_embeddings)
         return clip_embeddings, latents
-    
+
     def generate_image_grid(self):
         """
-        This function creates a set of user embeddings for the creation of the image wall. In general, the 
+        This function creates a set of user embeddings for the creation of the image wall. In general, the
         user profile in form of a weighted center is approximatly in the middle.
         Returns:
             Meshgrid (Tensor) : A meshgrid of samples going from lower left to upper right column-wise. So (-1, -1)
                 (-1, -0.677), (-1, -0.5), ...
         """
-        # Calculate the PCA for current embeddings 
+        # Calculate the PCA for current embeddings
         matrix = self.embeddings
         pca = PCA(n_components=2).fit(matrix)
 
@@ -362,7 +364,7 @@ class UserProfileHost():
                 y = torch.linspace(-1, 1, 200)
                 grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
                 low_d_user_space = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
-                user_space = pca.inverse_transform(low_d_user_space).float()
+                user_space = pca.inverse_transform(low_d_user_space).type(self.text_encoder.dtype)
                 scores = self.recommender.heat_map_values(user_profile=self.user_profile,
                                                           user_space=user_space)
                 if scores is not None:
