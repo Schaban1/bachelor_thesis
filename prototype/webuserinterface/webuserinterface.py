@@ -9,7 +9,7 @@ import secrets
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
-from prototype.generator.generator import Generator
+from prototype.generator.generator import Generator, GeneratorStream
 from prototype.utils import seed_everything
 from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer, DebugMenu
 
@@ -181,12 +181,24 @@ class WebUI:
         Initializes the generator and performs a warm-start.
         """
         with self.queue_lock:
-            self.generator = Generator(
-                n_images=self.num_images_to_generate,
-                cache_dir=self.args.path.cache_dir,
-                device=self.args.device,
-                **self.args.generator
-            )
+            if self.args.use_stream_diffusion:
+                print("using stream diffusion")
+                self.generator = GeneratorStream(
+                    n_images=self.num_images_to_generate,
+                    cache_dir=self.args.path.cache_dir,
+                    device=self.args.device,
+                    hf_model_name=self.args.hf_model_name,
+                    **self.args.generator
+                )
+            else:
+                self.generator = Generator(
+                    n_images=self.num_images_to_generate,
+                    cache_dir=self.args.path.cache_dir,
+                    device=self.args.device,
+                    hf_model_name=self.args.hf_model_name,
+                    **self.args.generator
+                )
+
             if self.args.generator_warm_start:
                 self.generator.generate_image(torch.zeros(1, 77, 768))
                 self.generator.latest_images = []
@@ -202,6 +214,7 @@ class WebUI:
             cache_dir=self.args.path.cache_dir,
             stable_dif_pipe=self.generator.pipe,
             n_recommendations=self.num_images_to_generate,
+            hf_model_name=self.args.hf_model_name,
             **self.args.recommender
         )
 

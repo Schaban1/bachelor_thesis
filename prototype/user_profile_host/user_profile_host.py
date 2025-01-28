@@ -245,6 +245,7 @@ class UserProfileHost():
                 self.user_profile_history.append(self.user_profile)
             self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
 
+    @torch.no_grad()
     def clip_embedding(self, prompt: str):
         """
         Embeds a given prompt using CLIP.
@@ -252,13 +253,6 @@ class UserProfileHost():
         Returns:
             embedding (Tensor) : An embedding for the prompt in shape (77, 768)
         """
-        # prompt_tokens = self.tokenizer(prompt,
-        #                                padding="max_length",
-        #                                max_length=self.tokenizer.model_max_length,
-        #                                truncation=True,
-        #                                return_tensors="pt", ).to(self.text_encoder.device)
-        #
-        # prompt_embeds = self.text_encoder(prompt_tokens.input_ids)[0].cpu()
         prompt_embeds = self.stable_dif_pipe.encode_prompt(prompt,
                                                           device=self.text_encoder.device,
                                                           num_images_per_prompt=1,
