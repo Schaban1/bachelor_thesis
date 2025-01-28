@@ -147,9 +147,6 @@ class UserProfileHost():
             self.add_ons = random.choices(population=realistic_add_ons, k=num_realistic_add_ons)
             self.add_ons.extend(random.choices(population=[d['description'] for d in data if not d['realistic']],
                                                k=(self.n_embedding_axis-num_realistic_add_ons)))
-            print("number of add-ons: ", len(self.add_ons))
-            print("number of realistic add-ons: ", num_realistic_add_ons)
-            print("add-ons: ", self.add_ons)
 
         if self.extend_original_prompt:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
