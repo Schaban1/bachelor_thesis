@@ -27,6 +27,7 @@ recommender:
   ema_alpha : 0.5
   beta: 0.1
   beta_step_size: 0.1
+  include_random_recommendations: False
 
 path:
   output_dir: ./output/

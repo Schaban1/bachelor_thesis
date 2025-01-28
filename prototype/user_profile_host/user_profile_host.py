@@ -25,6 +25,7 @@ class UserProfileHost():
     ema_alpha = binding.BindableProperty()
     beta = binding.BindableProperty()
     beta_step_size = binding.BindableProperty()
+    include_random_rec = binding.BindableProperty()
 
     # TODO: Group together Recommender Args and just pass them to the recommender, should simplyfy this arg list
     def __init__(
@@ -41,6 +42,7 @@ class UserProfileHost():
             n_latent_axis: int = 3,
             use_latent_center: bool = False,
             n_recommendations: int = 5,
+            include_random_recommendations: bool = False,
             ema_alpha: float = 0.5,
             beta: float = 0.,
             beta_step_size: float = 0.1,
@@ -87,6 +89,7 @@ class UserProfileHost():
         self.ema_alpha = ema_alpha
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
+        self.include_random_rec = include_random_recommendations
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
@@ -185,6 +188,10 @@ class UserProfileHost():
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
+        elif self.recommendation_type == RecommendationType.DIVERSE_DIRICHLET:
+            self.recommender = DiverseDirichletRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                    n_latent_axis=self.n_latent_axis)
+            self.optimizer = NoOptimizer()
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
 
@@ -271,12 +278,13 @@ class UserProfileHost():
         if self.user_profile is not None:
             # obtain beta from the recommender if not given
             user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                                          n_recommendations=num_recommendations//2,
+                                                                          n_recommendations=num_recommendations//2 if self.include_random_rec else num_recommendations,
                                                                           beta=self.beta)
             
             # Include some random user_space_embeddings througout each iteration
-            random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
-            user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
+            if self.include_random_rec:
+                random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
+                user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
 
             # Update Beta
             self.beta = min(self.beta+self.beta_step_size, 1.)

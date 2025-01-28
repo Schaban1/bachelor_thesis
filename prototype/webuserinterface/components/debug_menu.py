@@ -68,6 +68,7 @@ class DebugMenu(ngUI.element):
                     ("n_embedding_axis", ngUI.number(label="n_embedding_axis", min=0, precision=0, step=1).props(self.input_props)),
                     ("use_embedding_center", ngUI.checkbox('use_embedding_center').style(self.checkbox_style)),
                     ("use_latent_center", ngUI.checkbox('use_latent_center').style(self.checkbox_style)),
+                    ("include_random_rec", ngUI.checkbox('include_random_rec').style(self.checkbox_style)),
                     ("n_recommendations", ngUI.number(label="n_recommendations", min=0, precision=0, step=1).props(self.input_props)),
                     ("ema_alpha", ngUI.number(label="ema_alpha", min=0, step=0.01).props(self.input_props)),
                     ("beta", ngUI.number(label="beta", min=0, precision=2, step=.01).props(self.input_props)),
