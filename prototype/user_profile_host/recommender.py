@@ -190,11 +190,13 @@ class DiverseDirichletRecommender(Recommender):
         """
         beta = get_unnormalized_value(beta, 1, 500)
         user_embeddings, preferences = user_profile
+        #Change preferences to numpy
+        preferences = preferences.numpy()
         
         new_recommendations = []
         for i_rec in range(n_recommendations):
             # Draw a random embedding from previously iterations weighted by user preference
-            idx = np.random.choice(range(preferences.shape[0]), p=preferences/torch.sum(preferences))
+            idx = np.random.choice(range(preferences.shape[0]), p=preferences/np.sum(preferences))
 
             # Select the respective user_embedding as a center
             center = user_embeddings[idx]
