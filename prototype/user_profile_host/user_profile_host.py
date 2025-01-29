@@ -393,6 +393,7 @@ class UserProfileHost():
                 else:
                     raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
 
+                # QUESTION (Paul): This will never be used, can this go? Or should this replace the first if branch?
                 if self.user_profile is None:
                     return None, transformed_embeddings, self.preferences
 
