@@ -99,8 +99,8 @@ class MainLoopUI(UIComponent):
             self.webUI.num_images_to_generate = self.webUI.args.num_recommendations
 
             # Reinitialize Display Container
-            self.webUI.images = [Image.new('RGB', (self.webUI.image_display_width, self.webUI.image_display_height)) for _ in range(self.webUI.num_images_to_generate)] # For convenience already initialized here
-            self.webUI.images_display = [None for _ in range(self.webUI.num_images_to_generate)] # For convenience already initialized here
+            self.webUI.images = self.webUI.images[:self.num_images_to_generate]
+            self.webUI.images_display = self.webUI.images_display[:self.webUI.num_images_to_generate] 
      
         self.webUI.update_user_profile()
         ngUI.notify('Scores submitted!')
