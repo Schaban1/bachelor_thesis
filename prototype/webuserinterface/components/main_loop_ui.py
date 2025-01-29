@@ -99,7 +99,7 @@ class MainLoopUI(UIComponent):
             self.webUI.num_images_to_generate = self.webUI.args.num_recommendations
 
             # Reinitialize Display Container
-            self.webUI.images = self.webUI.images[:self.num_images_to_generate]
+            self.webUI.images = self.webUI.images[:self.webUI.num_images_to_generate]
             self.webUI.images_display = self.webUI.images_display[:self.webUI.num_images_to_generate] 
      
         self.webUI.update_user_profile()
