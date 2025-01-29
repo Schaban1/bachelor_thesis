@@ -43,7 +43,7 @@ class UserProfileHost():
             use_embedding_center: bool = True,
             n_latent_axis: int = 3,
             use_latent_center: bool = False,
-            n_recommendations: int = 5,
+            n_recommendations: int = 6,
             include_random_recommendations: bool = False,
             ema_alpha: float = 0.5,
             beta: float = 0.,

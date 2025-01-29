@@ -1,6 +1,5 @@
 from abc import abstractmethod, ABC
 import numpy as np
-import random
 import torch
 from torch import Tensor
 
@@ -223,7 +222,7 @@ class BayesianRecommender(Recommender):
         self.bounds = [0., 1.]
 
     def build_search_space(self):
-        n_samples = min(max(self.n_axis * 5 ** (self.n_axis // 2), 1000), 500000)
+        n_samples = min(max(self.n_axis * 5 ** (self.n_axis // 2), 1000), 200000)
         alpha = torch.ones(self.n_axis)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_samples,))
@@ -272,6 +271,9 @@ class BayesianRecommender(Recommender):
             scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
             candidate_idx = torch.argmax(scores)
             candidate = search_space[candidate_idx].reshape(1, -1)
+
+            # Remove candidate from search space
+            search_space = torch.cat((search_space[:candidate_idx], search_space[candidate_idx+1:]))
 
             # Extend data with new candidate and predicted preference to include this information in the next iteration
             pseudo_preference = acqf._mean_and_sigma(X=candidate, compute_sigma=False)[0].detach()
