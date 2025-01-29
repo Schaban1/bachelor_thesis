@@ -46,7 +46,6 @@ class DebugMenu(ngUI.element):
                     ngUI.label("Debug Generator Info").style("font-size: 50px; color: white;")
                     ngUI.number(label="height", min=0, precision=0, step=8, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'height', forward=int)
                     ngUI.number(label="width", min=0, precision=0, step=8, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'width', forward=int)
-                    ngUI.checkbox('random_latents', on_change=self.webUI.generator.load_generator).style(self.checkbox_style).bind_value(self.webUI.generator, 'random_latents')
                     ngUI.number(label="num_inference_steps", min=0, precision=0, step=1, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'num_inference_steps', forward=int)
                     ngUI.number(label="guidance_scale", min=0, step=0.01, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'guidance_scale')
                     ngUI.number(label="n_images", min=0, precision=0, step=1, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'n_images', forward=int)

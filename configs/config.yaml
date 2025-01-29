@@ -22,7 +22,6 @@ use_stream_diffusion: False
 generator:
   num_inference_steps : 25
   guidance_scale: 7.5
-  random_latents : False
   use_negative_prompt : False
   batch_size: 5
 
