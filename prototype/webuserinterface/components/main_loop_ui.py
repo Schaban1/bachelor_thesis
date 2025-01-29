@@ -92,16 +92,20 @@ class MainLoopUI(UIComponent):
         """
         Updates the user profile with the user scores and generates the next images.
         """
-        # TODO @Henry: Maybe move this somewhere else you deem fit
+        # TODO @Henry: Maybe move this somewhere else you deem fit ####################################
+        # However, it needs to occur after the first generation and before the second!
         if self.webUI.num_images_to_generate != self.webUI.args.num_recommendations:
             # Change num_recommendations
             self.webUI.num_images_to_generate = self.webUI.args.num_recommendations
 
             # Remove extra image spots in UI
             for i in range(self.webUI.num_images_to_generate, len(self.webUI.images_display)):
-                self.webUI.images_display[i].style('display: none')
+                self.webUI.images_display[i].remove()
+                self.webUI.scorer.scores_toggles[i].remove()
             self.webUI.images = self.webUI.images[:self.webUI.num_images_to_generate]
-            self.webUI.images_display = self.webUI.images_display[:self.webUI.num_images_to_generate] 
+            self.webUI.images_display = self.webUI.images_display[:self.webUI.num_images_to_generate]
+            self.webUI.scorer.scores_toggles = self.webUI.scorer.scores_toggles[:self.webUI.num_images_to_generate]
+        ###############################################################################################
      
         self.webUI.update_user_profile()
         ngUI.notify('Scores submitted!')
