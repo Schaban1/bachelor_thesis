@@ -23,7 +23,7 @@ generator:
   num_inference_steps : 25
   guidance_scale: 7.5
   use_negative_prompt : False
-  batch_size: 5
+  batch_size: 3
 
 recommender:
   extend_original_prompt : True
