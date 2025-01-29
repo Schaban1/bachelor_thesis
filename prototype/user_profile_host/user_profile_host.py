@@ -144,12 +144,18 @@ class UserProfileHost():
                 for line in f:
                     data.append(json.loads(line))
 
-            # adapt this factor to the number of sur-/realistic add-ons
-            realistic_add_ons = [d['description'] for d in data if d['realistic']]
-            num_realistic_add_ons = min(int(self.n_embedding_axis * self.realism_factor), len(realistic_add_ons))
-            self.add_ons = random.choices(population=realistic_add_ons, k=num_realistic_add_ons)
-            self.add_ons.extend(random.choices(population=[d['description'] for d in data if not d['realistic']],
-                                               k=(self.n_embedding_axis-num_realistic_add_ons)))
+            # TODO: Change how this is handled
+            self.add_ons = [d['description'] for d in data][:self.n_embedding_axis]
+
+            # TODO: Discuss. The realism factor is just one of many attributes that should emerge or vanish based on the user's voting behaviour
+            # Therefore, setting it by hand seems unfitting to the concept of our application.
+            if False:
+                # adapt this factor to the number of sur-/realistic add-ons
+                realistic_add_ons = [d['description'] for d in data if d['realistic']]
+                num_realistic_add_ons = min(int(self.n_embedding_axis * self.realism_factor), len(realistic_add_ons))
+                self.add_ons = random.choices(population=realistic_add_ons, k=num_realistic_add_ons)
+                self.add_ons.extend(random.choices(population=[d['description'] for d in data if not d['realistic']],
+                                                k=(self.n_embedding_axis-num_realistic_add_ons)))
 
         if self.extend_original_prompt:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:

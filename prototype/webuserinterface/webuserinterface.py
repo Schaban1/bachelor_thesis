@@ -63,7 +63,7 @@ class WebUI:
         # Provided by the user / system
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.RANDOM
-        self.num_images_to_generate = self.args.num_recommendations
+        self.num_images_to_generate = self.args.num_recommendations * 3 #Initially larger than follow up iterations
         assert self.num_images_to_generate%2 == 0, "We need an even num images to generate (num_recommendations)!"
 
         self.score_mode = self.args.score_mode
@@ -134,6 +134,17 @@ class WebUI:
         self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
         self.is_generating = self.state == WebUIState.GENERATING_STATE
         self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
+
+        # TODO @Henry: Maybe move this somewhere else you deem fit
+        if self.state == WebUIState.MAIN_STATE:
+            # Change num_recommendations
+            self.num_images_to_generate = self.args.num_recommendations
+
+            # Reinitialize Display Container
+            self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+            self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+            
+
 
     # <------------------------------------>
     # <---------- Building UI ---------->

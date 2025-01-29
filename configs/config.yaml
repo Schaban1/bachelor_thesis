@@ -3,7 +3,7 @@ defaults:
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled
 
-num_recommendations : 8
+num_recommendations : 10
 port: 8080
 reconnect_timeout: 30
 score_mode: emoji
@@ -28,7 +28,7 @@ generator:
 
 recommender:
   extend_original_prompt : True
-  n_embedding_axis : 13
+  n_embedding_axis : 25
   use_embedding_center : False
   n_latent_axis : 13
   use_latent_center : False
