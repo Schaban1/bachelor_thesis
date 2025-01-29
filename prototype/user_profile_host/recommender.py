@@ -325,6 +325,6 @@ class BayesianRecommender(Recommender):
         acqf = UpperConfidenceBound(model=model, beta=beta, maximize=True)
 
         # Get the highest scoring candidates out of meshgrid
-        scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1])).detach()
+        scores = acqf._mean_and_sigma(X=search_space.reshape(search_space.shape[0], 1, search_space.shape[1]),compute_sigma=False)[0].detach()
 
         return scores
