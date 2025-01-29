@@ -118,6 +118,15 @@ class Generator(GeneratorBase):
                                                          return_tensors="pt", ).to(self.pipe.text_encoder.device)
             self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
 
+        latents = torch.randn(
+                    (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
+                    device=self.pipe.device, dtype=self.pipe.dtype
+                )
+
+        # Warm up twice for quick speed up
+        self.generate_image(embeddings=self.negative_prompt_embeds[0], latents=latents)
+        self.generate_image(embeddings=self.negative_prompt_embeds[0], latents=latents)
+
 
     @torch.no_grad()
     def generate_image(self, embeddings: Tensor | tuple[Tensor, Tensor], latents: Tensor = None) -> list[Image]:
