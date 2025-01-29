@@ -99,8 +99,7 @@ class MainLoopUI(UIComponent):
 
             # Remove extra image spots in UI
             for i in range(self.webUI.num_images_to_generate, len(self.webUI.images_display)):
-                self.webUI.images[i] = None
-                self.webUI.images_display[i] = None
+                self.webUI.images_display[i].style('display: none')
             self.webUI.images = self.webUI.images[:self.webUI.num_images_to_generate]
             self.webUI.images_display = self.webUI.images_display[:self.webUI.num_images_to_generate] 
      

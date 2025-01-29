@@ -96,7 +96,6 @@ class Generator(GeneratorBase):
             logging.warning("Cannot use xformers memory efficient attention (maybe xformers not installed)")
 
         self.load_generator()
-        #self.generate_image(torch.zeros(size=(1, 77, 768), dtype=self.pipe.dtype, device=self.pipe.device))
 
     def load_generator(self):
         self.negative_prompt_embeds = None
@@ -108,16 +107,6 @@ class Generator(GeneratorBase):
                                                         truncation=True,
                                                         return_tensors="pt", ).to(self.pipe.text_encoder.device)
         self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
-
-        latents = torch.randn(
-                    (1, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
-                    device=self.pipe.device, dtype=self.pipe.dtype
-                )
-
-        # Warm up twice for quick speed up
-        # TODO: Fix this. with correct embedding shapes
-        self.generate_image(embeddings=self.negative_prompt_embeds[0][None, :, :], latents=latents)
-        self.generate_image(embeddings=self.negative_prompt_embeds[0][None, :, :], latents=latents)
 
 
     @torch.no_grad()
