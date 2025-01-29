@@ -5,6 +5,7 @@ from PIL import Image
 import asyncio
 import threading
 import secrets
+import torch
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
@@ -198,6 +199,11 @@ class WebUI:
                     hf_model_name=self.args.hf_model_name,
                     **self.args.generator
                 )
+
+            # TODO: Check if generating a new image twice leads to quicker generation
+            self.generator.generate_image(torch.zeros(1, 77, 768))
+            self.generator.generate_image(torch.zeros(1, 77, 768))
+            self.generator.latest_images = []
 
             # if self.args.generator_warm_start:
             #     self.generator.generate_image(torch.zeros(1, 77, 768))
