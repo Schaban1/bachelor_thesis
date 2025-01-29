@@ -94,7 +94,6 @@ class UserProfileHost():
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
-        assert self.realism_factor >= 0., "Realism factor should be in range [0., 1.]"
         assert self.beta_step_size >= 0. and self.beta_step_size < 1., "Beta Step Size should be in [0., 1.]"
 
         # Placeholder for the already evaluated embeddings of the current user
