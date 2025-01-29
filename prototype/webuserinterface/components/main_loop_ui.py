@@ -98,7 +98,10 @@ class MainLoopUI(UIComponent):
             # Change num_recommendations
             self.webUI.num_images_to_generate = self.webUI.args.num_recommendations
 
-            # Reinitialize Display Container
+            # Remove extra image spots in UI
+            for i in range(self.webUI.num_images_to_generate, len(self.image_display)):
+                self.webUI.images[i] = None
+                self.webUI.image_display[i] = None
             self.webUI.images = self.webUI.images[:self.webUI.num_images_to_generate]
             self.webUI.images_display = self.webUI.images_display[:self.webUI.num_images_to_generate] 
      

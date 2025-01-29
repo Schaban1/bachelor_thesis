@@ -142,6 +142,8 @@ class UserProfileHost():
             # TODO: Change how this is handled
             self.add_ons = random.sample(population=[d['description'] for d in data], k=self.n_embedding_axis)
 
+            # TODO (Discuss): What if we initially use all axis and then perform a PCA transformation into a subspace to reduce the number of variables?
+
         if self.extend_original_prompt:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
