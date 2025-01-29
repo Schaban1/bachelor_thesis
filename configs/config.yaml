@@ -24,7 +24,7 @@ generator:
   guidance_scale: 7.5
   random_latents : False
   use_negative_prompt : False
-  batch_size: null
+  batch_size: 5
 
 recommender:
   extend_original_prompt : True
@@ -36,7 +36,6 @@ recommender:
   beta: 0.1
   beta_step_size: 0.1
   include_random_recommendations: False
-  realism_factor: 0.8
 
 path:
   output_dir: ./output/

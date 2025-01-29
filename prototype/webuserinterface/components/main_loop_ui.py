@@ -2,6 +2,7 @@ from nicegui import ui as ngUI
 import asyncio
 from functools import partial
 import os
+from PIL import Image
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 from prototype.constants import WebUIState, ScoreMode
@@ -92,6 +93,15 @@ class MainLoopUI(UIComponent):
         """
         Updates the user profile with the user scores and generates the next images.
         """
+        # TODO @Henry: Maybe move this somewhere else you deem fit
+        if self.num_images_to_generate != self.args.num_recommendations:
+            # Change num_recommendations
+            self.num_images_to_generate = self.args.num_recommendations
+
+            # Reinitialize Display Container
+            self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+            self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+     
         self.webUI.update_user_profile()
         ngUI.notify('Scores submitted!')
         self.webUI.change_state(WebUIState.GENERATING_STATE)

@@ -133,17 +133,7 @@ class WebUI:
         self.is_initial_iteration = self.state == WebUIState.INIT_STATE
         self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
         self.is_generating = self.state == WebUIState.GENERATING_STATE
-        self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
-
-        # TODO @Henry: Maybe move this somewhere else you deem fit
-        if self.state == WebUIState.MAIN_STATE:
-            # Change num_recommendations
-            self.num_images_to_generate = self.args.num_recommendations
-
-            # Reinitialize Display Container
-            self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
-            self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
-            
+        self.is_interactive_plot = self.state == WebUIState.PLOT_STATE       
 
 
     # <------------------------------------>

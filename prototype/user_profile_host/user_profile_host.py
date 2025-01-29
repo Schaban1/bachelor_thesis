@@ -47,8 +47,7 @@ class UserProfileHost():
             include_random_recommendations: bool = False,
             ema_alpha: float = 0.5,
             beta: float = 0.,
-            beta_step_size: float = 0.1,
-            realism_factor: float = 0.8,
+            beta_step_size: float = 0.1
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -71,8 +70,6 @@ class UserProfileHost():
         :param beta: Trade-off between exploration and exploitation. Must be in [0, 1]. 0 means exploration, 1 means
             exploitation. Beta is increased after each recommendation (i.e. more exploitation).
         :param beta_step_size: The step size for the beta increase.
-        :param realism_factor: Factor to determine the number of realistic add-ons to be used. The bigger the factor, the
-            more realistic add-ons will be used.
         """
         # Some Clip Hyperparameters
         self.original_prompt = original_prompt
@@ -94,7 +91,6 @@ class UserProfileHost():
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
         self.include_random_rec = include_random_recommendations
-        self.realism_factor = min(realism_factor, 1.)
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
@@ -145,17 +141,7 @@ class UserProfileHost():
                     data.append(json.loads(line))
 
             # TODO: Change how this is handled
-            self.add_ons = [d['description'] for d in data][:self.n_embedding_axis]
-
-            # TODO: Discuss. The realism factor is just one of many attributes that should emerge or vanish based on the user's voting behaviour
-            # Therefore, setting it by hand seems unfitting to the concept of our application.
-            if False:
-                # adapt this factor to the number of sur-/realistic add-ons
-                realistic_add_ons = [d['description'] for d in data if d['realistic']]
-                num_realistic_add_ons = min(int(self.n_embedding_axis * self.realism_factor), len(realistic_add_ons))
-                self.add_ons = random.choices(population=realistic_add_ons, k=num_realistic_add_ons)
-                self.add_ons.extend(random.choices(population=[d['description'] for d in data if not d['realistic']],
-                                                k=(self.n_embedding_axis-num_realistic_add_ons)))
+            self.add_ons = random.sample(population=[d['description'] for d in data], k=self.n_embedding_axis)
 
         if self.extend_original_prompt:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
@@ -399,7 +385,6 @@ class UserProfileHost():
                 else:
                     raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
 
-                # QUESTION (Paul): This will never be used, can this go? Or should this replace the first if branch?
                 if self.user_profile is None:
                     return None, transformed_embeddings, self.preferences
 
