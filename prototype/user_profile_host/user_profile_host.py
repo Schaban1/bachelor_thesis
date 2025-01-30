@@ -134,7 +134,7 @@ class UserProfileHost():
         # TODO: Discuss, if this could be improved.
         # TODO (Discuss): What if we initially use all (more) axis and then perform a PCA transformation into a subspace to reduce the number of variables?
         if not self.add_ons:
-            with open('individual_tokens.json', 'r') as f:
+            with open('prototype/user_profile_host/individual_tokens.json', 'r') as f:
                 L = json.load(f)
             self.add_ons = []
             for i in range(self.n_embedding_axis):
