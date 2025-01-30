@@ -82,7 +82,7 @@ class UserProfileHost():
         self.height = 512
         self.width = 512
         self.latent_space_length = 15.55
-        self.n_token_per_addon = 15
+        self.n_token_per_addon = 10
         self.n_latent_axis = n_latent_axis
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
