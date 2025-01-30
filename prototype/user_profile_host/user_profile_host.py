@@ -82,6 +82,7 @@ class UserProfileHost():
         self.height = 512
         self.width = 512
         self.latent_space_length = 15.55
+        self.n_token_per_addon = 15
         self.n_latent_axis = n_latent_axis
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
@@ -131,19 +132,19 @@ class UserProfileHost():
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
         # TODO: Discuss, if this could be improved.
-        self.embedding_axis = []
+        # TODO (Discuss): What if we initially use all (more) axis and then perform a PCA transformation into a subspace to reduce the number of variables?
         if not self.add_ons:
-            data = []
-            # https://stackoverflow.com/questions/12451431/loading-and-parsing-a-json-file-with-multiple-json-objects
-            with open('prototype/user_profile_host/add_ons.json') as f:
-                for line in f:
-                    data.append(json.loads(line))
+            with open('individual_tokens.json', 'r') as f:
+                L = json.load(f)
+            self.add_ons = []
+            for i in range(self.n_embedding_axis):
+                add_on = ""
+                for j in range(self.n_token_per_addon):
+                    idx = random.choice(range(len(L)))
+                    add_on += L[idx] + ', '
+                self.add_ons.append(add_on[:-2])
 
-            # TODO: Change how this is handled
-            self.add_ons = random.sample(population=[d['description'] for d in data], k=self.n_embedding_axis)
-
-            # TODO (Discuss): What if we initially use all axis and then perform a PCA transformation into a subspace to reduce the number of variables?
-
+        self.embedding_axis = []
         if self.extend_original_prompt:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
