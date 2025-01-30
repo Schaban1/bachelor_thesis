@@ -4,7 +4,7 @@ from torch import Tensor
 from nicegui import binding
 import torch
 from PIL.Image import Image
-from diffusers import StableDiffusionPipeline, AutoencoderTiny, StableDiffusion3Pipeline, FluxPipeline, AutoencoderKL
+from diffusers import StableDiffusionPipeline, AutoencoderTiny, AutoencoderKL
 from streamdiffusion.image_utils import postprocess_image
 from prototype.generator.stream_diffusion import StreamDiffusion
 import logging
@@ -100,13 +100,14 @@ class Generator(GeneratorBase):
     def load_generator(self):
         self.negative_prompt_embeds = None
         self.negative_prompt = ""
-        self.negative_prompt = "lowres, error, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature, deformed, ugly, mutilated, disfigured, text, extra limbs, face cut, head cut, extra fingers, extra arms, poorly drawn face, mutation, bad proportions, cropped head, malformed limbs, mutated hands, fused fingers, long neck, illustration, painting, drawing, art, sketch,bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, worst quality, cropped, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, deformed, missing limb, bad hands, extra digits, extra fingers, not enough fingers, floating head, disembodied"
-        negative_prompt_tokens = self.pipe.tokenizer(self.negative_prompt,
-                                                        padding="max_length",
-                                                        max_length=self.pipe.tokenizer.model_max_length,
-                                                        truncation=True,
-                                                        return_tensors="pt", ).to(self.pipe.text_encoder.device)
-        self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
+        if self.use_negative_prompt:
+            self.negative_prompt = "lowres, error, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature, deformed, ugly, mutilated, disfigured, text, extra limbs, face cut, head cut, extra fingers, extra arms, poorly drawn face, mutation, bad proportions, cropped head, malformed limbs, mutated hands, fused fingers, long neck, illustration, painting, drawing, art, sketch,bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, worst quality, cropped, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, deformed, missing limb, bad hands, extra digits, extra fingers, not enough fingers, floating head, disembodied"
+            negative_prompt_tokens = self.pipe.tokenizer(self.negative_prompt,
+                                                            padding="max_length",
+                                                            max_length=self.pipe.tokenizer.model_max_length,
+                                                            truncation=True,
+                                                            return_tensors="pt", ).to(self.pipe.text_encoder.device)
+            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
 
 
     @torch.no_grad()

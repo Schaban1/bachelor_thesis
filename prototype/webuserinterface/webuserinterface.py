@@ -5,7 +5,7 @@ from PIL import Image
 import asyncio
 import threading
 import secrets
-import torch
+import logging
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
@@ -101,6 +101,7 @@ class WebUI:
         """
         This function starts the Web UI.
         """
+        logging.info("Start running the Web UI.")
         self.change_state(WebUIState.INIT_STATE)
         self.root.clear()
         self.build_userinterface()
@@ -149,6 +150,7 @@ class WebUI:
         - Some empty space so the footer doesnt look weird on high resolution devices.
         - Webis demo template bottom half/footer.
         """
+        logging.info("Building User Interface.")
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
@@ -181,6 +183,7 @@ class WebUI:
         """
         Initializes the generator and performs a warm-start.
         """
+        logging.info("Initialize Generator.")
         with self.queue_lock:
             if self.args.use_stream_diffusion:
                 print("using stream diffusion")
@@ -204,6 +207,7 @@ class WebUI:
         """
         Initializes the user profile host with the initial user prompt.
         """
+        logging.info("Initialize User Profile Host.")
         self.user_profile_host = UserProfileHost(
             original_prompt=self.user_prompt,
             add_ons=None,
@@ -247,6 +251,7 @@ class WebUI:
         Args:
             idx: The image index of the new active image.
         """
+        logging.info("Update Active Images.")
         if self.score_mode == ScoreMode.EMOJI.value:
             idx = idx % self.num_images_to_generate
             self.images_display[self.active_image].style('border-color: lightgray')
@@ -270,6 +275,7 @@ class WebUI:
         Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated 
         images of the generator in self.images.
         """
+        logging.info("Generate new Images.")
         with self.queue_lock:
             embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
@@ -293,12 +299,14 @@ class WebUI:
         """
         Updates the image displays with the current images in self.images.
         """
+        logging.info("Update Image Displays.")
         [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
 
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
         """
+        logging.info("Update UserProfileHost.")
         normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
 

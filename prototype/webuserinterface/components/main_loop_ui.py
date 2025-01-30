@@ -117,6 +117,9 @@ class MainLoopUI(UIComponent):
         self.webUI.plot_ui.clear_view()
 
         seed_everything(self.webUI.args.random_seed)
+
+        # Ensure large batch for first iteration again
+        
     
     def set_user_profile_host_beta_updater(self):
         """
