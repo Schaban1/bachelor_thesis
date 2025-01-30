@@ -92,9 +92,10 @@ class MainLoopUI(UIComponent):
         """
         Updates the user profile with the user scores and generates the next images.
         """
-        self.webUI.update_num_images()
         self.webUI.update_user_profile()
         ngUI.notify('Scores submitted!')
+        self.webUI.update_num_images()
+        ngUI.notify('Number of images updated!')
         self.webUI.change_state(WebUIState.GENERATING_STATE)
         ngUI.notify('Generating new images...')
         loop = asyncio.get_event_loop()
