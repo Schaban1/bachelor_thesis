@@ -5,9 +5,9 @@ import logging
 # Press F9 in the app to access the debug menu!
 @hydra.main(version_base=None, config_path="configs/", config_name="config")
 def main(args):
-    logging.info("Initialize Application.")
+    print("Initialize Application.")
     app = App(args=args)
-    logging.info("Start Application.")
+    print("Start Application.")
     app.start()
 
 if __name__ in {"__main__", "__mp_main__"}:

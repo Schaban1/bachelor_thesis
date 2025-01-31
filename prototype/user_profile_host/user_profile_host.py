@@ -139,6 +139,8 @@ class UserProfileHost():
             self.add_ons = []
             tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
             self.add_ons = [", ".join(tokens[i*self.n_token_per_addon:(i+1)*self.n_token_per_addon]) for i in range(self.n_embedding_axis)]
+            for ao in self.add_ons:
+                print(ao)
 
         self.embedding_axis = []
         if self.extend_original_prompt:
