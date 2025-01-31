@@ -137,12 +137,8 @@ class UserProfileHost():
             with open('prototype/user_profile_host/individual_tokens.json', 'r') as f:
                 L = json.load(f)
             self.add_ons = []
-            for i in range(self.n_embedding_axis):
-                add_on = ""
-                for j in range(self.n_token_per_addon):
-                    idx = random.choice(range(len(L)))
-                    add_on += L[idx] + ', '
-                self.add_ons.append(add_on[:-2])
+            tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
+            self.add_ons = [", ".join(tokens[i*self.n_tokens_per_addon:(i+1)*self.n_tokens_per_addon]) for i in range(self.n_embedding_axis)]
 
         self.embedding_axis = []
         if self.extend_original_prompt:
