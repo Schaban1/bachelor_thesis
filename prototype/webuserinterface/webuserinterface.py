@@ -306,7 +306,7 @@ class WebUI:
         Updates the image displays with the current images in self.images.
         """
         print("Update Image Displays.")
-        [self.images_display[i].set_source(self.images[i]) for i in range(len(self.images_display))]
+        [self.images_display[i].set_source(self.images[i]) for i in range(len(self.images))]
 
     def update_user_profile(self):
         """
