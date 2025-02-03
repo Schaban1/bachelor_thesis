@@ -115,9 +115,9 @@ class WebUI:
         """
         self.root.clear()
         self.scorer = Scorer(self)
-        self.images = self.images[:min(len(self.images), self.num_images_to_generate)] \
-                    + [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate - min(len(self.images), self.num_images_to_generate))]
-        self.images_display = [None for _ in range(self.num_images_to_generate)]
+        self.images = self.images[:min(len(self.images), self.num_images_to_generate * self.args.first_iteration_images_factor)] \
+                    + [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range((self.num_images_to_generate * self.args.first_iteration_images_factor) - min(len(self.images), self.num_images_to_generate * self.args.first_iteration_images_factor))]
+        self.images_display = [None for _ in range(self.num_images_to_generate * self.args.first_iteration_images_factor)]
         self.build_userinterface()
 
     # <---------- Updating State ---------->
