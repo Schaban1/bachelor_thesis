@@ -43,7 +43,7 @@ class MainLoopUI(UIComponent):
             with ngUI.row().classes('mx-auto items-center mt-4'):
                 for i in range(self.webUI.num_images_to_generate * self.webUI.first_iteration_images_factor):
                     with ngUI.column().classes('mx-auto items-center') as image_container:
-                        if i < self.webUI.num_images_to_generate:
+                        if i >= self.webUI.num_images_to_generate:
                             image_container.bind_visibility_from(self.webUI, 'iteration', backward=lambda it: it < 2, value=True)
                         self.webUI.images_display[i] = ngUI.interactive_image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                         with self.webUI.images_display[i]:
