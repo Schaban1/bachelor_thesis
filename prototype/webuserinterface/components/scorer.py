@@ -18,8 +18,8 @@ class Scorer:
         """
         self.webUI = webUI
 
-        self.scores_slider = [None for _ in range(self.webUI.num_images_to_generate)] # For convenience already initialized here
-        self.scores_toggles = [None for _ in range(self.webUI.num_images_to_generate)] # For convenience already initialized here
+        self.scores_slider = [None for _ in range(self.webUI.num_images_to_generate * self.webUI.first_iteration_images_factor)] # For convenience already initialized here
+        self.scores_toggles = [None for _ in range(self.webUI.num_images_to_generate * self.webUI.first_iteration_images_factor)] # For convenience already initialized here
 
         self.init_score_mode()
     
