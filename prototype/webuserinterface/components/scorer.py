@@ -64,7 +64,7 @@ class Scorer:
         Returns:
             The normalized scores as a one-dim tensor of shape (num_images_to_generate).
         """
-        scores = torch.FloatTensor([slider.value for slider in self.scores_slider])
+        scores = torch.FloatTensor([slider.value for slider in self.scores_slider if slider.visible])
         normalized_scores = scores / 10
         return normalized_scores
     
@@ -75,7 +75,7 @@ class Scorer:
         Returns:
             The normalized scores as a one-dim tensor of shape (num_images_to_generate).
         """
-        scores = torch.FloatTensor([toggle.value for toggle in self.scores_toggles])
+        scores = torch.FloatTensor([toggle.value for toggle in self.scores_toggles if toggle.visible])
         normalized_scores = scores / 4
         return normalized_scores
 

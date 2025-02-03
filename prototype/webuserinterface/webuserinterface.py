@@ -24,6 +24,7 @@ class WebUI:
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
     is_interactive_plot = binding.BindableProperty()
+    iteration = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
@@ -61,11 +62,13 @@ class WebUI:
         self.is_main_loop_iteration = False
         self.is_generating = False
         self.is_interactive_plot = False
+        self.iteration = 0
         # Provided by the user / system
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.RANDOM
-        self.num_images_to_generate = self.args.num_recommendations * 3 #Initially larger than follow up iterations
+        self.num_images_to_generate = self.args.num_recommendations
         assert self.num_images_to_generate%2 == 0, "We need an even num images to generate (num_recommendations)!"
+        self.first_iteration_images_factor = self.args.first_iteration_images_factor
 
         self.score_mode = self.args.score_mode
         self.scorer = Scorer(self)
@@ -77,8 +80,8 @@ class WebUI:
 
         # Lists / UI components
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
-        self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
-        self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate * self.args.first_iteration_images_factor)] # For convenience already initialized here
+        self.images_display = [None for _ in range(self.num_images_to_generate * self.args.first_iteration_images_factor)] # For convenience already initialized here
         self.active_image = 0
         self.submit_button = None
         # Image saving
@@ -277,7 +280,10 @@ class WebUI:
         """
         print("Generate new Images.")
         with self.queue_lock:
-            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
+            if self.iteration < 2:
+                embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate*self.first_iteration_images_factor)
+            else:
+                embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
 
     def update_num_images(self):
@@ -300,7 +306,7 @@ class WebUI:
         Updates the image displays with the current images in self.images.
         """
         print("Update Image Displays.")
-        [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
+        [self.images_display[i].set_source(self.images[i]) for i in range(len(self.images_display))]
 
     def update_user_profile(self):
         """

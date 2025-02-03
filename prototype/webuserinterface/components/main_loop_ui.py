@@ -41,8 +41,8 @@ class MainLoopUI(UIComponent):
                     ngUI.icon('subject', size='2rem').classes('mr-2')
                     ngUI.label(self.webUI.user_prompt).style('font-size: 120%;').bind_text_from(self.webUI, 'user_prompt')
             with ngUI.row().classes('mx-auto items-center mt-4'):
-                for i in range(self.webUI.num_images_to_generate):
-                    with ngUI.column().classes('mx-auto items-center'):
+                for i in range(self.webUI.num_images_to_generate * self.webUI.first_iteration_images_factor):
+                    with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'iteration', backward=lambda it: it < 2 or i < self.webUI.num_images_to_generate):
                         self.webUI.images_display[i] = ngUI.interactive_image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down; border-width: 3px; border-color: lightgray;')
                         with self.webUI.images_display[i]:
                             ngUI.button(icon='o_save', on_click=partial(self.on_save_button_click, self.webUI.images_display[i])).props('flat fab color=white').classes('absolute bottom-0 right-0 m-2')
@@ -94,9 +94,9 @@ class MainLoopUI(UIComponent):
         """
         self.webUI.update_user_profile()
         ngUI.notify('Scores submitted!')
-        self.webUI.update_num_images()
         ngUI.notify('Number of images updated!')
         self.webUI.change_state(WebUIState.GENERATING_STATE)
+        self.webUI.iteration += 1
         ngUI.notify('Generating new images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
@@ -112,14 +112,13 @@ class MainLoopUI(UIComponent):
         self.webUI.change_state(WebUIState.INIT_STATE)
         self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
+        self.webUI.iteration = 0
 
         # Clear plot ui for new process
         self.webUI.generator.clear_latest_images()
         self.webUI.plot_ui.clear_view()
 
         seed_everything(self.webUI.args.random_seed)
-
-        #TODO: Ensure large batch for first iteration again
         
     
     def set_user_profile_host_beta_updater(self):

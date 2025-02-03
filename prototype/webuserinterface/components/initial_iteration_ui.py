@@ -61,6 +61,7 @@ class InitialIterationUI(UIComponent):
         if self.webUI.blind_mode:
             self.setup_blind_mode()
         self.webUI.change_state(WebUIState.GENERATING_STATE)
+        self.webUI.iteration += 1
         ngUI.notify('Generating images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.init_user_profile_host)

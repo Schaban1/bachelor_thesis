@@ -4,6 +4,7 @@ defaults:
   - override hydra/job_logging: disabled
 
 num_recommendations : 10
+first_iteration_images_factor: 3
 port: 8080
 reconnect_timeout: 30
 score_mode: emoji
