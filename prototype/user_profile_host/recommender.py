@@ -205,7 +205,7 @@ class DiverseDirichletRecommender(Recommender):
             dist = torch.distributions.dirichlet.Dirichlet(alpha)
 
             # Sample one sample
-            sample = dist.sample(sample_shape=(n_recommendations,))
+            sample = dist.sample(sample_shape=(1,))
             new_recommendations.append(sample)
         
         new_recommendations = torch.cat(new_recommendations)
