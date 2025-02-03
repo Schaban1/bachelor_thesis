@@ -286,21 +286,6 @@ class WebUI:
                 embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
 
-    def update_num_images(self):
-        # TODO @Henry: Maybe move this somewhere else you deem fit ####################################
-        # However, it needs to occur after the first generation and before the second!
-        if self.num_images_to_generate != self.args.num_recommendations:
-            # Change num_recommendations
-            self.num_images_to_generate = self.args.num_recommendations
-
-            # Remove extra image spots in UI
-            for i in range(self.num_images_to_generate, len(self.images_display)):
-                self.images_display[i].delete()
-                self.scorer.scores_toggles[i].delete()
-            self.images = self.images[:self.num_images_to_generate]
-            self.images_display = self.images_display[:self.num_images_to_generate]
-            self.scorer.scores_toggles = self.scorer.scores_toggles[:self.num_images_to_generate] # This may not be working for the slider
-
     def update_image_displays(self):
         """
         Updates the image displays with the current images in self.images.
