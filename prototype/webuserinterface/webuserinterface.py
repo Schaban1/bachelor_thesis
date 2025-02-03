@@ -256,7 +256,7 @@ class WebUI:
         """
         print("Update Active Images.")
         if self.score_mode == ScoreMode.EMOJI.value:
-            idx = idx % self.num_images_to_generate
+            idx = idx % len(self.images)
             self.images_display[self.active_image].style('border-color: lightgray')
             self.active_image = idx
             self.images_display[idx].style('border-color: red')
