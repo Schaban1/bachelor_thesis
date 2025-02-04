@@ -47,7 +47,9 @@ class UserProfileHost():
             include_random_recommendations: bool = False,
             ema_alpha: float = 0.5,
             beta: float = 0.,
-            beta_step_size: float = 0.1
+            beta_step_size: float = 0.1,
+            n_tokens_per_axis: int = 10,
+            axis_with_context: bool = False,
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -82,7 +84,8 @@ class UserProfileHost():
         self.height = 512
         self.width = 512
         self.latent_space_length = 15.55
-        self.n_token_per_addon = 10
+        self.n_token_per_addon = n_tokens_per_axis
+        self.axis_with_context = axis_with_context
         self.n_latent_axis = n_latent_axis
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
@@ -134,7 +137,7 @@ class UserProfileHost():
         # TODO: Discuss, if this could be improved.
         # TODO (Discuss): What if we initially use all (more) axis and then perform a PCA transformation into a subspace to reduce the number of variables?
         if not self.add_ons:
-            with open('prototype/user_profile_host/individual_tokens.json', 'r') as f:
+            with open('prototype/user_profile_host/' + ('individual_tokens.json' if not self.axis_with_context else 'individual_tokens_with_contexts.json'), 'r') as f:
                 L = json.load(f)
             self.add_ons = []
             tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)

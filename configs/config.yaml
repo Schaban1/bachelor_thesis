@@ -28,6 +28,8 @@ generator:
 
 recommender:
   extend_original_prompt : True
+  axis_with_context: False
+  n_tokens_per_axis: 10
   n_embedding_axis : 20
   use_embedding_center : False
   n_latent_axis : 20
