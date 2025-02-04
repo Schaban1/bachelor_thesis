@@ -137,8 +137,17 @@ class UserProfileHost():
         # TODO: Discuss, if this could be improved.
         # TODO (Discuss): What if we initially use all (more) axis and then perform a PCA transformation into a subspace to reduce the number of variables?
         if not self.add_ons:
-            with open('prototype/user_profile_host/' + ('individual_tokens.json' if not self.axis_with_context else 'individual_tokens_with_contexts.json'), 'r') as f:
-                L = json.load(f)
+            print("Use axes with context: ", self.axis_with_context)
+
+            if self.axis_with_context:
+                with open('prototype/user_profile_host/individual_tokens_with_contexts.json', 'r') as f:
+                    L = json.load(f)
+            else:
+                L = []
+                with open('prototype/user_profile_host/add_ons.json', 'r') as f:
+                    for line in f:
+                        L.extend((json.loads(line)['description']).split(', '))
+
             self.add_ons = []
             tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
             self.add_ons = [", ".join(tokens[i*self.n_token_per_addon:(i+1)*self.n_token_per_addon]) for i in range(self.n_embedding_axis)]
