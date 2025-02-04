@@ -50,6 +50,7 @@ class UserProfileHost():
             beta_step_size: float = 0.1,
             n_tokens_per_axis: int = 10,
             axis_with_context: bool = False,
+            random_original_prompt_location: bool = False
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -95,6 +96,7 @@ class UserProfileHost():
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
         self.include_random_rec = include_random_recommendations
+        self.random_original_prompt_location = random_original_prompt_location
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
@@ -134,8 +136,6 @@ class UserProfileHost():
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
-        # TODO: Discuss, if this could be improved.
-        # TODO (Discuss): What if we initially use all (more) axis and then perform a PCA transformation into a subspace to reduce the number of variables?
         if not self.add_ons:
             with open('prototype/user_profile_host/' + ('individual_tokens.json' if not self.axis_with_context else 'individual_tokens_with_contexts.json'), 'r') as f:
                 L = json.load(f)
@@ -147,8 +147,16 @@ class UserProfileHost():
 
         self.embedding_axis = []
         if self.extend_original_prompt:
-            for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
-                self.embedding_axis.append(self.clip_embedding(prompt))
+            if self.random_original_prompt_location:
+                for a in self.add_ons:
+                    l = a.split(", ")
+                    rand_idx = random.choice(range(len(l)))
+                    l = l[:rand_idx] + [(', ' if rand_idx > 0 else []) + self.original_prompt + (', ' if rand_idx < len(l)-1 else '')] + l[rand_idx:]
+                    promt = ", ".join(l)
+                    self.embedding_axis.append(self.clip_embedding(prompt))
+            else:
+                for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
+                    self.embedding_axis.append(self.clip_embedding(prompt))
         else:
             for prompt in self.add_ons:
                 self.embedding_axis.append(self.clip_embedding(prompt))

@@ -28,11 +28,12 @@ generator:
 
 recommender:
   extend_original_prompt : True
+  random_original_prompt_location : False
   axis_with_context: False
   n_tokens_per_axis: 10
-  n_embedding_axis : 20
+  n_embedding_axis : 30
   use_embedding_center : False
-  n_latent_axis : 20
+  n_latent_axis : 10
   use_latent_center : False
   ema_alpha : 0.5
   beta: 0.1
