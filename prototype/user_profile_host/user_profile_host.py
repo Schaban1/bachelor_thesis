@@ -150,7 +150,7 @@ class UserProfileHost():
             if self.random_original_prompt_location:
                 for a in self.add_ons:
                     l = a.split(", ")
-                    rand_idx = random.choice(range(len(l)))
+                    rand_idx = random.choice(range(len(l)//3)) # TODO: Transfer 3 into hp if useful
                     l = l[:rand_idx] + [(', ' if rand_idx > 0 else '') + self.original_prompt + (', ' if rand_idx < len(l)-1 else '')] + l[rand_idx:]
                     prompt = ", ".join(l)
                     self.embedding_axis.append(self.clip_embedding(prompt))
