@@ -146,7 +146,9 @@ class UserProfileHost():
                 L = []
                 with open('prototype/user_profile_host/add_ons.json', 'r') as f:
                     for line in f:
-                        L.extend((json.loads(line)['description']).split(', '))
+                        # replaces '.' with ', ' to split the string correctly
+                        # omits the last comma to avoid them at the end of the prompt
+                        L.extend([add_on.rstrip(',') for add_on in ((json.loads(line)['description'].replace('.', ',')).split(', '))])
 
             self.add_ons = []
             tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
