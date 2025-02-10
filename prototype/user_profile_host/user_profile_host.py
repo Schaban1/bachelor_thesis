@@ -129,10 +129,12 @@ class UserProfileHost():
 
     def load_user_profile_host(self):
         # Define the center of the user_space with the original prompt embedding
-        self.embedding_center = self.clip_embedding(self.original_prompt)
+        self.prompt_embedding = self.clip_embedding(self.original_prompt)
         self.embedding_length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False)
         if not self.use_embedding_center:
             self.embedding_center = torch.zeros(size=(1, self.n_clip_tokens, self.embedding_dim))
+        else:
+            self.embedding_center = self.prompt_embedding
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
@@ -209,8 +211,12 @@ class UserProfileHost():
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
-        elif self.recommendation_type == RecommendationType.DIVERSE_DIRICHLET:
-            self.recommender = DiverseDirichletRecommender(n_embedding_axis=self.n_embedding_axis,
+        elif self.recommendation_type == RecommendationType.BASELINE:
+            self.recommender = BaselineRecommender(prompt_embedding=self.prompt_embedding,
+                                                    n_latent_axis=self.n_latent_axis)
+            self.optimizer = NoOptimizer()
+        elif self.recommendation_type == RecommendationType.SIMPLE:
+            self.recommender = SimpleRandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = NoOptimizer()
         else:
@@ -231,13 +237,16 @@ class UserProfileHost():
             user_embeddings = user_embeddings[:, :-self.latent_axis.shape[0]]
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
-        user_embeddings = user_embeddings.type(self.text_encoder.dtype)
-        self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
-        product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
-        embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
-        clip_embeddings = (self.embedding_center + product)
-        clip_embeddings = (clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True)
-                           * embedding_length)
+        if not self.recommendation_type == RecommendationType.BASELINE:
+            user_embeddings = user_embeddings.type(self.text_encoder.dtype)
+            self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
+            product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
+            embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
+            clip_embeddings = (self.embedding_center + product)
+            clip_embeddings = (clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True)
+                            * embedding_length)
+        else:
+            clip_embeddings = self.prompt_embedding.repeat(latent_factors.shape[0], 1, 1)
 
         latents = None
         if self.n_latent_axis:

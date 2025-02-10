@@ -1,6 +1,8 @@
 from enum import Enum
 
 class RecommendationType(Enum):
+    BASELINE = "Random Recommendations (Only Latents)"
+    SIMPLE = "Random Recommendations only with 0/1"
     RANDOM = "Random Recommendations"
     WEIGHTED_AXES = "Single point generation with weighted axes"
     EMA_WEIGHTED_AXES = "Single point generation with weighted axes using exponential moving average"

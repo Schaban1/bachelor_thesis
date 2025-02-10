@@ -60,6 +60,50 @@ class Recommender(ABC):  # ABC = Abstract Base Class
         pass
 
 
+class BaselineRecommender(Recommender):
+
+    def __init__(self, n_latent_axis):
+        self.n_latent_axis = n_latent_axis
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        """
+        :param user_profile: A point in the low-dimensional user profile space.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :param beta: Not used in this recommender.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
+            user_profile where n_dims is the dimensionality of the user_profile.
+        """
+        # Return random recommendations
+        alpha = torch.ones(self.n_latent_axis)
+        dist = torch.distributions.dirichlet.Dirichlet(alpha)
+        random_latents = dist.sample(sample_shape=(n_recommendations,))
+        return random_latents
+    
+
+class SimpleRandomRecommender(Recommender):
+
+    def __init__(self, n_embedding_axis, n_latent_axis):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        """
+        :param user_profile: A point in the low-dimensional user profile space.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :param beta: Not used in this recommender.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
+            user_profile where n_dims is the dimensionality of the user_profile.
+        """
+        # Return random recommendations
+        alpha = torch.ones(self.n_latent_axis)
+        dist = torch.distributions.dirichlet.Dirichlet(alpha)
+        random_latents = dist.sample(sample_shape=(n_recommendations,))
+        random_simple_embeddings = (torch.rand(size=(n_recommendations, self.n_embedding_axis)) > 0.5).float()
+        user_embeddings = torch.cat((random_simple_embeddings, random_latents))
+        return user_embeddings
+
+
 class RandomRecommender(Recommender):
 
     def __init__(self, n_embedding_axis, n_latent_axis):
