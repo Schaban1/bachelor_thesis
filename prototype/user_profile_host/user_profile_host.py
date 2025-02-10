@@ -46,7 +46,7 @@ class UserProfileHost():
             n_recommendations: int = 6,
             include_random_recommendations: bool = False,
             ema_alpha: float = 0.5,
-            beta: float = 0.,
+            beta: float = 0.3,
             beta_step_size: float = 0.1,
             n_tokens_per_axis: int = 10,
             axis_with_context: bool = False,

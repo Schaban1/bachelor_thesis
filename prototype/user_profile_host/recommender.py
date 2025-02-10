@@ -157,7 +157,7 @@ class DirichletRecommender(Recommender):
             Must be in [0, 1]. 0 means full exploration, 1 means full exploitation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        beta = get_unnormalized_value(beta, 1, 150)
+        beta = get_unnormalized_value(beta, 1, 250)
         alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) * beta)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))

@@ -17,12 +17,11 @@ hf_model_name: stable-diffusion-v1-5/stable-diffusion-v1-5
 #hf_model_name: stabilityai/stable-diffusion-3.5-medium
 #hf_model_name: black-forest-labs/FLUX.1-dev
 
-
 use_stream_diffusion: False
 
 generator:
-  num_inference_steps : 25
-  guidance_scale: 7.5
+  num_inference_steps : 30
+  guidance_scale: 8.3
   use_negative_prompt : False
   batch_size: 5
 
