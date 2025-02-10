@@ -137,8 +137,19 @@ class UserProfileHost():
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
         if not self.add_ons:
-            with open('prototype/user_profile_host/' + ('individual_tokens.json' if not self.axis_with_context else 'individual_tokens_with_contexts.json'), 'r') as f:
-                L = json.load(f)
+            print("Use axes with context: ", self.axis_with_context)
+
+            if self.axis_with_context:
+                with open('prototype/user_profile_host/individual_tokens_with_contexts.json', 'r') as f:
+                    L = json.load(f)
+            else:
+                L = []
+                with open('prototype/user_profile_host/add_ons.json', 'r') as f:
+                    for line in f:
+                        # replaces '.' with ', ' to split the string correctly
+                        # omits the last comma to avoid them at the end of the prompt
+                        L.extend([add_on.rstrip(',') for add_on in ((json.loads(line)['description'].replace('.', ',')).split(', '))])
+
             self.add_ons = []
             tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
             self.add_ons = [", ".join(tokens[i*self.n_token_per_addon:(i+1)*self.n_token_per_addon]) for i in range(self.n_embedding_axis)]
