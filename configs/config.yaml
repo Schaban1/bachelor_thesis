@@ -35,7 +35,7 @@ recommender:
   n_latent_axis : 20
   use_latent_center : False
   ema_alpha : 0.5
-  beta: 0.1
+  beta: 0.3
   beta_step_size: 0.1
   include_random_recommendations: False
 

@@ -142,7 +142,7 @@ class UserProfileHost():
             print("Use axes with context: ", self.axis_with_context)
 
             if self.axis_with_context:
-                with open('prototype/user_profile_host/individual_tokens_with_contexts.json', 'r') as f:
+                with open('prototype/user_profile_host/new_tokens.json', 'r') as f:
                     L = json.load(f)
             else:
                 L = []
