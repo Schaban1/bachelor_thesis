@@ -130,7 +130,7 @@ class UserProfileHost():
     def load_user_profile_host(self):
         # Define the center of the user_space with the original prompt embedding
         self.prompt_embedding = self.clip_embedding(self.original_prompt)
-        self.embedding_length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False)
+        self.embedding_length = torch.linalg.vector_norm(self.prompt_embedding, ord=2, dim=-1, keepdim=False)
         if not self.use_embedding_center:
             self.embedding_center = torch.zeros(size=(1, self.n_clip_tokens, self.embedding_dim))
         else:
