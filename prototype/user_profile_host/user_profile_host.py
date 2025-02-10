@@ -212,8 +212,7 @@ class UserProfileHost():
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         elif self.recommendation_type == RecommendationType.BASELINE:
-            self.recommender = BaselineRecommender(prompt_embedding=self.prompt_embedding,
-                                                    n_latent_axis=self.n_latent_axis)
+            self.recommender = BaselineRecommender(n_latent_axis=self.n_latent_axis)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.SIMPLE:
             self.recommender = SimpleRandomRecommender(n_embedding_axis=self.n_embedding_axis,
