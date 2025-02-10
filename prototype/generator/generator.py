@@ -134,6 +134,7 @@ class Generator(GeneratorBase):
 
         images = []
         for i in range(0, num_embeddings, batch_steps):
+            torch.compiler.cudagraph_mark_step_begin() # In order to fix a current error
             images.extend(self.pipe(height=self.height,
                                     width=self.width,
                                     num_images_per_prompt=1,
