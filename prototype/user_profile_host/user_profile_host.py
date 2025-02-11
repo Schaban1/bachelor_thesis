@@ -142,42 +142,109 @@ class UserProfileHost():
             print("Use axes with context: ", self.axis_with_context)
 
             if self.axis_with_context:
-                image_styles = ["photo of a","oil painting of a","watercolor of a","digital painting of a","sketch of a","3D render of a","pastel drawing of a","ink drawing of a",
-                                "charcoal drawing of a","acrylic painting of a","vintage photograph of a","polaroid of a","concept art of a","pixel art of a","abstract art of a",
-                                "fantasy art of a","photorealistic image of a","black and white image of a","glitch art of a","realistic portrait of a","nature photography of a",
-                                "street photography of a","landscape photography of a"]
+                image_styles = [
+                    "photo of a",
+                    "oil painting of a",
+                    "digital painting of a",
+                    "sketch of a",
+                    "3D render of a",
+                    "pastel drawing of a",
+                    "ink drawing of a",
+                    "charcoal drawing of a",
+                    "acrylic painting of a",
+                    "vintage photograph of a",
+                    "polaroid of a",
+                    "concept art of a",
+                    "pixel art of a",
+                    "abstract art of a",
+                    "fantasy art of a",
+                    "photorealistic drawing of a",
+                    "black and white image of a",
+                    "glitch art of a",
+                    "realistic portrait of a",
+                    "street photography of a"
+                ]
 
-                secondary_context = ["overgrown by plants","in a futuristic city","under a starry sky","on a mountain peak","in a neon-lit alley","surrounded by flames",
-                                     "in a dreamy landscape","with a mystical aura","in a bustling market","with glowing eyes","on a rainy day","in a vintage room",
-                                     "during sunset","in the style of the 80s","in an abandoned building","with wings of light","on a floating island","in an underwater world",
-                                     "in a fantasy forest","with a dramatic sky","in a cosmic setting","with a golden halo","in a gothic cathedral","in a post-apocalyptic world",
-                                     "in a magical realm","with a glowing aura","covered in ice and snow","in a lush garden","on a distant planet","in an ancient temple",
-                                     "with a fiery background","in a surreal dreamscape","in a hidden cave","surrounded by vibrant flowers",
-                                     "with flowing rivers","in a peaceful valley","on a calm beach","in a haunted house"]
+                secondary_contexts = [
+                    "overgrown by plants",
+                    "surrounded by flames",
+                    "in deep space",
+                    "in a futuristic city",
+                    "on a rainy day",
+                    "behind glass",
+                    "on a floating island",
+                    "in a magical realm",
+                    "covered in ice and snow",
+                    "on a mountain peak",
+                    "in a neon-lit alley",
+                    "in a haunted house",
+                    "in a fantasy forest",
+                    "surrounded by flowing rivers",
+                    "with a beautiful sunset in the background",
+                    "with a glowing moon in the background",
+                    "in the heart of a tornado",
+                    "in a cyberpunk world",
+                    "covered in vines",
+                    "floating in a bubble",                    
+                    ]
 
-                atmosphere_details = ["with soft lighting","in a moody atmosphere","with a dark, gritty vibe","in cinematic lighting","with soft shadows",
-                                      "in high contrast","with ethereal lighting","in an eerie glow","with a vintage filter","with a bright, joyful tone",
-                                      "in a tranquil, serene atmosphere","with a mystical glow","with golden hour lighting","with dramatic lighting",
-                                      "with surreal colors","with a glowing effect","in deep shadow","with soft focus","in a warm, inviting tone","with sharp details",
-                                      "in a minimalistic style","with a whimsical touch","in a dreamy haze","with intense saturation","with a retro color palette",
-                                      "with soft, flowing lines","with cinematic depth","in a highly stylized art form","with a subtle, ethereal atmosphere","in a cold, desaturated palette"]
+                atmospheric_attributes = [
+                    "with glowing highlights",
+                    "in a stormy atmosphere",
+                    "with dramatic shadows",
+                    "in a golden hour glow",
+                    "with intense contrast",
+                    "in a sun-drenched scene",
+                    "with moody lighting",
+                    "with bright, ethereal colors",
+                    "with a center-focus",
+                    "with a glowing halo",
+                    "in a dark, brooding tone",
+                    "with a faint, misty light",
+                    "with swirling clouds",
+                    "with a peaceful, tranquil mood",
+                    "in a surreal ambiance",
+                    "with fiery backlighting",
+                    "in a cold, eerie atmosphere",
+                    "with vibrant, neon lighting",
+                    "with sharp, crisp lighting",
+                    "in a high-contrast setting"
+                ]
+
+                quality_terms = [
+                    "highly detailed",
+                    "ultra-realistic",
+                    "in 4K resolution",
+                    "in HD",
+                    "trending on ArtStation",
+                    "cinematic quality",
+                    "photorealistic",
+                    "high-definition textures",
+                    "intricate details",
+                    "with realistic lighting",
+                    "sharp focus",
+                    "fine details",
+                    "hyper-realistic",
+                    "with crisp lines",
+                    "4K resolution",
+                    "award-winning quality",
+                    "in high definition",
+                    "super realistic",
+                    "with pristine quality",
+                    "in stunning clarity",
+                ]
+
+                # Shuffle all attribute lists
+                random.shuffle(image_styles)
+                random.shuffle(secondary_contexts)
+                random.shuffle(atmospheric_attributes)
+                random.shuffle(quality_terms)
                 
-                quality_terms = ["highly detailed","ultra-realistic","in 4K resolution","in HD","trending on ArtStation","cinematic quality","photorealistic","high-definition textures",
-                                 "intricate details","with realistic lighting","sharp focus","fine details","hyper-realistic","with crisp lines","highly detailed textures","4K resolution",
-                                 "award-winning quality","in high definition","in ultra HD","extremely detailed","super realistic","with pristine quality","in stunning clarity",
-                                 "with vivid detail","hyper-detailed","professional quality","hyper-realistic textures","cutting-edge visual style","in studio-quality resolution",
-                                 "masterpiece level","as if photographed","with sharp contrast","in a high-resolution render"]
-
-                
+                # Create Add ons with original prompt included
                 self.add_ons = []
-                for _ in range(self.n_embedding_axis):
-                    ao = random.choice(image_styles)
-                    ao += " " + self.original_prompt
-                    ao += " " + random.choice(secondary_context)
-                    ao += " " + random.choice(atmosphere_details)
-                    ao += ", " + random.choice(quality_terms)
+                for i in range(self.n_embedding_axis):
+                    ao = image_styles[i] + " " + self.original_prompt + " " + secondary_contexts[i] + " " + atmospheric_attributes[i] + ", " + quality_terms[i]
                     self.add_ons.append(ao)
-
 
             else:
                 L = []

@@ -22,7 +22,7 @@ use_stream_diffusion: False
 generator:
   num_inference_steps : 30
   guidance_scale: 8.3
-  use_negative_prompt : False
+  use_negative_prompt : True
   batch_size: 5
 
 recommender:
@@ -30,9 +30,9 @@ recommender:
   random_original_prompt_location : False
   axis_with_context: True
   n_tokens_per_axis: 8
-  n_embedding_axis : 30
+  n_embedding_axis : 20
   use_embedding_center : False
-  n_latent_axis : 10
+  n_latent_axis : 20
   use_latent_center : False
   ema_alpha : 0.5
   beta: 0.3
