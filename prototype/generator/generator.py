@@ -107,7 +107,7 @@ class Generator(GeneratorBase):
                                                             max_length=self.pipe.tokenizer.model_max_length,
                                                             truncation=True,
                                                             return_tensors="pt", ).to(self.pipe.text_encoder.device)
-            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
+            self.negative_prompt_embed = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0]
 
 
     @torch.no_grad()
@@ -128,7 +128,6 @@ class Generator(GeneratorBase):
         latents = latents.type(self.pipe.dtype)
 
         pos_prompt_embeds = embeddings
-        neg_prompt_embeds = self.negative_prompt_embeds
         num_embeddings = pos_prompt_embeds.shape[0]
         batch_steps = self.batch_size or num_embeddings
 
@@ -138,7 +137,7 @@ class Generator(GeneratorBase):
                                     width=self.width,
                                     num_images_per_prompt=1,
                                     prompt_embeds=pos_prompt_embeds[i:i + batch_steps],
-                                    negative_prompt_embeds=neg_prompt_embeds[i:i + batch_steps] if self.use_negative_prompt else None,
+                                    negative_prompt_embeds=self.negative_prompt_embed.repeat(batch_steps, 1, 1) if self.use_negative_prompt else None,
                                     num_inference_steps=self.num_inference_steps,
                                     guidance_scale=self.guidance_scale,
                                     latents=latents[i:i + batch_steps],

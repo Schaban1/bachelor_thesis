@@ -152,12 +152,12 @@ class UserProfileHost():
                                      "during sunset","in the style of the 80s","in an abandoned building","with wings of light","on a floating island","in an underwater world",
                                      "in a fantasy forest","with a dramatic sky","in a cosmic setting","with a golden halo","in a gothic cathedral","in a post-apocalyptic world",
                                      "in a magical realm","with a glowing aura","covered in ice and snow","in a lush garden","on a distant planet","in an ancient temple",
-                                     "with a fiery background","surrounded by colorful clouds","in a surreal dreamscape","in a hidden cave","surrounded by vibrant flowers",
+                                     "with a fiery background","in a surreal dreamscape","in a hidden cave","surrounded by vibrant flowers",
                                      "with flowing rivers","in a peaceful valley","on a calm beach","in a haunted house"]
 
-                atmosphere_details = ["with soft lighting","with vibrant colors","in a moody atmosphere","with a dark, gritty vibe","in cinematic lighting","with soft shadows",
-                                      "in high contrast","with ethereal lighting","in an eerie glow","with a vintage filter","with pastel tones","with a bright, joyful tone",
-                                      "in a tranquil, serene atmosphere","with a mystical glow","with golden hour lighting","with dramatic lighting","in a vibrant, colorful palette",
+                atmosphere_details = ["with soft lighting","in a moody atmosphere","with a dark, gritty vibe","in cinematic lighting","with soft shadows",
+                                      "in high contrast","with ethereal lighting","in an eerie glow","with a vintage filter","with a bright, joyful tone",
+                                      "in a tranquil, serene atmosphere","with a mystical glow","with golden hour lighting","with dramatic lighting",
                                       "with surreal colors","with a glowing effect","in deep shadow","with soft focus","in a warm, inviting tone","with sharp details",
                                       "in a minimalistic style","with a whimsical touch","in a dreamy haze","with intense saturation","with a retro color palette",
                                       "with soft, flowing lines","with cinematic depth","in a highly stylized art form","with a subtle, ethereal atmosphere","in a cold, desaturated palette"]
@@ -175,7 +175,7 @@ class UserProfileHost():
                     ao += " " + self.original_prompt
                     ao += " " + random.choice(secondary_context)
                     ao += " " + random.choice(atmosphere_details)
-                    ao += " ," + random.choice(quality_terms)
+                    ao += ", " + random.choice(quality_terms)
                     self.add_ons.append(ao)
 
 
