@@ -175,7 +175,7 @@ class UserProfileHost():
                     "on a floating island",
                     "in a magical realm",
                     "covered in ice and snow",
-                    "on a mountain peak",
+                    "covered in flames",
                     "in a neon-lit alley",
                     "in a haunted house",
                     "in a fantasy forest",
@@ -362,7 +362,7 @@ class UserProfileHost():
             user_profile (Variable) : The fitted user profile depending on the optimizer.
         """
         # Initialize or extend the available user related data 
-        if len(self.preferences) == 0:
+        if self.preferences is not None:
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
