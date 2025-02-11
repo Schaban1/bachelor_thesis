@@ -5,6 +5,7 @@ from PIL import Image
 import asyncio
 import threading
 import secrets
+import logging
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
@@ -23,6 +24,7 @@ class WebUI:
     is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
     is_interactive_plot = binding.BindableProperty()
+    iteration = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
@@ -60,11 +62,13 @@ class WebUI:
         self.is_main_loop_iteration = False
         self.is_generating = False
         self.is_interactive_plot = False
+        self.iteration = 0
         # Provided by the user / system
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
         assert self.num_images_to_generate%2 == 0, "We need an even num images to generate (num_recommendations)!"
+        self.first_iteration_images_factor = self.args.first_iteration_images_factor
 
         self.score_mode = self.args.score_mode
         self.scorer = Scorer(self)
@@ -76,8 +80,8 @@ class WebUI:
 
         # Lists / UI components
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
-        self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)] # For convenience already initialized here
-        self.images_display = [None for _ in range(self.num_images_to_generate)] # For convenience already initialized here
+        self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate * self.args.first_iteration_images_factor)] # For convenience already initialized here
+        self.images_display = [None for _ in range(self.num_images_to_generate * self.args.first_iteration_images_factor)] # For convenience already initialized here
         self.active_image = 0
         self.submit_button = None
         # Image saving
@@ -100,6 +104,7 @@ class WebUI:
         """
         This function starts the Web UI.
         """
+        print("Start running the Web UI.")
         self.change_state(WebUIState.INIT_STATE)
         self.root.clear()
         self.build_userinterface()
@@ -110,9 +115,9 @@ class WebUI:
         """
         self.root.clear()
         self.scorer = Scorer(self)
-        self.images = self.images[:min(len(self.images), self.num_images_to_generate)] \
-                    + [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate - min(len(self.images), self.num_images_to_generate))]
-        self.images_display = [None for _ in range(self.num_images_to_generate)]
+        self.images = self.images[:min(len(self.images), self.num_images_to_generate * self.args.first_iteration_images_factor)] \
+                    + [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range((self.num_images_to_generate * self.args.first_iteration_images_factor) - min(len(self.images), self.num_images_to_generate * self.args.first_iteration_images_factor))]
+        self.images_display = [None for _ in range(self.num_images_to_generate * self.args.first_iteration_images_factor)]
         self.build_userinterface()
 
     # <---------- Updating State ---------->
@@ -133,7 +138,8 @@ class WebUI:
         self.is_initial_iteration = self.state == WebUIState.INIT_STATE
         self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
         self.is_generating = self.state == WebUIState.GENERATING_STATE
-        self.is_interactive_plot = self.state == WebUIState.PLOT_STATE
+        self.is_interactive_plot = self.state == WebUIState.PLOT_STATE       
+
 
     # <------------------------------------>
     # <---------- Building UI ---------->
@@ -147,6 +153,7 @@ class WebUI:
         - Some empty space so the footer doesnt look weird on high resolution devices.
         - Webis demo template bottom half/footer.
         """
+        print("Building User Interface.")
         webis_template_top, webis_template_bottom = self.get_webis_demo_template_html()
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
@@ -179,6 +186,7 @@ class WebUI:
         """
         Initializes the generator and performs a warm-start.
         """
+        print("Initialize Generator.")
         with self.queue_lock:
             if self.args.use_stream_diffusion:
                 print("using stream diffusion")
@@ -198,14 +206,11 @@ class WebUI:
                     **self.args.generator
                 )
 
-            # if self.args.generator_warm_start:
-            #     self.generator.generate_image(torch.zeros(1, 77, 768))
-            #     self.generator.latest_images = []
-
     def init_user_profile_host(self):
         """
         Initializes the user profile host with the initial user prompt.
         """
+        print("Initialize User Profile Host.")
         self.user_profile_host = UserProfileHost(
             original_prompt=self.user_prompt,
             add_ons=None,
@@ -249,8 +254,9 @@ class WebUI:
         Args:
             idx: The image index of the new active image.
         """
+        print("Update Active Images.")
         if self.score_mode == ScoreMode.EMOJI.value:
-            idx = idx % self.num_images_to_generate
+            idx = idx % len(self.images)
             self.images_display[self.active_image].style('border-color: lightgray')
             self.active_image = idx
             self.images_display[idx].style('border-color: red')
@@ -272,20 +278,26 @@ class WebUI:
         Generates images by passing the recommended embeddings from the user profile host to the generator and saving the generated 
         images of the generator in self.images.
         """
+        print("Generate new Images.")
         with self.queue_lock:
-            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
+            if self.iteration < 2:
+                embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate*self.first_iteration_images_factor)
+            else:
+                embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
             self.images = self.generator.generate_image(embeddings, latents)
 
     def update_image_displays(self):
         """
         Updates the image displays with the current images in self.images.
         """
-        [self.images_display[i].set_source(self.images[i]) for i in range(self.num_images_to_generate)]
+        print("Update Image Displays.")
+        [self.images_display[i].set_source(self.images[i]) for i in range(len(self.images))]
 
     def update_user_profile(self):
         """
         Call the user profile host to update the user profile using provided scores of the current iteration.
         """
+        print("Update UserProfileHost.")
         normalized_scores = self.scorer.get_scores()
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
 

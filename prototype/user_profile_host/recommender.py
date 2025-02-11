@@ -1,6 +1,5 @@
 from abc import abstractmethod, ABC
 import numpy as np
-import random
 import torch
 from torch import Tensor
 
@@ -59,6 +58,44 @@ class Recommender(ABC):  # ABC = Abstract Base Class
         :return: A tensor of recommendations, i.e. n_recommendations many low-dimensional embeddings.
         """
         pass
+
+
+class BaselineRecommender(Recommender):
+
+    def __init__(self, n_latent_axis):
+        self.n_latent_axis = n_latent_axis
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        """
+        :param user_profile: A point in the low-dimensional user profile space.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :param beta: Not used in this recommender.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
+            user_profile where n_dims is the dimensionality of the user_profile.
+        """
+        # Return random recommendations
+        alpha = torch.ones(self.n_latent_axis)
+        dist = torch.distributions.dirichlet.Dirichlet(alpha)
+        random_latents = dist.sample(sample_shape=(n_recommendations,))
+        return random_latents
+    
+
+class SimpleRandomRecommender(Recommender):
+
+    def __init__(self, n_embedding_axis, n_latent_axis):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_axis = n_embedding_axis + n_latent_axis
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        """
+        :param user_profile: A point in the low-dimensional user profile space.
+        :param n_recommendations: Number of recommendations to return. By default, 5.
+        :param beta: Not used in this recommender.
+        :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
+            user_profile where n_dims is the dimensionality of the user_profile.
+        """
+        return None # Placeholder
 
 
 class RandomRecommender(Recommender):
@@ -158,7 +195,7 @@ class DirichletRecommender(Recommender):
             Must be in [0, 1]. 0 means full exploration, 1 means full exploitation.
         :return: Tensor of shape (n_recommendations, n_dims) containing the recommendations.
         """
-        beta = get_unnormalized_value(beta, 1, 150)
+        beta = get_unnormalized_value(beta, 1, 250)
         alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) * beta)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
@@ -223,7 +260,7 @@ class BayesianRecommender(Recommender):
         self.bounds = [0., 1.]
 
     def build_search_space(self):
-        n_samples = min(max(self.n_axis * 5 ** (self.n_axis // 2), 1000), 500000)
+        n_samples = min(max(self.n_axis * 5 ** (self.n_axis // 2), 1000), 200000)
         alpha = torch.ones(self.n_axis)
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_samples,))
@@ -272,6 +309,9 @@ class BayesianRecommender(Recommender):
             scores = acqf(search_space.reshape(search_space.shape[0], 1, search_space.shape[1]))
             candidate_idx = torch.argmax(scores)
             candidate = search_space[candidate_idx].reshape(1, -1)
+
+            # Remove candidate from search space
+            search_space = torch.cat((search_space[:candidate_idx], search_space[candidate_idx+1:]))
 
             # Extend data with new candidate and predicted preference to include this information in the next iteration
             pseudo_preference = acqf._mean_and_sigma(X=candidate, compute_sigma=False)[0].detach()

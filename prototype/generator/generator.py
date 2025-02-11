@@ -4,7 +4,7 @@ from torch import Tensor
 from nicegui import binding
 import torch
 from PIL.Image import Image
-from diffusers import StableDiffusionPipeline, AutoencoderTiny, StableDiffusion3Pipeline, FluxPipeline, AutoencoderKL
+from diffusers import StableDiffusionPipeline, AutoencoderTiny, AutoencoderKL
 from streamdiffusion.image_utils import postprocess_image
 from prototype.generator.stream_diffusion import StreamDiffusion
 import logging
@@ -37,7 +37,6 @@ class Generator(GeneratorBase):
     height = binding.BindableProperty()
     width = binding.BindableProperty()
     batch_size = binding.BindableProperty()
-    random_latents = binding.BindableProperty()
     num_inference_steps = binding.BindableProperty()
     guidance_scale = binding.BindableProperty()
     n_images = binding.BindableProperty()
@@ -51,7 +50,6 @@ class Generator(GeneratorBase):
                  cache_dir: str | None = '/cache/',
                  num_inference_steps: int = 20,
                  device: str = 'cuda',
-                 random_latents: bool = False,
                  guidance_scale: float = 7.,
                  use_negative_prompt: bool = False
                  ):
@@ -70,7 +68,6 @@ class Generator(GeneratorBase):
         self.height = 512
         self.width = 512
         self.batch_size = batch_size
-        self.random_latents = random_latents
         self.num_inference_steps = num_inference_steps
         self.guidance_scale = guidance_scale
         self.n_images = n_images
@@ -99,56 +96,38 @@ class Generator(GeneratorBase):
             logging.warning("Cannot use xformers memory efficient attention (maybe xformers not installed)")
 
         self.load_generator()
-        #self.generate_image(torch.zeros(size=(1, 77, 768), dtype=self.pipe.dtype, device=self.pipe.device))
 
     def load_generator(self):
-        self.latents = torch.randn(
-            (1, self.pipe.unet.config.in_channels, self.height, self.width),
-            device=self.pipe.device, dtype=self.pipe.dtype
-        ).repeat(self.n_images, 1, 1, 1)
-
         self.negative_prompt_embeds = None
         self.negative_prompt = ""
         if self.use_negative_prompt:
             self.negative_prompt = "lowres, error, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature, deformed, ugly, mutilated, disfigured, text, extra limbs, face cut, head cut, extra fingers, extra arms, poorly drawn face, mutation, bad proportions, cropped head, malformed limbs, mutated hands, fused fingers, long neck, illustration, painting, drawing, art, sketch,bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, worst quality, cropped, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, deformed, missing limb, bad hands, extra digits, extra fingers, not enough fingers, floating head, disembodied"
             negative_prompt_tokens = self.pipe.tokenizer(self.negative_prompt,
-                                                         padding="max_length",
-                                                         max_length=self.pipe.tokenizer.model_max_length,
-                                                         truncation=True,
-                                                         return_tensors="pt", ).to(self.pipe.text_encoder.device)
-            self.negative_prompt_embeds = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0].repeat(self.n_images, 1, 1)
+                                                            padding="max_length",
+                                                            max_length=self.pipe.tokenizer.model_max_length,
+                                                            truncation=True,
+                                                            return_tensors="pt", ).to(self.pipe.text_encoder.device)
+            self.negative_prompt_embed = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0]
 
 
     @torch.no_grad()
-    def generate_image(self, embeddings: Tensor | tuple[Tensor, Tensor], latents: Tensor = None) -> list[Image]:
+    def generate_image(self, embeddings: Tensor, latents: Tensor) -> list[Image]:
         """
         Generates a list of image(s) from given embedding
 
         Args:
-        embedding (Tensor or tuple[Tensor, Tensor]):
+        embedding (Tensor]):
             A single embedding as tensor of shape (batch, 77, 768)
-            A tuple with two embedding tensors each with 3 dim (batch, 77, 768)
-
         Returns:
             `list[PIL.Image.Image]: a list of batch many PIL images generated from the embeddings.
         """
         if embeddings.dtype != self.pipe.dtype:
             embeddings = embeddings.type(self.pipe.dtype)
         embeddings = embeddings.to(self.pipe.device)
-        if latents != None:
-            latents = latents.to(self.pipe.device)
-            latents = latents.type(self.pipe.dtype)
-        else:
-            if self.random_latents:
-                latents = torch.randn(
-                    (self.n_images, self.pipe.unet.config.in_channels, self.height // 8, self.width // 8),
-                    device=self.pipe.device, dtype=self.pipe.dtype
-                )
-            else:
-                latents = self.latents
+        latents = latents.to(self.pipe.device)
+        latents = latents.type(self.pipe.dtype)
 
-        pos_prompt_embeds = embeddings[0] if isinstance(embeddings, tuple) else embeddings
-        neg_prompt_embeds = embeddings[1] if isinstance(embeddings, tuple) else self.negative_prompt_embeds
+        pos_prompt_embeds = embeddings
         num_embeddings = pos_prompt_embeds.shape[0]
         batch_steps = self.batch_size or num_embeddings
 
@@ -158,7 +137,7 @@ class Generator(GeneratorBase):
                                     width=self.width,
                                     num_images_per_prompt=1,
                                     prompt_embeds=pos_prompt_embeds[i:i + batch_steps],
-                                    negative_prompt_embeds=neg_prompt_embeds[i:i + batch_steps] if neg_prompt_embeds is not None else None,
+                                    negative_prompt_embeds=self.negative_prompt_embed.repeat(batch_steps, 1, 1) if self.use_negative_prompt else None,
                                     num_inference_steps=self.num_inference_steps,
                                     guidance_scale=self.guidance_scale,
                                     latents=latents[i:i + batch_steps],

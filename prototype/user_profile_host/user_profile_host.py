@@ -43,12 +43,14 @@ class UserProfileHost():
             use_embedding_center: bool = True,
             n_latent_axis: int = 3,
             use_latent_center: bool = False,
-            n_recommendations: int = 5,
+            n_recommendations: int = 6,
             include_random_recommendations: bool = False,
             ema_alpha: float = 0.5,
-            beta: float = 0.,
+            beta: float = 0.3,
             beta_step_size: float = 0.1,
-            realism_factor: float = 0.8,
+            n_tokens_per_axis: int = 10,
+            axis_with_context: bool = False,
+            random_original_prompt_location: bool = False
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -71,8 +73,6 @@ class UserProfileHost():
         :param beta: Trade-off between exploration and exploitation. Must be in [0, 1]. 0 means exploration, 1 means
             exploitation. Beta is increased after each recommendation (i.e. more exploitation).
         :param beta_step_size: The step size for the beta increase.
-        :param realism_factor: Factor to determine the number of realistic add-ons to be used. The bigger the factor, the
-            more realistic add-ons will be used.
         """
         # Some Clip Hyperparameters
         self.original_prompt = original_prompt
@@ -85,6 +85,8 @@ class UserProfileHost():
         self.height = 512
         self.width = 512
         self.latent_space_length = 15.55
+        self.n_token_per_addon = n_tokens_per_axis
+        self.axis_with_context = axis_with_context
         self.n_latent_axis = n_latent_axis
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
@@ -94,11 +96,10 @@ class UserProfileHost():
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
         self.include_random_rec = include_random_recommendations
-        self.realism_factor = min(realism_factor, 1.)
+        self.random_original_prompt_location = random_original_prompt_location
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
-        assert self.realism_factor >= 0., "Realism factor should be in range [0., 1.]"
         assert self.beta_step_size >= 0. and self.beta_step_size < 1., "Beta Step Size should be in [0., 1.]"
 
         # Placeholder for the already evaluated embeddings of the current user
@@ -128,30 +129,146 @@ class UserProfileHost():
 
     def load_user_profile_host(self):
         # Define the center of the user_space with the original prompt embedding
-        self.embedding_center = self.clip_embedding(self.original_prompt)
-        self.embedding_length = torch.linalg.vector_norm(self.embedding_center, ord=2, dim=-1, keepdim=False)
+        self.prompt_embedding = self.clip_embedding(self.original_prompt)
+        self.embedding_length = torch.linalg.vector_norm(self.prompt_embedding, ord=2, dim=-1, keepdim=False)
         if not self.use_embedding_center:
             self.embedding_center = torch.zeros(size=(1, self.n_clip_tokens, self.embedding_dim))
+        else:
+            self.embedding_center = self.prompt_embedding
 
         # Generate axis to define the user profile space with extensions of the original user-promt
         # by calculating the respective CLIP embeddings to the resulting prompts
-        # TODO: Discuss, if this could be improved.
-        self.embedding_axis = []
         if not self.add_ons:
-            data = []
-            # https://stackoverflow.com/questions/12451431/loading-and-parsing-a-json-file-with-multiple-json-objects
-            with open('prototype/user_profile_host/add_ons.json') as f:
-                for line in f:
-                    data.append(json.loads(line))
+            print("Use axes with context: ", self.axis_with_context)
 
-            # adapt this factor to the number of sur-/realistic add-ons
-            realistic_add_ons = [d['description'] for d in data if d['realistic']]
-            num_realistic_add_ons = min(int(self.n_embedding_axis * self.realism_factor), len(realistic_add_ons))
-            self.add_ons = random.choices(population=realistic_add_ons, k=num_realistic_add_ons)
-            self.add_ons.extend(random.choices(population=[d['description'] for d in data if not d['realistic']],
-                                               k=(self.n_embedding_axis-num_realistic_add_ons)))
+            if self.axis_with_context:
+                image_styles = [
+                    "photo of",
+                    "oil painting of",
+                    "digital painting of",
+                    "sketch of",
+                    "3D render of",
+                    "pastel drawing of",
+                    "ink drawing of",
+                    "charcoal drawing of",
+                    "acrylic painting of",
+                    "vintage photograph of",
+                    "polaroid of",
+                    "concept art of",
+                    "pixel art of",
+                    "abstract art of",
+                    "fantasy art of",
+                    "photorealistic drawing of",
+                    "black and white image of",
+                    "glitch art of",
+                    "realistic portrait of",
+                    "street photography of",
+                ]
 
-        if self.extend_original_prompt:
+                secondary_contexts = [
+                    "overgrown by plants",
+                    "surrounded by flames",
+                    "in deep space",
+                    "in a futuristic city",
+                    "on a rainy day",
+                    "behind glass",
+                    "on a floating island",
+                    "in a magical realm",
+                    "covered in ice and snow",
+                    "covered in flames",
+                    "in a neon-lit alley",
+                    "in a haunted house",
+                    "in a fantasy forest",
+                    "surrounded by flowing rivers",
+                    "with a beautiful sunset in the background",
+                    "with a glowing moon in the background",
+                    "in the heart of a tornado",
+                    "in a cyberpunk world",
+                    "covered in vines",
+                    "floating in a bubble",                    
+                    ]
+
+                atmospheric_attributes = [
+                    "with glowing highlights",
+                    "in a stormy atmosphere",
+                    "with dramatic shadows",
+                    "in a golden hour glow",
+                    "with intense contrast",
+                    "in a sun-drenched scene",
+                    "with moody lighting",
+                    "with bright, ethereal colors",
+                    "with a center-focus",
+                    "with a glowing halo",
+                    "in a dark, brooding tone",
+                    "with a faint, misty light",
+                    "with swirling clouds",
+                    "with a peaceful, tranquil mood",
+                    "in a surreal ambiance",
+                    "with fiery backlighting",
+                    "in a cold, eerie atmosphere",
+                    "with vibrant, neon lighting",
+                    "with sharp, crisp lighting",
+                    "in a high-contrast setting"
+                ]
+
+                quality_terms = [
+                    "highly detailed",
+                    "ultra-realistic",
+                    "in 4K resolution",
+                    "in HD",
+                    "trending on ArtStation",
+                    "cinematic quality",
+                    "photorealistic",
+                    "high-definition textures",
+                    "intricate details",
+                    "with realistic lighting",
+                    "sharp focus",
+                    "fine details",
+                    "hyper-realistic",
+                    "with crisp lines",
+                    "4K resolution",
+                    "award-winning quality",
+                    "in high definition",
+                    "super realistic",
+                    "with pristine quality",
+                    "in stunning clarity",
+                ]
+
+                # Shuffle all attribute lists
+                random.shuffle(image_styles)
+                random.shuffle(secondary_contexts)
+                random.shuffle(atmospheric_attributes)
+                random.shuffle(quality_terms)
+
+                # Test for problems
+                assert len(image_styles) >= self.n_embedding_axis, 'There are more embedding axis then elements in image_styles! Either add some elements or reduce the number of embedding axis!'
+                assert len(secondary_contexts) >= self.n_embedding_axis, 'There are more embedding axis then elements in secondary_contexts! Either add some elements or reduce the number of embedding axis!'
+                assert len(atmospheric_attributes) >= self.n_embedding_axis, 'There are more embedding axis then elements in atmospheric_attributes! Either add some elements or reduce the number of embedding axis!'
+                assert len(quality_terms) >= self.n_embedding_axis, 'There are more embedding axis then elements in quality_terms! Either add some elements or reduce the number of embedding axis!'
+
+                # Create Add ons with original prompt included
+                self.add_ons = []
+                for i in range(self.n_embedding_axis):
+                    ao = image_styles[i] + " " + self.original_prompt + " " + secondary_contexts[i] + " " + atmospheric_attributes[i] + ", " + quality_terms[i]
+                    self.add_ons.append(ao)
+
+            else:
+                L = []
+                with open('prototype/user_profile_host/add_ons.json', 'r') as f:
+                    for line in f:
+                        # replaces '.' with ', ' to split the string correctly
+                        # omits the last comma to avoid them at the end of the prompt
+                        L.extend([add_on.rstrip(',') for add_on in ((json.loads(line)['description'].replace('.', ',')).split(', '))])
+
+                self.add_ons = []
+                tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
+                self.add_ons = [", ".join(tokens[i*self.n_token_per_addon:(i+1)*self.n_token_per_addon]) for i in range(self.n_embedding_axis)]
+            
+            for ao in self.add_ons:
+                print(ao)
+
+        self.embedding_axis = []
+        if self.extend_original_prompt and not self.axis_with_context:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
                 self.embedding_axis.append(self.clip_embedding(prompt))
         else:
@@ -195,8 +312,11 @@ class UserProfileHost():
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
-        elif self.recommendation_type == RecommendationType.DIVERSE_DIRICHLET:
-            self.recommender = DiverseDirichletRecommender(n_embedding_axis=self.n_embedding_axis,
+        elif self.recommendation_type == RecommendationType.BASELINE:
+            self.recommender = BaselineRecommender(n_latent_axis=self.n_latent_axis)
+            self.optimizer = NoOptimizer()
+        elif self.recommendation_type == RecommendationType.SIMPLE:
+            self.recommender = SimpleRandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = NoOptimizer()
         else:
@@ -217,13 +337,16 @@ class UserProfileHost():
             user_embeddings = user_embeddings[:, :-self.latent_axis.shape[0]]
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
-        user_embeddings = user_embeddings.type(self.text_encoder.dtype)
-        self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
-        product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
-        embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
-        clip_embeddings = (self.embedding_center + product)
-        clip_embeddings = (clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True)
-                           * embedding_length)
+        if not self.recommendation_type == RecommendationType.BASELINE:
+            user_embeddings = user_embeddings.type(self.text_encoder.dtype)
+            self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
+            product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
+            embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
+            clip_embeddings = (self.embedding_center + product)
+            clip_embeddings = (clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True)
+                            * embedding_length)
+        else:
+            clip_embeddings = self.prompt_embedding.repeat(latent_factors.shape[0], 1, 1)
 
         latents = None
         if self.n_latent_axis:
@@ -245,7 +368,7 @@ class UserProfileHost():
             user_profile (Variable) : The fitted user profile depending on the optimizer.
         """
         # Initialize or extend the available user related data 
-        if len(self.preferences) == 0:
+        if self.preferences is not None:
             self.preferences = preferences
         else:
             self.preferences = torch.cat((self.preferences, preferences))
@@ -284,6 +407,10 @@ class UserProfileHost():
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
+        if self.recommendation_type == RecommendationType.SIMPLE:
+            return self.embedding_axis[random.choices(population=range(self.embedding_axis.shape[0]), k=num_recommendations)], self.latent_axis[random.choices(population=range(self.latent_axis.shape[0]), k=num_recommendations)]
+
+
         # Generate recommendations in the user_space
         if self.user_profile is not None:
             # obtain beta from the recommender if not given

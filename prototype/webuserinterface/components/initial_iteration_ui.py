@@ -40,7 +40,7 @@ class InitialIterationUI(UIComponent):
                                         .tooltip('Randomly selects a recommendation type and keeps it hidden') \
                                         .bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
-                    self.recommendation_field = ngUI.select({t: t.value for t in RecommendationType}) \
+                    self.recommendation_field = ngUI.select({t: t.value for t in [RecommendationType.BASELINE, RecommendationType.SIMPLE, RecommendationType.RANDOM, RecommendationType.EMA_DIRICHLET]}) \
                                             .props('size=80 borderless dense item-aligned color=secondary popup-content-class="max-w-[200px]"') \
                                             .bind_value(self.webUI, 'recommendation_type') \
                                             .bind_visibility_from(self.webUI, 'blind_mode', value=False)
@@ -61,6 +61,7 @@ class InitialIterationUI(UIComponent):
         if self.webUI.blind_mode:
             self.setup_blind_mode()
         self.webUI.change_state(WebUIState.GENERATING_STATE)
+        self.webUI.iteration += 1
         ngUI.notify('Generating images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.init_user_profile_host)
