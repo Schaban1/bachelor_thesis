@@ -8,7 +8,7 @@ class RecommendationType(Enum):
     WEIGHTED_AXES = "Single point generation with weighted axes"
     EMA_WEIGHTED_AXES = "Single point generation with weighted axes using exponential moving average"
     FUNCTION_BASED = "Function-based generation"
-    SIMPLE = "Random Recommendations only with 0/1"
+    SIMPLE = "Randomly Selecting one specific Axis"
     DIVERSE_DIRICHLET = "Dirichlet-based with multiple preference-based centers"
 
 class WebUIState(Enum):

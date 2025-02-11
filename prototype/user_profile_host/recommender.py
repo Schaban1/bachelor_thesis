@@ -95,14 +95,7 @@ class SimpleRandomRecommender(Recommender):
         :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
             user_profile where n_dims is the dimensionality of the user_profile.
         """
-        # Return Random Latent Embeddings but just one of the newly generated axis
-        alpha = torch.ones(self.n_latent_axis)
-        dist = torch.distributions.dirichlet.Dirichlet(alpha)
-        random_latents = dist.sample(sample_shape=(n_recommendations,))
-        random_numbers = torch.rand(size=(n_recommendations, self.n_embedding_axis))
-        random_simple_embeddings = (random_numbers >= random_numbers.max(1)[0]).float()
-        user_embeddings = torch.cat((random_simple_embeddings, random_latents))
-        return user_embeddings
+        return None # Placeholder
 
 
 class RandomRecommender(Recommender):

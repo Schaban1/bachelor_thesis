@@ -401,6 +401,10 @@ class UserProfileHost():
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
+        if self.recommendation_type == RecommendationType.SIMPLE:
+            return self.embedding_axis[random.choices(population=range(self.embedding_axis.shape[0]), k=num_recommendations)], self.latent_axis[random.choices(population=range(self.latent_axis.shape[0]), k=num_recommendations)]
+
+
         # Generate recommendations in the user_space
         if self.user_profile is not None:
             # obtain beta from the recommender if not given
