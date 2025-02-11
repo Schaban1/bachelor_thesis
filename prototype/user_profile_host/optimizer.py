@@ -51,7 +51,7 @@ class SimpleOptimizer:
         # Create a probability distribution that handles the probabilites to select a certain embedding/latent
         embedding_idx, latent_idx = embeddings
         embedding_weights, latent_weights = [1 for _ in range(self.n_embedding_axis)], [1 for _ in range(self.n_latent_axis)]
-        for i_emb, i_lat, p in zip((embedding_idx, latent_idx, preferences)):
+        for i_emb, i_lat, p in zip(embedding_idx, latent_idx, preferences.reshape(-1).tolist()):
             embedding_weights[i_emb] += p
             latent_weights[i_lat] += p
         
