@@ -40,7 +40,7 @@ class InitialIterationUI(UIComponent):
                                         .tooltip('Randomly selects a recommendation type and keeps it hidden') \
                                         .bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
-                    self.recommendation_field = ngUI.select({t: t.value for t in RecommendationType}) \
+                    self.recommendation_field = ngUI.select({t: t.value for t in [RecommendationType.BASELINE, RecommendationType.RANDOM, RecommendationType.EMA_DIRICHLET]}) \
                                             .props('size=80 borderless dense item-aligned color=secondary popup-content-class="max-w-[200px]"') \
                                             .bind_value(self.webUI, 'recommendation_type') \
                                             .bind_visibility_from(self.webUI, 'blind_mode', value=False)
