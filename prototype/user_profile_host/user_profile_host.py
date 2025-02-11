@@ -142,8 +142,39 @@ class UserProfileHost():
             print("Use axes with context: ", self.axis_with_context)
 
             if self.axis_with_context:
-                with open('prototype/user_profile_host/new_tokens.json', 'r') as f:
-                    L = json.load(f)
+                image_styles = ["photo of a","oil painting of a","watercolor of a","digital painting of a","sketch of a","3D render of a","pastel drawing of a","ink drawing of a",
+                                "charcoal drawing of a","acrylic painting of a","vintage photograph of a","polaroid of a","concept art of a","pixel art of a","abstract art of a",
+                                "fantasy art of a","photorealistic image of a","black and white image of a","glitch art of a","realistic portrait of a","nature photography of a",
+                                "street photography of a","landscape photography of a"]
+
+                secondary_context = ["overgrown by plants","in a futuristic city","under a starry sky","on a mountain peak","in a neon-lit alley","surrounded by fog",
+                                     "in a dreamy landscape","with a mystical aura","in a bustling market","with glowing eyes","on a rainy day","in a vintage room",
+                                     "during sunset","in the style of the 80s","in an abandoned building","with wings of light","on a floating island","in an underwater world",
+                                     "in a fantasy forest","with a dramatic sky","in a cosmic setting","with a golden halo","in a gothic cathedral","in a post-apocalyptic world",
+                                     "in a magical realm","with a glowing aura","covered in ice and snow","in a lush garden","on a distant planet","in an ancient temple",
+                                     "with a fiery background","surrounded by colorful clouds","in a surreal dreamscape","in a hidden cave","surrounded by vibrant flowers",
+                                     "with flowing rivers","in a peaceful valley","on a calm beach","in a haunted house"]
+
+                atmosphere_details = ["with soft lighting","with vibrant colors","in a moody atmosphere","with a dark, gritty vibe","in cinematic lighting","with soft shadows",
+                                      "in high contrast","with ethereal lighting","in an eerie glow","with a vintage filter","with pastel tones","with a bright, joyful tone",
+                                      "in a tranquil, serene atmosphere","with a mystical glow","with golden hour lighting","with dramatic lighting","in a vibrant, colorful palette",
+                                      "with surreal colors","with a glowing effect","in deep shadow","with soft focus","in a warm, inviting tone","with sharp details",
+                                      "in a minimalistic style","with a whimsical touch","in a dreamy haze","with intense saturation","with a retro color palette",
+                                      "with soft, flowing lines","with cinematic depth","in a highly stylized art form","with a subtle, ethereal atmosphere","in a cold, desaturated palette"]
+                
+                self.add_ons = []
+                for _ in range(self.n_embedding_axis):
+                    ao = ""
+                    ao += random.choice(image_styles)
+                    ao += " "
+                    ao += self.original_prompt
+                    ao += " "
+                    ao += random.choice(secondary_context)
+                    ao += " "
+                    ao += random.choice(atmosphere_details)
+                    self.add_ons.append(ao)
+
+
             else:
                 L = []
                 with open('prototype/user_profile_host/add_ons.json', 'r') as f:
@@ -152,24 +183,17 @@ class UserProfileHost():
                         # omits the last comma to avoid them at the end of the prompt
                         L.extend([add_on.rstrip(',') for add_on in ((json.loads(line)['description'].replace('.', ',')).split(', '))])
 
-            self.add_ons = []
-            tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
-            self.add_ons = [", ".join(tokens[i*self.n_token_per_addon:(i+1)*self.n_token_per_addon]) for i in range(self.n_embedding_axis)]
+                self.add_ons = []
+                tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
+                self.add_ons = [", ".join(tokens[i*self.n_token_per_addon:(i+1)*self.n_token_per_addon]) for i in range(self.n_embedding_axis)]
+            
             for ao in self.add_ons:
                 print(ao)
 
         self.embedding_axis = []
-        if self.extend_original_prompt:
-            if self.random_original_prompt_location:
-                for a in self.add_ons:
-                    l = a.split(", ")
-                    rand_idx = random.choice(range(len(l)//3)) # TODO: Transfer 3 into hp if useful
-                    l = l[:rand_idx] + [(', ' if rand_idx > 0 else '') + self.original_prompt + (', ' if rand_idx < len(l)-1 else '')] + l[rand_idx:]
-                    prompt = ", ".join(l)
-                    self.embedding_axis.append(self.clip_embedding(prompt))
-            else:
-                for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
-                    self.embedding_axis.append(self.clip_embedding(prompt))
+        if self.extend_original_prompt and not self.axis_with_context:
+            for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
+                self.embedding_axis.append(self.clip_embedding(prompt))
         else:
             for prompt in self.add_ons:
                 self.embedding_axis.append(self.clip_embedding(prompt))
