@@ -17,7 +17,7 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
     """
 
     @abstractmethod
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -28,7 +28,7 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
 
 class NoOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -41,19 +41,20 @@ class SimpleOptimizer:
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
+        beta = beta * 10
 
         # Create a probability distribution that handles the probabilites to select a certain embedding/latent
         embedding_idx, latent_idx = embeddings
         embedding_weights, latent_weights = [1 for _ in range(self.n_embedding_axis)], [1 for _ in range(self.n_latent_axis)]
         for i_emb, i_lat, p in zip(embedding_idx, latent_idx, preferences.reshape(-1).tolist()):
-            embedding_weights[i_emb] += p
-            latent_weights[i_lat] += p
+            embedding_weights[i_emb] += p * beta
+            latent_weights[i_lat] += p * beta
         
         # Norm to get a probability distribution
         emb_sum = sum(embedding_weights)
@@ -66,7 +67,7 @@ class SimpleOptimizer:
 
 class MaxPrefOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -78,7 +79,7 @@ class MaxPrefOptimizer:
 
 class WeightedSumOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -102,7 +103,7 @@ class EMAWeightedSumOptimizer:
         self.n_recommendations = n_recommendations
         self.alpha = alpha
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.

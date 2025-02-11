@@ -378,7 +378,7 @@ class UserProfileHost():
         if torch.count_nonzero(self.preferences) > 0:
             if self.user_profile is not None:
                 self.user_profile_history.append(self.user_profile)
-            self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile)
+            self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile, self.beta)
 
     @torch.no_grad()
     def clip_embedding(self, prompt: str):
@@ -425,6 +425,9 @@ class UserProfileHost():
                 self.embeddings[1].extend(latent_idx)
             else:
                 self.embeddings = [embedding_idx, latent_idx]
+
+            # Update Beta
+            self.beta = min(self.beta+self.beta_step_size, 1.)
 
         else:
             # Generate recommendations in the user_space
