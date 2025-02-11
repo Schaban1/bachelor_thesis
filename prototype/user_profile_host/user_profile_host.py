@@ -239,7 +239,13 @@ class UserProfileHost():
                 random.shuffle(secondary_contexts)
                 random.shuffle(atmospheric_attributes)
                 random.shuffle(quality_terms)
-                
+
+                # Test for problems
+                assert len(image_styles) >= self.n_embedding_axis, 'There are more embedding axis then elements in image_styles! Either add some elements or reduce the number of embedding axis!'
+                assert len(secondary_contexts) >= self.n_embedding_axis, 'There are more embedding axis then elements in secondary_contexts! Either add some elements or reduce the number of embedding axis!'
+                assert len(atmospheric_attributes) >= self.n_embedding_axis, 'There are more embedding axis then elements in atmospheric_attributes! Either add some elements or reduce the number of embedding axis!'
+                assert len(quality_terms) >= self.n_embedding_axis, 'There are more embedding axis then elements in quality_terms! Either add some elements or reduce the number of embedding axis!'
+
                 # Create Add ons with original prompt included
                 self.add_ons = []
                 for i in range(self.n_embedding_axis):
