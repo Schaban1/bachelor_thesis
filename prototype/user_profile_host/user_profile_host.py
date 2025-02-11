@@ -147,7 +147,7 @@ class UserProfileHost():
                                 "fantasy art of a","photorealistic image of a","black and white image of a","glitch art of a","realistic portrait of a","nature photography of a",
                                 "street photography of a","landscape photography of a"]
 
-                secondary_context = ["overgrown by plants","in a futuristic city","under a starry sky","on a mountain peak","in a neon-lit alley","surrounded by fog",
+                secondary_context = ["overgrown by plants","in a futuristic city","under a starry sky","on a mountain peak","in a neon-lit alley","surrounded by flames",
                                      "in a dreamy landscape","with a mystical aura","in a bustling market","with glowing eyes","on a rainy day","in a vintage room",
                                      "during sunset","in the style of the 80s","in an abandoned building","with wings of light","on a floating island","in an underwater world",
                                      "in a fantasy forest","with a dramatic sky","in a cosmic setting","with a golden halo","in a gothic cathedral","in a post-apocalyptic world",
@@ -162,16 +162,20 @@ class UserProfileHost():
                                       "in a minimalistic style","with a whimsical touch","in a dreamy haze","with intense saturation","with a retro color palette",
                                       "with soft, flowing lines","with cinematic depth","in a highly stylized art form","with a subtle, ethereal atmosphere","in a cold, desaturated palette"]
                 
+                quality_terms = ["highly detailed","ultra-realistic","in 4K resolution","in HD","trending on ArtStation","cinematic quality","photorealistic","high-definition textures",
+                                 "intricate details","with realistic lighting","sharp focus","fine details","hyper-realistic","with crisp lines","highly detailed textures","4K resolution",
+                                 "award-winning quality","in high definition","in ultra HD","extremely detailed","super realistic","with pristine quality","in stunning clarity",
+                                 "with vivid detail","hyper-detailed","professional quality","hyper-realistic textures","cutting-edge visual style","in studio-quality resolution",
+                                 "masterpiece level","as if photographed","with sharp contrast","in a high-resolution render"]
+
+                
                 self.add_ons = []
                 for _ in range(self.n_embedding_axis):
-                    ao = ""
-                    ao += random.choice(image_styles)
-                    ao += " "
-                    ao += self.original_prompt
-                    ao += " "
-                    ao += random.choice(secondary_context)
-                    ao += " "
-                    ao += random.choice(atmosphere_details)
+                    ao = random.choice(image_styles)
+                    ao += " " + self.original_prompt
+                    ao += " " + random.choice(secondary_context)
+                    ao += " " + random.choice(atmosphere_details)
+                    ao += " ," + random.choice(quality_terms)
                     self.add_ons.append(ao)
 
 
