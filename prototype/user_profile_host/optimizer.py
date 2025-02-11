@@ -35,6 +35,33 @@ class NoOptimizer:
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
         return (embeddings, preferences)
+    
+class SimpleOptimizer:
+    def __init__(self, n_embedding_axis : int, n_latent_axis : int):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+        """
+        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
+        :param preferences: The scores of the current user concerning the (user-space) embeddings.
+        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
+        """
+
+        # Create a probability distribution that handles the probabilites to select a certain embedding/latent
+        embedding_idx, latent_idx = embeddings
+        embedding_weights, latent_weights = [1 for _ in range(self.n_embedding_axis)], [1 for _ in range(self.n_latent_axis)]
+        for i_emb, i_lat, p in zip((embedding_idx, latent_idx, preferences)):
+            embedding_weights[i_emb] += p
+            latent_weights[i_lat] += p
+        
+        # Norm to get a probability distribution
+        emb_sum = sum(embedding_weights)
+        embedding_weights = [w/emb_sum for w in embedding_weights]
+        lat_sum = sum(latent_weights)
+        latent_weights = [w/lat_sum for w in latent_weights]
+            
+        return (embedding_weights, latent_weights)
 
 
 class MaxPrefOptimizer:

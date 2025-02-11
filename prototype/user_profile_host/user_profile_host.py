@@ -318,7 +318,8 @@ class UserProfileHost():
         elif self.recommendation_type == RecommendationType.SIMPLE:
             self.recommender = SimpleRandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis)
-            self.optimizer = NoOptimizer()
+            self.optimizer = SimpleOptimizer(n_embedding_axis=self.n_embedding_axis,
+                                             n_latent_axis=self.n_latent_axis)
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
 
@@ -408,36 +409,52 @@ class UserProfileHost():
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
         if self.recommendation_type == RecommendationType.SIMPLE:
-            return self.embedding_axis[random.choices(population=range(self.embedding_axis.shape[0]), k=num_recommendations)], self.latent_axis[random.choices(population=range(self.latent_axis.shape[0]), k=num_recommendations)]
+            if self.user_profile is not None:
+                embedding_weights = self.user_profile[0]
+                latent_weights = self.user_profile[1]
+            else:
+                embedding_weights, latent_weights = None, None
 
+            embedding_idx = random.choices(population=range(self.n_embedding_axis), k=num_recommendations, weights=embedding_weights)
+            latent_idx = random.choices(population=range(self.n_latent_axis), k=num_recommendations, weights=latent_weights)
+            clip_embeddings = self.embedding_axis[embedding_idx]
+            latents = self.latent_axis[latent_idx]
+            
+            if self.embeddings is not None:
+                self.embeddings[0].extend(embedding_idx)
+                self.embeddings[1].extend(latent_idx)
+            else:
+                self.embeddings = [embedding_idx, latent_idx]
 
-        # Generate recommendations in the user_space
-        if self.user_profile is not None:
-            # obtain beta from the recommender if not given
-            user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                                          n_recommendations=num_recommendations//2 if self.include_random_rec else num_recommendations,
-                                                                          beta=self.beta)
-
-            # Include some random user_space_embeddings througout each iteration
-            if self.include_random_rec:
-                random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
-                user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
-
-            # Update Beta
-            self.beta = min(self.beta+self.beta_step_size, 1.)
         else:
-            # Start initially with a lot of random embeddings to build a foundation for the user profile
-            user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations)
+            # Generate recommendations in the user_space
+            if self.user_profile is not None:
+                # obtain beta from the recommender if not given
+                user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
+                                                                            n_recommendations=num_recommendations//2 if self.include_random_rec else num_recommendations,
+                                                                            beta=self.beta)
 
-        user_space_embeddings.type(self.text_encoder.dtype)
-        # Safe the user_space_embeddings
-        if self.embeddings is not None:
-            self.embeddings = torch.cat((self.embeddings, user_space_embeddings))
-        else:
-            self.embeddings = user_space_embeddings
+                # Include some random user_space_embeddings througout each iteration
+                if self.include_random_rec:
+                    random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
+                    user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
 
-        # Transform embeddings from user_space to CLIP space
-        clip_embeddings, latents = self.inv_transform(user_space_embeddings)
+                # Update Beta
+                self.beta = min(self.beta+self.beta_step_size, 1.)
+            else:
+                # Start initially with a lot of random embeddings to build a foundation for the user profile
+                user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations)
+
+            # Transform embeddings from user_space to CLIP space
+            clip_embeddings, latents = self.inv_transform(user_space_embeddings)
+
+            user_space_embeddings.type(self.text_encoder.dtype)
+            # Safe the user_space_embeddings
+            if self.embeddings is not None:
+                self.embeddings = torch.cat((self.embeddings, user_space_embeddings))
+            else:
+                self.embeddings = user_space_embeddings
+
         return clip_embeddings, latents
 
     def generate_image_grid(self):
@@ -477,6 +494,8 @@ class UserProfileHost():
                 generated images
             Preferences (Tensor) : The respective preferences as a number between 0 and 1.
         """
+
+        assert self.recommendation_type != RecommendationType.SIMPLE, "This is not yet available for the simple recommender."
 
         if self.num_axis == 2:
             return self.user_profile, self.embeddings, self.preferences
