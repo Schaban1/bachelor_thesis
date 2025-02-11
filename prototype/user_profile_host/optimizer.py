@@ -47,7 +47,7 @@ class SimpleOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        beta = beta * 10
+        beta = max(1, beta * 25)
 
         # Create a probability distribution that handles the probabilites to select a certain embedding/latent
         embedding_idx, latent_idx = embeddings
