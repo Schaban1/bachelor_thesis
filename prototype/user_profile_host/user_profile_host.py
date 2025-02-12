@@ -116,6 +116,7 @@ class UserProfileHost():
 
         self.load_user_profile_host()
 
+
     def load_user_profile_host(self):
         # Define the center of the user_space with the original prompt embedding
         self.prompt_embedding = self.clip_embedding(self.original_prompt)
@@ -150,11 +151,21 @@ class UserProfileHost():
             "Glitch art of",
             "Realistic portrait of",
             "Street graffiti of",
+            "Cyberpunk illustration of",
+            "Watercolor painting of",
+            "Surrealist artwork of",
+            "Retro-futuristic design of",
+            "Low-poly render of",
+            "Gothic-style drawing of",
+            "Vector art of",
+            "Fantasy map of",
+            "Steampunk concept of",
+            "3D voxel art of"
         ]
 
         self.secondary_contexts = [
             "",
-            "overgrown, nature reclaiming the space",
+            "reclaimed by nature",
             "surrounded by flames",
             "floating through space, surrounded by galaxies",
             "in a futuristic city",
@@ -168,13 +179,23 @@ class UserProfileHost():
             "in a neon-lit alley",
             "in a haunted house",
             "in a fantasy forest",
-            "on top of a raging river",
+            "floating in a aesthetic river",
             "with a beautiful sunset in the background",
             "with a glowing moon in the background",
             "in the heart of a tornado",
             "in a cyberpunk world",
-            "floating in a bubble",                    
-            ]
+            "floating in a bubble",
+            "suspended in a jar of glowing liquid",
+            "inside a giant, sentient cloud",
+            "trapped inside a floating crystal orb",
+            "within the rings of a distant planet",
+            "embedded in a giant block of amber",
+            "swirling through an endless black hole",
+            "growing inside a giant floating seed pod",
+            "tangled in a web of light, floating in mid-air",
+            "surrounded by a sea of molten glass",
+            "swimming through an ocean of floating constellations"
+        ]
 
         self.atmospheric_attributes = [
             "",
@@ -184,25 +205,29 @@ class UserProfileHost():
             "in a golden hour glow",
             "with intense contrast",
             "in a sun-drenched scene",
-            "with moody lighting",
+            "with moody, cinematic lighting",
             "with bright, ethereal colors",
             "with a center-focus",
-            "with a glowing halo",
-            "in a dark, brooding tone",
+            "with a glowing halo effect",
+            "in a dark, brooding atmosphere",
             "with a faint, misty light",
-            "with swirling clouds",
+            "with swirling, dreamlike clouds",
             "with a peaceful, tranquil mood",
             "in a surreal ambiance",
-            "with fiery backlighting",
+            "with fiery, backlit edges",
             "in a cold, eerie atmosphere",
             "with vibrant, neon lighting",
             "with sharp, crisp lighting",
-            "in a high-contrast setting",
-            "in the style of liquid metal",
+            "in a high-contrast, dramatic setting",
+            "in the style of liquid metal sheen",
             "based on fringe absurdism",
-            "vibrant colors",
-            "merging with the background",
-            "merging with the surrounding elements"
+            "with vibrant, saturated colors",
+            "merging seamlessly with the background",
+            "with an iridescent glow",
+            "with a soft, hazy filter",
+            "with a soft, glowing fog",
+            "in a high-energy, pulsating atmosphere",
+            "with an ultra-smooth, polished finish"
         ]
 
         self.quality_terms = [
@@ -274,15 +299,6 @@ class UserProfileHost():
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
                                                    n_latent_axis=self.n_latent_axis)
             self.optimizer = NoOptimizer()
-            #TODO: Remove use of bound ares as they are not really variable anymore (fixed to [0., 1.])
-        elif self.recommendation_type == RecommendationType.WEIGHTED_AXES:
-            self.recommender = SinglePointWeightedAxesRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                                  n_latent_axis=self.n_latent_axis)
-            self.optimizer = WeightedSumOptimizer()
-        elif self.recommendation_type == RecommendationType.EMA_WEIGHTED_AXES:
-            self.recommender = SinglePointWeightedAxesRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                                  n_latent_axis=self.n_latent_axis)
-            self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         elif self.recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                  n_latent_axis=self.n_latent_axis)
@@ -305,6 +321,7 @@ class UserProfileHost():
                                              quality_terms=self.quality_terms)
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
+
 
     def inv_transform(self, user_embeddings: Tensor):
         """
@@ -341,6 +358,7 @@ class UserProfileHost():
 
         return clip_embeddings, latents
 
+
     def fit_user_profile(self, preferences: Tensor):
         """
         This function initializes and fits a gaussian process for the available user preferences that can subsequently
@@ -363,6 +381,7 @@ class UserProfileHost():
                 self.user_profile_history.append(self.user_profile)
             self.user_profile = self.optimizer.optimize_user_profile(self.embeddings, self.preferences, self.user_profile, self.beta)
 
+
     @torch.no_grad()
     def clip_embedding(self, prompt: str):
         """
@@ -377,6 +396,7 @@ class UserProfileHost():
                                                           do_classifier_free_guidance=False)[0].cpu()
 
         return prompt_embeds.squeeze()
+
 
     def generate_recommendations(self, num_recommendations: int = 2):
         """
@@ -460,32 +480,8 @@ class UserProfileHost():
         self.beta = min(self.beta+self.beta_step_size, 1.)
         return clip_embeddings, latents
 
-    def generate_image_grid(self):
-        """
-        This function creates a set of user embeddings for the creation of the image wall. In general, the
-        user profile in form of a weighted center is approximatly in the middle.
-        Returns:
-            Meshgrid (Tensor) : A meshgrid of samples going from lower left to upper right column-wise. So (-1, -1)
-                (-1, -0.677), (-1, -0.5), ...
-        """
-        # Calculate the PCA for current embeddings
-        matrix = self.embeddings
-        pca = PCA(n_components=2).fit(matrix)
 
-        # Create a meshgrid in the 2D space
-        grid_x = torch.linspace(-1, 1, 7)
-        grid_y = torch.linspace(-1, 1, 7)
-        grid_x, grid_y = torch.meshgrid(grid_x, grid_y, indexing='ij')
-        grid_xy = torch.cat((grid_x.flatten().reshape(-1, 1), grid_y.flatten().reshape(-1, 1)), dim=1)
-
-        # Retransform back into User-Space
-        grid_xy_re = pca.inverse_transform(grid_xy)
-
-        # Return the grid to be plottet
-        return grid_xy_re
-
-    def plotting_utils(self, algorithm: str = 'pca'):
-        # TODO: Discuss removing tsne as it has no backwards compatibility
+    def plotting_utils(self):
         """
         This function creates a reduction of the user embeddings into a two-dimensional space, so we can plot the
         embedding space and the respective images in our application.
@@ -534,13 +530,8 @@ class UserProfileHost():
                 else:
                     matrix = torch.cat((self.user_profile.reshape(1, -1), self.embeddings), dim=0)
 
-                if algorithm == 'pca':
-                    pca = PCA(n_components=2)
-                    transformed_embeddings = pca.fit_transform(matrix)
-                elif algorithm == 'tsne':
-                    transformed_embeddings = TSNE(random_state=42).fit_transform(matrix)
-                else:
-                    raise NotImplementedError(f'The requested reduction algorithm ({algorithm}) is not available.')
+                pca = PCA(n_components=2)
+                transformed_embeddings = pca.fit_transform(matrix)
 
                 if self.user_profile is None:
                     return None, transformed_embeddings, self.preferences
