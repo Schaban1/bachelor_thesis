@@ -392,7 +392,7 @@ class UserProfileHost():
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
         # The first recommender does not make use of the originally created subspace but dynamically generates new prompts based on user voting behavior
-        if self.recommendation_type == RecommendationType.SIMPLE2:
+        if self.recommendation_type == RecommendationType.SIMPLE:
             # Extract probability distributions over all terms from user profile (None equals uniform distribution)
             if self.user_profile is not None:
                 img_weights, sec_weights, at_weights, qual_weights, lat_weights = self.user_profile
