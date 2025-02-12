@@ -13,7 +13,6 @@ from diffusers import StableDiffusionPipeline
 
 class UserProfileHost():
     original_prompt = binding.BindableProperty()
-    extend_original_prompt = binding.BindableProperty()
     recommendation_type = binding.BindableProperty()
     height = binding.BindableProperty()
     width = binding.BindableProperty()
@@ -33,7 +32,6 @@ class UserProfileHost():
             self,
             original_prompt: str,
             add_ons: list = None,
-            extend_original_prompt: bool = True,
             recommendation_type: str = RecommendationType.RANDOM,
             stable_dif_pipe: StableDiffusionPipeline = None,
             hf_model_name: str = "stable-diffusion-v1-5/stable-diffusion-v1-5",
@@ -53,7 +51,6 @@ class UserProfileHost():
         :param original_prompt: The original prompt as string.
         :param add_ons: A list of additional prompts to be used as axis for the user profile space.
             Elements of the list are strings.
-        :param extend_original_prompt: Whether to extend the original prompt with the add_ons, separated by ', '.
         :param recommendation_type: The type of recommender to be used. Must be in constants.RecommendationType
         :param stable_dif_pipe: If given, the pipeline will be used to calculate the CLIP embeddings.
         Otherwise, a new pipeline will be created.
@@ -73,7 +70,6 @@ class UserProfileHost():
         # Some Clip Hyperparameters
         self.original_prompt = original_prompt
         self.add_ons = add_ons
-        self.extend_original_prompt = extend_original_prompt
         self.recommendation_type = recommendation_type
         self.stable_dif_pipe = stable_dif_pipe
         self.embedding_dim = 768
@@ -253,14 +249,9 @@ class UserProfileHost():
   
         print("The following prompts describe the axis for the embedding space:")
         self.embedding_axis = []
-        if self.extend_original_prompt and not self.axis_with_context:
-            for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
-                print(prompt)
-                self.embedding_axis.append(self.clip_embedding(prompt))
-        else:
-            for prompt in self.add_ons:
-                print(prompt)
-                self.embedding_axis.append(self.clip_embedding(prompt))
+        for prompt in self.add_ons:
+            print(prompt)
+            self.embedding_axis.append(self.clip_embedding(prompt))
         self.embedding_axis = torch.stack(self.embedding_axis)
 
         # Similarly, define axis in the latent space to have variations in both spaces that together build the user space
@@ -448,13 +439,8 @@ class UserProfileHost():
             if self.user_profile is not None:
                 # obtain beta from the recommender if not given
                 user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
-                                                                            n_recommendations=num_recommendations//2 if self.include_random_rec else num_recommendations,
+                                                                            n_recommendations=num_recommendations,
                                                                             beta=self.beta)
-
-                # Include some random user_space_embeddings througout each iteration
-                if self.include_random_rec:
-                    random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
-                    user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
 
             else:
                 # Start initially with a lot of random embeddings to build a foundation for the user profile

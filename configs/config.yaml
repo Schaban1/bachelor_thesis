@@ -3,8 +3,8 @@ defaults:
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled
 
-num_recommendations : 10
-first_iteration_images_factor: 3
+num_recommendations : 15
+first_iteration_images_factor: 2
 port: 8080
 reconnect_timeout: 30
 score_mode: emoji
@@ -26,7 +26,6 @@ generator:
   batch_size: 5
 
 recommender:
-  extend_original_prompt : True
   n_embedding_axis : 20
   use_embedding_center : False
   n_latent_axis : 20
@@ -34,7 +33,6 @@ recommender:
   ema_alpha : 0.5
   beta: 0.3
   beta_step_size: 0.1
-  include_random_recommendations: False
 
 path:
   output_dir: ./output/
