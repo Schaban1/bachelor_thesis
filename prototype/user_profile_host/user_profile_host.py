@@ -154,7 +154,7 @@ class UserProfileHost():
 
         self.secondary_contexts = [
             "",
-            "overgrown with ivy, moss, and wild plants, nature reclaiming the space",
+            "overgrown, nature reclaiming the space",
             "surrounded by flames",
             "floating through space, surrounded by galaxies",
             "in a futuristic city",
@@ -399,7 +399,7 @@ class UserProfileHost():
 
                 # Debug prints
                 for weights, terms, name in zip([img_weights, sec_weights, at_weights, qual_weights], [self.image_styles, self.secondary_contexts, self.atmospheric_attributes, self.quality_terms], ['Image Styles:', 'Secondary Contexts:', 'Atmospheric Attributes:', 'Quality Terms:']):
-                    print(name, [(t, round(w, 2)) for t, w in zip(weights, terms)])
+                    print(name, [(t, round(w, 2)) for t, w in zip(terms, weights)])
             else:
                 img_weights, sec_weights, at_weights, qual_weights, lat_weights = None, None, None, None, None
 
