@@ -142,7 +142,7 @@ class UserProfileHost():
             print("Use axes with context: ", self.axis_with_context)
 
             if self.axis_with_context:
-                image_styles = [
+                self.image_styles = [
                     "photo of",
                     "oil painting of",
                     "digital painting of",
@@ -165,7 +165,7 @@ class UserProfileHost():
                     "street photography of",
                 ]
 
-                secondary_contexts = [
+                self.secondary_contexts = [
                     "overgrown by plants",
                     "surrounded by flames",
                     "in deep space",
@@ -188,7 +188,7 @@ class UserProfileHost():
                     "floating in a bubble",                    
                     ]
 
-                atmospheric_attributes = [
+                self.atmospheric_attributes = [
                     "with glowing highlights",
                     "in a stormy atmosphere",
                     "with dramatic shadows",
@@ -211,7 +211,7 @@ class UserProfileHost():
                     "in a high-contrast setting"
                 ]
 
-                quality_terms = [
+                self.quality_terms = [
                     "highly detailed",
                     "ultra-realistic",
                     "in 4K resolution",
@@ -235,21 +235,21 @@ class UserProfileHost():
                 ]
 
                 # Shuffle all attribute lists
-                random.shuffle(image_styles)
-                random.shuffle(secondary_contexts)
-                random.shuffle(atmospheric_attributes)
-                random.shuffle(quality_terms)
+                random.shuffle(self.image_styles)
+                random.shuffle(self.secondary_contexts)
+                random.shuffle(self.atmospheric_attributes)
+                random.shuffle(self.quality_terms)
 
                 # Test for problems
-                assert len(image_styles) >= self.n_embedding_axis, 'There are more embedding axis then elements in image_styles! Either add some elements or reduce the number of embedding axis!'
-                assert len(secondary_contexts) >= self.n_embedding_axis, 'There are more embedding axis then elements in secondary_contexts! Either add some elements or reduce the number of embedding axis!'
-                assert len(atmospheric_attributes) >= self.n_embedding_axis, 'There are more embedding axis then elements in atmospheric_attributes! Either add some elements or reduce the number of embedding axis!'
-                assert len(quality_terms) >= self.n_embedding_axis, 'There are more embedding axis then elements in quality_terms! Either add some elements or reduce the number of embedding axis!'
+                assert len(self.image_styles) >= self.n_embedding_axis, 'There are more embedding axis then elements in image_styles! Either add some elements or reduce the number of embedding axis!'
+                assert len(self.secondary_contexts) >= self.n_embedding_axis, 'There are more embedding axis then elements in secondary_contexts! Either add some elements or reduce the number of embedding axis!'
+                assert len(self.atmospheric_attributes) >= self.n_embedding_axis, 'There are more embedding axis then elements in atmospheric_attributes! Either add some elements or reduce the number of embedding axis!'
+                assert len(self.quality_terms) >= self.n_embedding_axis, 'There are more embedding axis then elements in quality_terms! Either add some elements or reduce the number of embedding axis!'
 
                 # Create Add ons with original prompt included
                 self.add_ons = []
                 for i in range(self.n_embedding_axis):
-                    ao = image_styles[i] + " " + self.original_prompt + " " + secondary_contexts[i] + " " + atmospheric_attributes[i] + ", " + quality_terms[i]
+                    ao = self.image_styles[i] + " " + self.original_prompt + " " + self.secondary_contexts[i] + " " + self.atmospheric_attributes[i] + ", " + self.quality_terms[i]
                     self.add_ons.append(ao)
 
             else:
@@ -320,6 +320,15 @@ class UserProfileHost():
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = SimpleOptimizer(n_embedding_axis=self.n_embedding_axis,
                                              n_latent_axis=self.n_latent_axis)
+        elif self.recommendation_type == RecommendationType.SIMPLE2:
+            self.recommender = SimpleRandomRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                    n_latent_axis=self.n_latent_axis)
+            self.optimizer = SimpleOptimizerV2(n_embedding_axis=self.n_embedding_axis,
+                                             n_latent_axis=self.n_latent_axis,
+                                             image_styles=self.image_styles,
+                                             secondary_contexts=self.secondary_contexts,
+                                             atmospheric_attributes=self.atmospheric_attributes,
+                                             quality_terms=self.quality_terms)
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
 
@@ -426,8 +435,38 @@ class UserProfileHost():
             else:
                 self.embeddings = [embedding_idx, latent_idx]
 
-            # Update Beta
-            self.beta = min(self.beta+self.beta_step_size, 1.)
+
+        elif self.recommendation_type == RecommendationType.SIMPLE2:
+            if self.user_profile is not None:
+                img_weights, sec_weights, at_weights, qual_weights, lat_weights = self.user_profile
+                print([[round(w, 2) for w in weights] for weights in [img_weights, sec_weights, at_weights, qual_weights, lat_weights]])
+            else:
+                img_weights, sec_weights, at_weights, qual_weights, lat_weights = None, None, None, None, None
+
+            img_idx = random.choices(range(len(self.image_styles)), weights=img_weights, k=num_recommendations)
+            sec_idx = random.choices(range(len(self.secondary_contexts)), weights=sec_weights, k=num_recommendations)
+            at_idx = random.choices(range(len(self.atmospheric_attributes)), weights=at_weights, k=num_recommendations)
+            qual_idx = random.choices(range(len(self.quality_terms)), weights=qual_weights, k=num_recommendations)
+            lat_idx = random.choices(range(self.n_latent_axis), weights=lat_weights, k=num_recommendations)
+
+            print("The following prompts will be generated with various latents:")
+            clip_embeddings = []
+            for i in range(num_recommendations):
+                prompt = self.image_styles[img_idx[i]] + " " + self.original_prompt + " " + self.secondary_contexts[sec_idx[i]] + " " + self.atmospheric_attributes[at_idx[i]] + ", " + self.quality_terms[qual_idx[i]]
+                print(prompt)
+                c_emb = self.clip_embedding(prompt)
+                clip_embeddings.append(c_emb)
+            clip_embeddings = torch.cat(clip_embeddings)
+            latents = self.latent_axis[lat_idx]
+                
+            if self.embeddings is not None:
+                self.embeddings[0].extend(img_idx)
+                self.embeddings[1].extend(sec_idx)
+                self.embeddings[2].extend(at_idx)
+                self.embeddings[3].extend(qual_idx)
+                self.embeddings[4].extend(lat_idx)
+            else:
+                self.embeddings = [img_idx, sec_idx, at_idx, qual_idx, lat_idx]
 
         else:
             # Generate recommendations in the user_space
@@ -442,8 +481,6 @@ class UserProfileHost():
                     random_user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations//2)
                     user_space_embeddings = torch.cat((user_space_embeddings, random_user_space_embeddings))
 
-                # Update Beta
-                self.beta = min(self.beta+self.beta_step_size, 1.)
             else:
                 # Start initially with a lot of random embeddings to build a foundation for the user profile
                 user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations)
@@ -457,6 +494,9 @@ class UserProfileHost():
                 self.embeddings = torch.cat((self.embeddings, user_space_embeddings))
             else:
                 self.embeddings = user_space_embeddings
+
+        # Update Beta
+        self.beta = min(self.beta+self.beta_step_size, 1.)
 
         return clip_embeddings, latents
 

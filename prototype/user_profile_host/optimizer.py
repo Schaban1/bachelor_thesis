@@ -35,8 +35,55 @@ class NoOptimizer:
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
         return (embeddings, preferences)
+
+
+class SimpleOptimizerV2:
+
+    def __init__(self, n_embedding_axis : int, n_latent_axis : int, image_styles : list, secondary_contexts : list, atmospheric_attributes : list, quality_terms : list):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.image_styles = image_styles
+        self.secondary_contexts = secondary_contexts
+        self.atmospheric_attributes = atmospheric_attributes
+        self.quality_terms = quality_terms
+
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
+        """
+        :param embeddings: A list of lists containing the indices chosen for each prompt part
+        :param preferences: The scores of the current user concerning the (user-space) embeddings.
+        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
+        """
+        # TODO: Find optimal beta value
+        # beta = max(1, beta * 5)
+
+        # Create a probability distribution that handles the probabilites to select a certain embedding/latent
+        img_idx, sec_idx, at_idx, qual_idx, lat_idx = embeddings
+        img_weights, sec_weights, at_weights, qual_weights, lat_weights = [1 for _ in range(len(self.image_styles))], [1 for _ in range(len(self.secondary_contexts))], [1 for _ in range(len(self.atmospheric_attributes))], [1 for _ in range(len(self.quality_terms))], [1 for _ in range(self.n_latent_axis)]
+
+        for i_img, i_sec, i_at, i_qual, i_lat, p in zip(img_idx, sec_idx, at_idx, qual_idx, lat_idx, preferences.reshape(-1).tolist()):
+            img_weights[i_img] += p * beta
+            sec_weights[i_sec] += p * beta
+            at_weights[i_at] += p * beta
+            qual_weights[i_qual] += p * beta
+            lat_weights[i_lat] += p * beta
+        
+        # Norm to get a probability distribution
+        img_sum = sum(img_weights)
+        img_weights = [w/img_sum for w in img_weights]
+        sec_sum = sum(sec_weights)
+        sec_weights = [w/sec_sum for w in sec_weights]
+        at_sum = sum(at_weights)
+        at_weights = [w/at_sum for w in at_weights]
+        qual_sum = sum(qual_weights)
+        qual_weights = [w/qual_sum for w in qual_weights]
+        lat_sum = sum(lat_weights)
+        lat_weights = [w/lat_sum for w in lat_weights]
+            
+        return (img_weights, sec_weights, at_weights, qual_weights, lat_weights)
+
     
 class SimpleOptimizer:
+    # TODO: Idea: Rework this into generating new axis at runtime, freshly combining the attributes in UserProfileHost based on preferences
     def __init__(self, n_embedding_axis : int, n_latent_axis : int):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
