@@ -456,7 +456,7 @@ class UserProfileHost():
                 print(prompt)
                 c_emb = self.clip_embedding(prompt)
                 clip_embeddings.append(c_emb)
-            clip_embeddings = torch.cat(clip_embeddings)
+            clip_embeddings = torch.stack(clip_embeddings)
             latents = self.latent_axis[lat_idx]
                 
             if self.embeddings is not None:
