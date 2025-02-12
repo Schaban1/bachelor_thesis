@@ -37,7 +37,7 @@ class NoOptimizer:
         return (embeddings, preferences)
 
 
-class SimpleOptimizerV2:
+class SimpleOptimizer:
 
     def __init__(self, n_embedding_axis : int, n_latent_axis : int, image_styles : list, secondary_contexts : list, atmospheric_attributes : list, quality_terms : list):
         self.n_embedding_axis = n_embedding_axis
@@ -46,6 +46,7 @@ class SimpleOptimizerV2:
         self.secondary_contexts = secondary_contexts
         self.atmospheric_attributes = atmospheric_attributes
         self.quality_terms = quality_terms
+        self.beta_factor = 20
 
     def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
@@ -53,8 +54,8 @@ class SimpleOptimizerV2:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        # TODO: Find optimal beta value
-        beta = beta * 25
+        # TODO: Find optimal beta_factor value
+        beta = beta * self.beta_factor
 
         # Create a probability distribution that handles the probabilites to select a certain embedding/latent
         img_idx, sec_idx, at_idx, qual_idx, lat_idx = embeddings
@@ -80,36 +81,6 @@ class SimpleOptimizerV2:
         lat_weights = [w/lat_sum for w in lat_weights]
             
         return (img_weights, sec_weights, at_weights, qual_weights, lat_weights)
-
-    
-class SimpleOptimizer:
-    # TODO: Idea: Rework this into generating new axis at runtime, freshly combining the attributes in UserProfileHost based on preferences
-    def __init__(self, n_embedding_axis : int, n_latent_axis : int):
-        self.n_embedding_axis = n_embedding_axis
-        self.n_latent_axis = n_latent_axis
-
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
-        """
-        :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
-        :param preferences: The scores of the current user concerning the (user-space) embeddings.
-        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
-        """
-        beta = max(1, beta * 25)
-
-        # Create a probability distribution that handles the probabilites to select a certain embedding/latent
-        embedding_idx, latent_idx = embeddings
-        embedding_weights, latent_weights = [1 for _ in range(self.n_embedding_axis)], [1 for _ in range(self.n_latent_axis)]
-        for i_emb, i_lat, p in zip(embedding_idx, latent_idx, preferences.reshape(-1).tolist()):
-            embedding_weights[i_emb] += p * beta
-            latent_weights[i_lat] += p * beta
-        
-        # Norm to get a probability distribution
-        emb_sum = sum(embedding_weights)
-        embedding_weights = [w/emb_sum for w in embedding_weights]
-        lat_sum = sum(latent_weights)
-        latent_weights = [w/lat_sum for w in latent_weights]
-            
-        return (embedding_weights, latent_weights)
 
 
 class MaxPrefOptimizer:

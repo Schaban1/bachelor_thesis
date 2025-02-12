@@ -1,4 +1,3 @@
-import json
 import random
 import torch
 from torch import Tensor
@@ -48,9 +47,6 @@ class UserProfileHost():
             ema_alpha: float = 0.5,
             beta: float = 0.3,
             beta_step_size: float = 0.1,
-            n_tokens_per_axis: int = 10,
-            axis_with_context: bool = False,
-            random_original_prompt_location: bool = False
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -85,9 +81,7 @@ class UserProfileHost():
         self.height = 512
         self.width = 512
         self.latent_space_length = 15.55
-        self.n_token_per_addon = n_tokens_per_axis
-        self.axis_with_context = axis_with_context
-        self.n_latent_axis = n_latent_axis
+        self.n_latent_axis = (n_latent_axis * 2) if self.recommendation_type == RecommendationType.SIMPLE else n_latent_axis
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
         self.use_latent_center = use_latent_center
@@ -96,7 +90,6 @@ class UserProfileHost():
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
         self.include_random_rec = include_random_recommendations
-        self.random_original_prompt_location = random_original_prompt_location
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
@@ -136,151 +129,141 @@ class UserProfileHost():
         else:
             self.embedding_center = self.prompt_embedding
 
-        # Generate axis to define the user profile space with extensions of the original user-promt
-        # by calculating the respective CLIP embeddings to the resulting prompts
-        if not self.add_ons:
-            print("Use axes with context: ", self.axis_with_context)
+        # Generate axis to define the user profile space with extensions of the original user-promt in the clip embedding space
+        self.image_styles = [
+            "",
+            "Pop art bold graphic of",
+            "Detailed painting of",
+            "Photo of",
+            "Oil painting of",
+            "Digital painting of",
+            "Detailed sketch of",
+            "3D render of",
+            "Pastel drawing of",
+            "Ink drawing of",
+            "Charcoal drawing of",
+            "Acrylic painting of",
+            "Vintage photograph of",
+            "Polaroid of",
+            "Concept art of",
+            "Pixel art of",
+            "Abstract art of",
+            "Fantasy art of",
+            "Photorealistic drawing of",
+            "Black and white photo of",
+            "Glitch art of",
+            "Realistic portrait of",
+            "Street graffiti of",
+        ]
 
-            if self.axis_with_context:
-                self.image_styles = [
-                    "A pop art bold graphic of",
-                    "Detailed painting of",
-                    "photo of",
-                    "oil painting of",
-                    "digital painting of",
-                    "sketch of",
-                    "3D render of",
-                    "pastel drawing of",
-                    "ink drawing of",
-                    "charcoal drawing of",
-                    "acrylic painting of",
-                    "vintage photograph of",
-                    "polaroid of",
-                    "concept art of",
-                    "pixel art of",
-                    "abstract art of",
-                    "fantasy art of",
-                    "photorealistic drawing of",
-                    "black and white image of",
-                    "glitch art of",
-                    "realistic portrait of",
-                    "street photography of",
-                ]
+        self.secondary_contexts = [
+            "",
+            "overgrown with ivy, moss, and wild plants, nature reclaiming the space",
+            "surrounded by flames",
+            "floating through space, surrounded by galaxies",
+            "in a futuristic city",
+            "on top of a large skyscraper",
+            "with heavy rain pouring down",
+            "behind glass",
+            "on a floating island",
+            "in a magical realm",
+            "covered in ice and snow",
+            "covered in flames",
+            "in a neon-lit alley",
+            "in a haunted house",
+            "in a fantasy forest",
+            "on top of a raging river",
+            "with a beautiful sunset in the background",
+            "with a glowing moon in the background",
+            "in the heart of a tornado",
+            "in a cyberpunk world",
+            "floating in a bubble",                    
+            ]
 
-                self.secondary_contexts = [
-                    "overgrown by plants",
-                    "surrounded by flames",
-                    "floating through space",
-                    "in a futuristic city",
-                    "with heavy rain pouring down",
-                    "behind glass",
-                    "on a floating island",
-                    "in a magical realm",
-                    "covered in ice and snow",
-                    "covered in flames",
-                    "in a neon-lit alley",
-                    "in a haunted house",
-                    "in a fantasy forest",
-                    "surrounded by flowing rivers",
-                    "with a beautiful sunset in the background",
-                    "with a glowing moon in the background",
-                    "in the heart of a tornado",
-                    "in a cyberpunk world",
-                    "covered in vines",
-                    "floating in a bubble",                    
-                    ]
+        self.atmospheric_attributes = [
+            "",
+            "with glowing highlights",
+            "in a stormy atmosphere",
+            "with dramatic shadows",
+            "in a golden hour glow",
+            "with intense contrast",
+            "in a sun-drenched scene",
+            "with moody lighting",
+            "with bright, ethereal colors",
+            "with a center-focus",
+            "with a glowing halo",
+            "in a dark, brooding tone",
+            "with a faint, misty light",
+            "with swirling clouds",
+            "with a peaceful, tranquil mood",
+            "in a surreal ambiance",
+            "with fiery backlighting",
+            "in a cold, eerie atmosphere",
+            "with vibrant, neon lighting",
+            "with sharp, crisp lighting",
+            "in a high-contrast setting",
+            "in the style of liquid metal",
+            "based on fringe absurdism",
+            "vibrant colors",
+            "merging with the background",
+            "merging with the surrounding elements"
+        ]
 
-                self.atmospheric_attributes = [
-                    "with glowing highlights",
-                    "in a stormy atmosphere",
-                    "with dramatic shadows",
-                    "in a golden hour glow",
-                    "with intense contrast",
-                    "in a sun-drenched scene",
-                    "with moody lighting",
-                    "with bright, ethereal colors",
-                    "with a center-focus",
-                    "with a glowing halo",
-                    "in a dark, brooding tone",
-                    "with a faint, misty light",
-                    "with swirling clouds",
-                    "with a peaceful, tranquil mood",
-                    "in a surreal ambiance",
-                    "with fiery backlighting",
-                    "in a cold, eerie atmosphere",
-                    "with vibrant, neon lighting",
-                    "with sharp, crisp lighting",
-                    "in a high-contrast setting",
-                    "in the style of liquid metal",
-                    "based on fringe absurdism",
-                    "vibrant colors"
-                ]
+        self.quality_terms = [
+            "",
+            "highly detailed",
+            "ultra-realistic",
+            "in 4K resolution",
+            "in HD",
+            "trending on ArtStation",
+            "cinematic quality",
+            "photorealistic",
+            "high-definition textures",
+            "intricate details",
+            "with realistic lighting",
+            "sharp focus",
+            "fine details",
+            "hyper-realistic",
+            "with crisp lines",
+            "4K resolution",
+            "award-winning quality",
+            "in high definition",
+            "super realistic",
+            "with pristine quality",
+            "in stunning clarity",
+        ]
 
-                self.quality_terms = [
-                    "highly detailed",
-                    "ultra-realistic",
-                    "in 4K resolution",
-                    "in HD",
-                    "trending on ArtStation",
-                    "cinematic quality",
-                    "photorealistic",
-                    "high-definition textures",
-                    "intricate details",
-                    "with realistic lighting",
-                    "sharp focus",
-                    "fine details",
-                    "hyper-realistic",
-                    "with crisp lines",
-                    "4K resolution",
-                    "award-winning quality",
-                    "in high definition",
-                    "super realistic",
-                    "with pristine quality",
-                    "in stunning clarity",
-                ]
+        # Shuffle all attribute lists
+        random.shuffle(self.image_styles)
+        random.shuffle(self.secondary_contexts)
+        random.shuffle(self.atmospheric_attributes)
+        random.shuffle(self.quality_terms)
 
-                # Shuffle all attribute lists
-                random.shuffle(self.image_styles)
-                random.shuffle(self.secondary_contexts)
-                random.shuffle(self.atmospheric_attributes)
-                random.shuffle(self.quality_terms)
+        # Test for problems
+        assert len(self.image_styles) >= self.n_embedding_axis, 'There are more embedding axis then elements in image_styles! Either add some elements or reduce the number of embedding axis!'
+        assert len(self.secondary_contexts) >= self.n_embedding_axis, 'There are more embedding axis then elements in secondary_contexts! Either add some elements or reduce the number of embedding axis!'
+        assert len(self.atmospheric_attributes) >= self.n_embedding_axis, 'There are more embedding axis then elements in atmospheric_attributes! Either add some elements or reduce the number of embedding axis!'
+        assert len(self.quality_terms) >= self.n_embedding_axis, 'There are more embedding axis then elements in quality_terms! Either add some elements or reduce the number of embedding axis!'
 
-                # Test for problems
-                assert len(self.image_styles) >= self.n_embedding_axis, 'There are more embedding axis then elements in image_styles! Either add some elements or reduce the number of embedding axis!'
-                assert len(self.secondary_contexts) >= self.n_embedding_axis, 'There are more embedding axis then elements in secondary_contexts! Either add some elements or reduce the number of embedding axis!'
-                assert len(self.atmospheric_attributes) >= self.n_embedding_axis, 'There are more embedding axis then elements in atmospheric_attributes! Either add some elements or reduce the number of embedding axis!'
-                assert len(self.quality_terms) >= self.n_embedding_axis, 'There are more embedding axis then elements in quality_terms! Either add some elements or reduce the number of embedding axis!'
-
-                # Create Add ons with original prompt included
-                self.add_ons = []
-                for i in range(self.n_embedding_axis):
-                    ao = self.image_styles[i] + " " + self.original_prompt + " " + self.secondary_contexts[i] + " " + self.atmospheric_attributes[i] + ", " + self.quality_terms[i]
-                    self.add_ons.append(ao)
-
-            else:
-                L = []
-                with open('prototype/user_profile_host/add_ons.json', 'r') as f:
-                    for line in f:
-                        # replaces '.' with ', ' to split the string correctly
-                        # omits the last comma to avoid them at the end of the prompt
-                        L.extend([add_on.rstrip(',') for add_on in ((json.loads(line)['description'].replace('.', ',')).split(', '))])
-
-                self.add_ons = []
-                tokens = random.sample(L, k=self.n_embedding_axis * self.n_token_per_addon)
-                self.add_ons = [", ".join(tokens[i*self.n_token_per_addon:(i+1)*self.n_token_per_addon]) for i in range(self.n_embedding_axis)]
-            
-            for ao in self.add_ons:
-                print(ao)
-
+        # Create Add ons with original prompt included at the semantically correct position
+        self.add_ons = []
+        for i in range(self.n_embedding_axis):
+            ao = self.image_styles[i] + " " + self.original_prompt + " " + self.secondary_contexts[i] + " " + self.atmospheric_attributes[i] + ", " + self.quality_terms[i]
+            self.add_ons.append(ao)
+  
+        print("The following prompts describe the axis for the embedding space:")
         self.embedding_axis = []
         if self.extend_original_prompt and not self.axis_with_context:
             for prompt in [self.original_prompt + ', ' + add for add in self.add_ons]:
+                print(prompt)
                 self.embedding_axis.append(self.clip_embedding(prompt))
         else:
             for prompt in self.add_ons:
+                print(prompt)
                 self.embedding_axis.append(self.clip_embedding(prompt))
-
         self.embedding_axis = torch.stack(self.embedding_axis)
+
+        # Similarly, define axis in the latent space to have variations in both spaces that together build the user space
         if self.n_latent_axis:
             self.latent_center = torch.randn((1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
                                               self.width // 8)) if self.use_latent_center else (
@@ -292,7 +275,7 @@ class UserProfileHost():
         else:
             self.num_axis = self.embedding_axis.shape[0]
 
-        # Generally required througout this programm
+        # Generally required
         self.random_recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis)
 
         # Initialize Optimizer and Recommender based on one Mode
@@ -324,11 +307,6 @@ class UserProfileHost():
             self.recommender = SimpleRandomRecommender(n_embedding_axis=self.n_embedding_axis,
                                                     n_latent_axis=self.n_latent_axis)
             self.optimizer = SimpleOptimizer(n_embedding_axis=self.n_embedding_axis,
-                                             n_latent_axis=self.n_latent_axis)
-        elif self.recommendation_type == RecommendationType.SIMPLE2:
-            self.recommender = SimpleRandomRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                    n_latent_axis=self.n_latent_axis)
-            self.optimizer = SimpleOptimizerV2(n_embedding_axis=self.n_embedding_axis,
                                              n_latent_axis=self.n_latent_axis,
                                              image_styles=self.image_styles,
                                              secondary_contexts=self.secondary_contexts,
@@ -361,7 +339,7 @@ class UserProfileHost():
             clip_embeddings = (clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True)
                             * embedding_length)
         else:
-            clip_embeddings = self.prompt_embedding.repeat(latent_factors.shape[0], 1, 1)
+            clip_embeddings = self.prompt_embedding.repeat(user_embeddings.shape[0], 1, 1)
 
         latents = None
         if self.n_latent_axis:
@@ -422,38 +400,26 @@ class UserProfileHost():
         Returns:
             embeddings (Tensor): Embeddings that can be retransformed into the CLIP space and used for image generation
         """
-        if self.recommendation_type == RecommendationType.SIMPLE:
-            if self.user_profile is not None:
-                embedding_weights = self.user_profile[0]
-                latent_weights = self.user_profile[1]
-            else:
-                embedding_weights, latent_weights = None, None
-
-            embedding_idx = random.choices(population=range(self.n_embedding_axis), k=num_recommendations, weights=embedding_weights)
-            latent_idx = random.choices(population=range(self.n_latent_axis), k=num_recommendations, weights=latent_weights)
-            clip_embeddings = self.embedding_axis[embedding_idx]
-            latents = self.latent_axis[latent_idx]
-            
-            if self.embeddings is not None:
-                self.embeddings[0].extend(embedding_idx)
-                self.embeddings[1].extend(latent_idx)
-            else:
-                self.embeddings = [embedding_idx, latent_idx]
-
-
-        elif self.recommendation_type == RecommendationType.SIMPLE2:
+        # The first recommender does not make use of the originally created subspace but dynamically generates new prompts based on user voting behavior
+        if self.recommendation_type == RecommendationType.SIMPLE2:
+            # Extract probability distributions over all terms from user profile (None equals uniform distribution)
             if self.user_profile is not None:
                 img_weights, sec_weights, at_weights, qual_weights, lat_weights = self.user_profile
-                print([[round(w, 2) for w in weights] for weights in [img_weights, sec_weights, at_weights, qual_weights, lat_weights]])
+
+                # Debug prints
+                for weights, terms, name in zip([img_weights, sec_weights, at_weights, qual_weights], [self.image_styles, self.secondary_contexts, self.atmospheric_attributes, self.quality_terms], ['Image Styles:', 'Secondary Contexts:', 'Atmospheric Attributes:', 'Quality Terms:']):
+                    print(name, [(t, round(w, 2)) for t, w in zip(weights, terms)])
             else:
                 img_weights, sec_weights, at_weights, qual_weights, lat_weights = None, None, None, None, None
 
+            # Select new indices that build up the next embeddings
             img_idx = random.choices(range(len(self.image_styles)), weights=img_weights, k=num_recommendations)
             sec_idx = random.choices(range(len(self.secondary_contexts)), weights=sec_weights, k=num_recommendations)
             at_idx = random.choices(range(len(self.atmospheric_attributes)), weights=at_weights, k=num_recommendations)
             qual_idx = random.choices(range(len(self.quality_terms)), weights=qual_weights, k=num_recommendations)
             lat_idx = random.choices(range(self.n_latent_axis), weights=lat_weights, k=num_recommendations)
 
+            # Generate respective clip embeddings (note that no inv-transformation is required here)
             print("The following prompts will be generated with various latents:")
             clip_embeddings = []
             for i in range(num_recommendations):
@@ -462,8 +428,11 @@ class UserProfileHost():
                 c_emb = self.clip_embedding(prompt)
                 clip_embeddings.append(c_emb)
             clip_embeddings = torch.stack(clip_embeddings)
+
+            # For latents, simply select the respective latent from a list
             latents = self.latent_axis[lat_idx]
-                
+            
+            # Update user profile
             if self.embeddings is not None:
                 self.embeddings[0].extend(img_idx)
                 self.embeddings[1].extend(sec_idx)
@@ -473,6 +442,7 @@ class UserProfileHost():
             else:
                 self.embeddings = [img_idx, sec_idx, at_idx, qual_idx, lat_idx]
 
+        # This case works with the predefined user axis
         else:
             # Generate recommendations in the user_space
             if self.user_profile is not None:
@@ -500,9 +470,8 @@ class UserProfileHost():
             else:
                 self.embeddings = user_space_embeddings
 
-        # Update Beta
+        # Update Beta and return clip embeddings and latents for a generator to use
         self.beta = min(self.beta+self.beta_step_size, 1.)
-
         return clip_embeddings, latents
 
     def generate_image_grid(self):
