@@ -143,6 +143,8 @@ class UserProfileHost():
 
             if self.axis_with_context:
                 self.image_styles = [
+                    "A pop art bold graphic of",
+                    "Detailed painting of",
                     "photo of",
                     "oil painting of",
                     "digital painting of",
@@ -168,9 +170,9 @@ class UserProfileHost():
                 self.secondary_contexts = [
                     "overgrown by plants",
                     "surrounded by flames",
-                    "in deep space",
+                    "floating through space",
                     "in a futuristic city",
-                    "on a rainy day",
+                    "with heavy rain pouring down",
                     "behind glass",
                     "on a floating island",
                     "in a magical realm",
@@ -208,7 +210,10 @@ class UserProfileHost():
                     "in a cold, eerie atmosphere",
                     "with vibrant, neon lighting",
                     "with sharp, crisp lighting",
-                    "in a high-contrast setting"
+                    "in a high-contrast setting",
+                    "in the style of liquid metal",
+                    "based on fringe absurdism",
+                    "vibrant colors"
                 ]
 
                 self.quality_terms = [

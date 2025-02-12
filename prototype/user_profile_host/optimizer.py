@@ -54,7 +54,7 @@ class SimpleOptimizerV2:
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
         # TODO: Find optimal beta value
-        beta = beta * 10
+        beta = beta * 25
 
         # Create a probability distribution that handles the probabilites to select a certain embedding/latent
         img_idx, sec_idx, at_idx, qual_idx, lat_idx = embeddings
