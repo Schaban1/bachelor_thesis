@@ -1,7 +1,7 @@
+import json
 import random
 import torch
 from torch import Tensor
-from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from nicegui import binding
 
@@ -127,132 +127,13 @@ class UserProfileHost():
             self.embedding_center = self.prompt_embedding
 
         # Generate axis to define the user profile space with extensions of the original user-promt in the clip embedding space
-        self.image_styles = [
-            "",
-            "Pop art bold graphic of",
-            "Detailed painting of",
-            "Photo of",
-            "Oil painting of",
-            "Digital painting of",
-            "Detailed sketch of",
-            "3D render of",
-            "Pastel drawing of",
-            "Ink drawing of",
-            "Charcoal drawing of",
-            "Acrylic painting of",
-            "Vintage photograph of",
-            "Polaroid of",
-            "Concept art of",
-            "Pixel art of",
-            "Abstract art of",
-            "Fantasy art of",
-            "Photorealistic drawing of",
-            "Black and white photo of",
-            "Glitch art of",
-            "Realistic portrait of",
-            "Street graffiti of",
-            "Cyberpunk illustration of",
-            "Watercolor painting of",
-            "Surrealist artwork of",
-            "Retro-futuristic design of",
-            "Low-poly render of",
-            "Gothic-style drawing of",
-            "Vector art of",
-            "Fantasy map of",
-            "Steampunk concept of",
-            "3D voxel art of"
-        ]
+        with open('prototype/user_profile_host/prompt_terms.json', 'r') as f:
+            prompt_terms = json.load(f)
 
-        self.secondary_contexts = [
-            "",
-            "reclaimed by nature",
-            "surrounded by flames",
-            "floating through space, surrounded by galaxies",
-            "in a futuristic city",
-            "on top of a large skyscraper",
-            "with heavy rain pouring down",
-            "behind glass",
-            "on a floating island",
-            "in a magical realm",
-            "covered in ice and snow",
-            "covered in flames",
-            "in a neon-lit alley",
-            "in a haunted house",
-            "in a fantasy forest",
-            "floating in a aesthetic river",
-            "with a beautiful sunset in the background",
-            "with a glowing moon in the background",
-            "in the heart of a tornado",
-            "in a cyberpunk world",
-            "floating in a bubble",
-            "suspended in a jar of glowing liquid",
-            "inside a giant, sentient cloud",
-            "trapped inside a floating crystal orb",
-            "within the rings of a distant planet",
-            "embedded in a giant block of amber",
-            "swirling through an endless black hole",
-            "growing inside a giant floating seed pod",
-            "tangled in a web of light, floating in mid-air",
-            "surrounded by a sea of molten glass",
-            "swimming through an ocean of floating constellations"
-        ]
-
-        self.atmospheric_attributes = [
-            "",
-            "with glowing highlights",
-            "in a stormy atmosphere",
-            "with dramatic shadows",
-            "in a golden hour glow",
-            "with intense contrast",
-            "in a sun-drenched scene",
-            "with moody, cinematic lighting",
-            "with bright, ethereal colors",
-            "with a center-focus",
-            "with a glowing halo effect",
-            "in a dark, brooding atmosphere",
-            "with a faint, misty light",
-            "with swirling, dreamlike clouds",
-            "with a peaceful, tranquil mood",
-            "in a surreal ambiance",
-            "with fiery, backlit edges",
-            "in a cold, eerie atmosphere",
-            "with vibrant, neon lighting",
-            "with sharp, crisp lighting",
-            "in a high-contrast, dramatic setting",
-            "in the style of liquid metal sheen",
-            "based on fringe absurdism",
-            "with vibrant, saturated colors",
-            "merging seamlessly with the background",
-            "with an iridescent glow",
-            "with a soft, hazy filter",
-            "with a soft, glowing fog",
-            "in a high-energy, pulsating atmosphere",
-            "with an ultra-smooth, polished finish"
-        ]
-
-        self.quality_terms = [
-            "",
-            "highly detailed",
-            "ultra-realistic",
-            "in 4K resolution",
-            "in HD",
-            "trending on ArtStation",
-            "cinematic quality",
-            "photorealistic",
-            "high-definition textures",
-            "intricate details",
-            "with realistic lighting",
-            "sharp focus",
-            "fine details",
-            "hyper-realistic",
-            "with crisp lines",
-            "4K resolution",
-            "award-winning quality",
-            "in high definition",
-            "super realistic",
-            "with pristine quality",
-            "in stunning clarity",
-        ]
+        self.image_styles = prompt_terms["image_styles"] 
+        self.secondary_contexts = prompt_terms["secondary_contexts"]
+        self.atmospheric_attributes = prompt_terms["atmospheric_attributes"]
+        self.quality_terms = prompt_terms["quality_terms"]
 
         # Shuffle all attribute lists
         random.shuffle(self.image_styles)
@@ -461,7 +342,6 @@ class UserProfileHost():
                 user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
                                                                             n_recommendations=num_recommendations,
                                                                             beta=self.beta)
-
             else:
                 # Start initially with a lot of random embeddings to build a foundation for the user profile
                 user_space_embeddings = self.random_recommender.recommend_embeddings(None, num_recommendations)

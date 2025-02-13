@@ -10,7 +10,7 @@ reconnect_timeout: 30
 score_mode: emoji
 device: cuda
 image_display_size : [256, 256]
-random_seed : 42
+random_seed : 41
 generator_warm_start: False
 hf_model_name: stable-diffusion-v1-5/stable-diffusion-v1-5
 #hf_model_name: stabilityai/stable-diffusion-3.5-large-turbo
