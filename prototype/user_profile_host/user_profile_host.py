@@ -153,10 +153,8 @@ class UserProfileHost():
             ao = self.image_styles[i] + " " + self.original_prompt + " " + self.secondary_contexts[i] + " " + self.atmospheric_attributes[i] + ", " + self.quality_terms[i]
             self.add_ons.append(ao)
   
-        print("The following prompts describe the axis for the embedding space:")
         self.embedding_axis = []
         for prompt in self.add_ons:
-            print(prompt)
             self.embedding_axis.append(self.clip_embedding(prompt))
         self.embedding_axis = torch.stack(self.embedding_axis)
 
