@@ -286,7 +286,10 @@ class UserProfileHost():
 
                 # Debug prints
                 for weights, terms, name in zip([img_weights, sec_weights, at_weights, qual_weights], [self.image_styles, self.secondary_contexts, self.atmospheric_attributes, self.quality_terms], ['Image Styles:', 'Secondary Contexts:', 'Atmospheric Attributes:', 'Quality Terms:']):
-                    print(name, [(t, round(w, 2)) for t, w in zip(terms, weights)])
+                    top_val, top_idx = torch.topk(torch.tensor([w for w in weights]), k=4)[1]
+                    print("Top 4 "+name)
+                    for val, idx in zip(top_val, top_idx):
+                        print(terms[idx], val)
             else:
                 img_weights, sec_weights, at_weights, qual_weights, lat_weights = None, None, None, None, None
 
@@ -302,7 +305,7 @@ class UserProfileHost():
             clip_embeddings = []
             for i in range(num_recommendations):
                 prompt = self.image_styles[img_idx[i]] + self.original_prompt + self.secondary_contexts[sec_idx[i]] + self.atmospheric_attributes[at_idx[i]] + self.quality_terms[qual_idx[i]]
-                print(prompt)
+                print(str(i+1)+":", prompt)
                 c_emb = self.clip_embedding(prompt)
                 clip_embeddings.append(c_emb)
             clip_embeddings = torch.stack(clip_embeddings)

@@ -42,10 +42,10 @@ class SimpleOptimizer:
     def __init__(self, n_embedding_axis : int, n_latent_axis : int, image_styles : list, secondary_contexts : list, atmospheric_attributes : list, quality_terms : list):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
-        self.image_styles = image_styles
-        self.secondary_contexts = secondary_contexts
-        self.atmospheric_attributes = atmospheric_attributes
-        self.quality_terms = quality_terms
+        self.n_image_styles = len(image_styles)
+        self.n_secondary_contexts = len(secondary_contexts)
+        self.n_atmospheric_attributes = len(atmospheric_attributes)
+        self.n_quality_terms = len(quality_terms)
         self.beta_factor = 10
 
     def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
@@ -59,8 +59,13 @@ class SimpleOptimizer:
 
         # Create a probability distribution that handles the probabilites to select a certain embedding/latent
         img_idx, sec_idx, at_idx, qual_idx, lat_idx = embeddings
-        img_weights, sec_weights, at_weights, qual_weights, lat_weights = [1 for _ in range(len(self.image_styles))], [1 for _ in range(len(self.secondary_contexts))], [1 for _ in range(len(self.atmospheric_attributes))], [1 for _ in range(len(self.quality_terms))], [1 for _ in range(self.n_latent_axis)]
+        img_weights = [1 for _ in range(self.n_image_styles)]
+        sec_weights = [1 for _ in range(self.n_secondary_contexts)]
+        at_weights = [1 for _ in range(self.n_atmospheric_attributes)]
+        qual_weights = [1 for _ in range(self.n_quality_terms)]
+        lat_weights = [1 for _ in range(self.n_latent_axis)]
 
+        # Add preference votes on the individual terms of each embedding
         for i_img, i_sec, i_at, i_qual, i_lat, p in zip(img_idx, sec_idx, at_idx, qual_idx, lat_idx, preferences.reshape(-1).tolist()):
             img_weights[i_img] += p * beta
             sec_weights[i_sec] += p * beta
