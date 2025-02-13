@@ -46,7 +46,7 @@ class SimpleOptimizer:
         self.secondary_contexts = secondary_contexts
         self.atmospheric_attributes = atmospheric_attributes
         self.quality_terms = quality_terms
-        self.beta_factor = 5
+        self.beta_factor = 10
 
     def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """

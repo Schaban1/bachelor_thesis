@@ -135,22 +135,10 @@ class UserProfileHost():
         self.atmospheric_attributes = prompt_terms["atmospheric_attributes"]
         self.quality_terms = prompt_terms["quality_terms"]
 
-        # Shuffle all attribute lists
-        random.shuffle(self.image_styles)
-        random.shuffle(self.secondary_contexts)
-        random.shuffle(self.atmospheric_attributes)
-        random.shuffle(self.quality_terms)
-
-        # Test for problems
-        assert len(self.image_styles) >= self.n_embedding_axis, 'There are more embedding axis then elements in image_styles! Either add some elements or reduce the number of embedding axis!'
-        assert len(self.secondary_contexts) >= self.n_embedding_axis, 'There are more embedding axis then elements in secondary_contexts! Either add some elements or reduce the number of embedding axis!'
-        assert len(self.atmospheric_attributes) >= self.n_embedding_axis, 'There are more embedding axis then elements in atmospheric_attributes! Either add some elements or reduce the number of embedding axis!'
-        assert len(self.quality_terms) >= self.n_embedding_axis, 'There are more embedding axis then elements in quality_terms! Either add some elements or reduce the number of embedding axis!'
-
         # Create Add ons with original prompt included at the semantically correct position
         self.add_ons = []
-        for i in range(self.n_embedding_axis):
-            ao = self.image_styles[i] + " " + self.original_prompt + " " + self.secondary_contexts[i] + " " + self.atmospheric_attributes[i] + ", " + self.quality_terms[i]
+        for _ in range(self.n_embedding_axis):
+            ao = random.choice(self.image_styles) + self.original_prompt + random.choice(self.secondary_contexts) + random.choice(self.atmospheric_attributes) + random.choice(self.quality_terms)
             self.add_ons.append(ao)
   
         self.embedding_axis = []
@@ -313,7 +301,7 @@ class UserProfileHost():
             print("The following prompts will be generated with various latents:")
             clip_embeddings = []
             for i in range(num_recommendations):
-                prompt = self.image_styles[img_idx[i]] + " " + self.original_prompt + " " + self.secondary_contexts[sec_idx[i]] + " " + self.atmospheric_attributes[at_idx[i]] + ", " + self.quality_terms[qual_idx[i]]
+                prompt = self.image_styles[img_idx[i]] + self.original_prompt + self.secondary_contexts[sec_idx[i]] + self.atmospheric_attributes[at_idx[i]] + self.quality_terms[qual_idx[i]]
                 print(prompt)
                 c_emb = self.clip_embedding(prompt)
                 clip_embeddings.append(c_emb)
