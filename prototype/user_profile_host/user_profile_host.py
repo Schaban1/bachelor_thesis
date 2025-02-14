@@ -239,10 +239,10 @@ class UserProfileHost():
         print("Voted preferences:", preferences)
         # Initialize or extend the available user related data 
         if self.preferences is not None:
-            self.preferences = preferences
-        else:
             self.preferences = torch.cat((self.preferences, preferences))
-
+        else:
+            self.preferences = preferences
+            
         # Only fit user profile if preferences are not all zero
         if torch.count_nonzero(self.preferences) > 0:
             if self.user_profile is not None:
