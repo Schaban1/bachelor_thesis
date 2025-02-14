@@ -1,6 +1,5 @@
 from prototype.app import App
 import hydra
-import logging
 
 # Press F9 in the app to access the debug menu!
 @hydra.main(version_base=None, config_path="configs/", config_name="config")

@@ -5,7 +5,6 @@ from PIL import Image
 import asyncio
 import threading
 import secrets
-import logging
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
@@ -67,7 +66,6 @@ class WebUI:
         self.user_prompt = ""
         self.recommendation_type = RecommendationType.RANDOM
         self.num_images_to_generate = self.args.num_recommendations
-        assert self.num_images_to_generate%2 == 0, "We need an even num images to generate (num_recommendations)!"
         self.first_iteration_images_factor = self.args.first_iteration_images_factor
 
         self.score_mode = self.args.score_mode
@@ -298,7 +296,10 @@ class WebUI:
         Call the user profile host to update the user profile using provided scores of the current iteration.
         """
         print("Update UserProfileHost.")
-        normalized_scores = self.scorer.get_scores()
+        if self.iteration < 2:
+            normalized_scores = self.scorer.get_scores()
+        else:
+            normalized_scores = self.scorer.get_scores()[:self.num_images_to_generate]
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
 
     # <----------------------------------------------------->

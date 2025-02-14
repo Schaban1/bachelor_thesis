@@ -17,7 +17,7 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
     """
 
     @abstractmethod
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -28,7 +28,7 @@ class Optimizer(ABC):  # ABC = Abstract Base Class
 
 class NoOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -37,9 +37,60 @@ class NoOptimizer:
         return (embeddings, preferences)
 
 
+class SimpleOptimizer:
+
+    def __init__(self, n_embedding_axis : int, n_latent_axis : int, image_styles : list, secondary_contexts : list, atmospheric_attributes : list, quality_terms : list):
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.n_image_styles = len(image_styles)
+        self.n_secondary_contexts = len(secondary_contexts)
+        self.n_atmospheric_attributes = len(atmospheric_attributes)
+        self.n_quality_terms = len(quality_terms)
+        self.beta_factor = 10
+
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
+        """
+        :param embeddings: A list of lists containing the indices chosen for each prompt part
+        :param preferences: The scores of the current user concerning the (user-space) embeddings.
+        :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
+        """
+        beta = beta * self.beta_factor
+
+        # Create a probability distribution that handles the probabilites to select a certain term/latent
+        img_idx, sec_idx, at_idx, qual_idx, lat_idx = embeddings
+        img_votes = [1 for _ in range(self.n_image_styles)]
+        sec_votes = [1 for _ in range(self.n_secondary_contexts)]
+        at_votes = [1 for _ in range(self.n_atmospheric_attributes)]
+        qual_votes = [1 for _ in range(self.n_quality_terms)]
+        lat_votes = [1 for _ in range(self.n_latent_axis)]
+
+        # Add preference votes on the individual terms/latents
+        for i_img, i_sec, i_at, i_qual, i_lat, p in zip(img_idx, sec_idx, at_idx, qual_idx, lat_idx, preferences.reshape(-1).tolist()):
+            img_votes[i_img] += p * beta
+            sec_votes[i_sec] += p * beta
+            at_votes[i_at] += p * beta
+            qual_votes[i_qual] += p * beta
+            lat_votes[i_lat] += p * beta
+        
+        # Norm to get a probability distribution
+        img_sum = sum(img_votes)
+        img_weights = [v/img_sum for v in img_votes]
+        sec_sum = sum(sec_votes)
+        sec_weights = [v/sec_sum for v in sec_votes]
+        at_sum = sum(at_votes)
+        at_weights = [v/at_sum for v in at_votes]
+        qual_sum = sum(qual_votes)
+        qual_weights = [v/qual_sum for v in qual_votes]
+        lat_sum = sum(lat_votes)
+        lat_weights = [v/lat_sum for v in lat_votes]
+        
+        # Return weights for drawing new terms to be included in 
+        return (img_weights, sec_weights, at_weights, qual_weights, lat_weights)
+
+
 class MaxPrefOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -51,7 +102,7 @@ class MaxPrefOptimizer:
 
 class WeightedSumOptimizer:
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
@@ -75,7 +126,7 @@ class EMAWeightedSumOptimizer:
         self.n_recommendations = n_recommendations
         self.alpha = alpha
 
-    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor) -> Tensor:
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor, beta : float = None) -> Tensor:
         """
         :param embeddings: The (user-space) embeddings of generated images the user saw and evaluated.
         :param preferences: The scores of the current user concerning the (user-space) embeddings.

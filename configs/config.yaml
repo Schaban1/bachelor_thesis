@@ -3,14 +3,14 @@ defaults:
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled
 
-num_recommendations : 10
-first_iteration_images_factor: 3
+num_recommendations : 15
+first_iteration_images_factor: 2
 port: 8080
 reconnect_timeout: 30
 score_mode: emoji
 device: cuda
 image_display_size : [256, 256]
-random_seed : 42
+random_seed : 41
 generator_warm_start: False
 hf_model_name: stable-diffusion-v1-5/stable-diffusion-v1-5
 #hf_model_name: stabilityai/stable-diffusion-3.5-large-turbo
@@ -26,10 +26,6 @@ generator:
   batch_size: 5
 
 recommender:
-  extend_original_prompt : True
-  random_original_prompt_location : False
-  axis_with_context: True
-  n_tokens_per_axis: 8
   n_embedding_axis : 20
   use_embedding_center : False
   n_latent_axis : 20
@@ -37,7 +33,6 @@ recommender:
   ema_alpha : 0.5
   beta: 0.3
   beta_step_size: 0.1
-  include_random_recommendations: False
 
 path:
   output_dir: ./output/
