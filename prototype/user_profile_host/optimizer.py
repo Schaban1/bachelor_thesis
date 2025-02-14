@@ -57,34 +57,37 @@ class SimpleOptimizer:
         # TODO: Find optimal beta_factor value
         beta = beta * self.beta_factor
 
-        # Create a probability distribution that handles the probabilites to select a certain embedding/latent
+        # Create a probability distribution that handles the probabilites to select a certain term/latent
         img_idx, sec_idx, at_idx, qual_idx, lat_idx = embeddings
-        img_weights = [1 for _ in range(self.n_image_styles)]
-        sec_weights = [1 for _ in range(self.n_secondary_contexts)]
-        at_weights = [1 for _ in range(self.n_atmospheric_attributes)]
-        qual_weights = [1 for _ in range(self.n_quality_terms)]
-        lat_weights = [1 for _ in range(self.n_latent_axis)]
+        img_votes = [1 for _ in range(self.n_image_styles)]
+        sec_votes = [1 for _ in range(self.n_secondary_contexts)]
+        at_votes = [1 for _ in range(self.n_atmospheric_attributes)]
+        qual_votes = [1 for _ in range(self.n_quality_terms)]
+        lat_votes = [1 for _ in range(self.n_latent_axis)]
 
-        # Add preference votes on the individual terms of each embedding
+        # Add preference votes on the individual terms/latents
         for i_img, i_sec, i_at, i_qual, i_lat, p in zip(img_idx, sec_idx, at_idx, qual_idx, lat_idx, preferences.reshape(-1).tolist()):
-            img_weights[i_img] += p * beta
-            sec_weights[i_sec] += p * beta
-            at_weights[i_at] += p * beta
-            qual_weights[i_qual] += p * beta
-            lat_weights[i_lat] += p * beta
+            img_votes[i_img] += p * beta
+            sec_votes[i_sec] += p * beta
+            at_votes[i_at] += p * beta
+            qual_votes[i_qual] += p * beta
+            lat_votes[i_lat] += p * beta
+
+        print("Image Votes (for debugging): ",img_votes)
         
         # Norm to get a probability distribution
-        img_sum = sum(img_weights)
-        img_weights = [w/img_sum for w in img_weights]
-        sec_sum = sum(sec_weights)
-        sec_weights = [w/sec_sum for w in sec_weights]
-        at_sum = sum(at_weights)
-        at_weights = [w/at_sum for w in at_weights]
-        qual_sum = sum(qual_weights)
-        qual_weights = [w/qual_sum for w in qual_weights]
-        lat_sum = sum(lat_weights)
-        lat_weights = [w/lat_sum for w in lat_weights]
-            
+        img_sum = sum(img_votes)
+        img_weights = [v/img_sum for v in img_votes]
+        sec_sum = sum(sec_votes)
+        sec_weights = [v/sec_sum for v in sec_votes]
+        at_sum = sum(at_votes)
+        at_weights = [v/at_sum for v in at_votes]
+        qual_sum = sum(qual_votes)
+        qual_weights = [v/qual_sum for v in qual_votes]
+        lat_sum = sum(lat_votes)
+        lat_weights = [v/lat_sum for v in lat_votes]
+        
+        # Return weights for drawing new terms to be included in 
         return (img_weights, sec_weights, at_weights, qual_weights, lat_weights)
 
 

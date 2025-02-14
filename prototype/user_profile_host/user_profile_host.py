@@ -289,7 +289,7 @@ class UserProfileHost():
                     top_val, top_idx = torch.topk(torch.tensor([w for w in weights]), k=4)
                     print("Top 4 "+name)
                     for val, idx in zip(top_val, top_idx):
-                        print(terms[idx], val)
+                        print(terms[idx],'with prob of', round(val.item()*100, 2),'%')
             else:
                 img_weights, sec_weights, at_weights, qual_weights, lat_weights = None, None, None, None, None
 
