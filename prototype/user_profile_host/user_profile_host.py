@@ -236,6 +236,7 @@ class UserProfileHost():
         Returns:
             user_profile (Variable) : The fitted user profile depending on the optimizer.
         """
+        print("Voted preferences:", preferences)
         # Initialize or extend the available user related data 
         if self.preferences is not None:
             self.preferences = preferences
