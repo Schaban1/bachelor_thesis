@@ -54,7 +54,6 @@ class SimpleOptimizer:
         :param preferences: The scores of the current user concerning the (user-space) embeddings.
         :return: A user profile that can be used by the recommender to generate new embeddings preferred by the user.
         """
-        # TODO: Find optimal beta_factor value
         beta = beta * self.beta_factor
 
         # Create a probability distribution that handles the probabilites to select a certain term/latent
@@ -65,9 +64,6 @@ class SimpleOptimizer:
         qual_votes = [1 for _ in range(self.n_quality_terms)]
         lat_votes = [1 for _ in range(self.n_latent_axis)]
 
-        print('Debug prints in Optimizer')
-        print('img_idx', img_idx)
-
         # Add preference votes on the individual terms/latents
         for i_img, i_sec, i_at, i_qual, i_lat, p in zip(img_idx, sec_idx, at_idx, qual_idx, lat_idx, preferences.reshape(-1).tolist()):
             img_votes[i_img] += p * beta
@@ -75,8 +71,6 @@ class SimpleOptimizer:
             at_votes[i_at] += p * beta
             qual_votes[i_qual] += p * beta
             lat_votes[i_lat] += p * beta
-
-        print("Image Votes (for debugging): ",img_votes)
         
         # Norm to get a probability distribution
         img_sum = sum(img_votes)

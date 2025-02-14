@@ -236,7 +236,6 @@ class UserProfileHost():
         Returns:
             user_profile (Variable) : The fitted user profile depending on the optimizer.
         """
-        print("Voted preferences:", preferences)
         # Initialize or extend the available user related data 
         if self.preferences is not None:
             self.preferences = torch.cat((self.preferences, preferences))
@@ -290,7 +289,7 @@ class UserProfileHost():
                     top_val, top_idx = torch.topk(torch.tensor([w for w in weights]), k=4)
                     print("Top 4 "+name)
                     for val, idx in zip(top_val, top_idx):
-                        print(terms[idx],'with prob of', round(val.item()*100, 2),'%')
+                        print(terms[idx],'['+str(round(val.item()*100, 2))+'%]')
             else:
                 img_weights, sec_weights, at_weights, qual_weights, lat_weights = None, None, None, None, None
 
@@ -300,8 +299,6 @@ class UserProfileHost():
             at_idx = random.choices(range(len(self.atmospheric_attributes)), weights=at_weights, k=num_recommendations)
             qual_idx = random.choices(range(len(self.quality_terms)), weights=qual_weights, k=num_recommendations)
             lat_idx = random.choices(range(self.n_latent_axis), weights=lat_weights, k=num_recommendations)
-
-            print('Current Image Styles', self.image_styles)
 
             # Generate respective clip embeddings (note that no inv-transformation is required here)
             print("The following prompts will be generated with various latents:")
