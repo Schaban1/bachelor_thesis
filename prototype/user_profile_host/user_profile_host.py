@@ -326,7 +326,7 @@ class UserProfileHost():
         # This case works with the predefined user axis
         else:
             # Generate recommendations in the user_space
-            if self.user_profile is not None:
+            if self.user_profile is not None or self.recommendation_type == RecommendationType.BASELINE:
                 # obtain beta from the recommender if not given
                 user_space_embeddings = self.recommender.recommend_embeddings(user_profile=self.user_profile,
                                                                             n_recommendations=num_recommendations,
