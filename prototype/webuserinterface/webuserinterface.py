@@ -297,7 +297,10 @@ class WebUI:
         Call the user profile host to update the user profile using provided scores of the current iteration.
         """
         print("Update UserProfileHost.")
-        normalized_scores = self.scorer.get_scores()
+        if self.iteration < 2:
+            normalized_scores = self.scorer.get_scores()
+        else:
+            normalized_scores = self.scorer.get_scores()[:self.num_images_to_generate]
         self.user_profile_host.fit_user_profile(preferences=normalized_scores)
 
     # <----------------------------------------------------->
