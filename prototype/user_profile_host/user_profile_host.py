@@ -301,6 +301,8 @@ class UserProfileHost():
             qual_idx = random.choices(range(len(self.quality_terms)), weights=qual_weights, k=num_recommendations)
             lat_idx = random.choices(range(self.n_latent_axis), weights=lat_weights, k=num_recommendations)
 
+            print('Current Image Styles', self.image_styles)
+
             # Generate respective clip embeddings (note that no inv-transformation is required here)
             print("The following prompts will be generated with various latents:")
             clip_embeddings = []

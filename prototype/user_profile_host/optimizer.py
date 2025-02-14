@@ -65,6 +65,9 @@ class SimpleOptimizer:
         qual_votes = [1 for _ in range(self.n_quality_terms)]
         lat_votes = [1 for _ in range(self.n_latent_axis)]
 
+        print('Debug prints in Optimizer')
+        print('img_idx', img_idx)
+
         # Add preference votes on the individual terms/latents
         for i_img, i_sec, i_at, i_qual, i_lat, p in zip(img_idx, sec_idx, at_idx, qual_idx, lat_idx, preferences.reshape(-1).tolist()):
             img_votes[i_img] += p * beta

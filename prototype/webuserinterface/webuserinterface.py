@@ -5,7 +5,6 @@ from PIL import Image
 import asyncio
 import threading
 import secrets
-import logging
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
