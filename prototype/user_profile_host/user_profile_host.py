@@ -142,7 +142,9 @@ class UserProfileHost():
             self.add_ons.append(ao)
   
         self.embedding_axis = []
+        print('The embedding axis will consist of the following prompts:')
         for prompt in self.add_ons:
+            print(prompt)
             self.embedding_axis.append(self.clip_embedding(prompt))
         self.embedding_axis = torch.stack(self.embedding_axis)
 
