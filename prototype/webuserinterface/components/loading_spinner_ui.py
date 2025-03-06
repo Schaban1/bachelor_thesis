@@ -21,7 +21,7 @@ class LoadingSpinnerUI(UIComponent):
             ngUI.label('Generating images...').style('font-size: 200%;')
             ngUI.space().classes('m-4')
             global loading_progress
-            loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232')
+            loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232').props('instant-feedback=True')
         global generator_num_batches
         generator_num_batches = int(math.ceil(self.webUI.num_images_to_generate/self.webUI.args.generator.batch_size))
 
