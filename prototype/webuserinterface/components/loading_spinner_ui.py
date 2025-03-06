@@ -19,8 +19,7 @@ class LoadingSpinnerUI(UIComponent):
             ngUI.label('Generating images...').style('font-size: 200%;')
             ngUI.space().classes('m-4')
             global loading_progress
-            loading_progress = ngUI.linear_progress(value=0)
-            ngUI.spinner(size='10em', color='#323232')
+            loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232')
         global num_inference_steps
         num_inference_steps = self.webUI.args.generator.num_inference_steps
         self.webUI.generator.callback = update_progess
