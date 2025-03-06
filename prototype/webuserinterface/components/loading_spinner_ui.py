@@ -29,3 +29,4 @@ def update_progess(pipe, step, timestep, callback_kwargs):
     global num_inference_steps
     global loading_progress
     loading_progress.set_value(step/num_inference_steps)
+    return callback_kwargs
