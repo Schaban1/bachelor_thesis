@@ -1,7 +1,9 @@
 from nicegui import ui as ngUI
-from functools import partial
 
 from prototype.webuserinterface.components.ui_component import UIComponent
+
+num_inference_steps = 30
+loading_progress = None
 
 
 class LoadingSpinnerUI(UIComponent):
@@ -16,9 +18,14 @@ class LoadingSpinnerUI(UIComponent):
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_generating', value=True):
             ngUI.label('Generating images...').style('font-size: 200%;')
             ngUI.space().classes('m-4')
-            self.loading_progess = ngUI.linear_progress(value=0)
+            global loading_progress
+            loading_progress = ngUI.linear_progress(value=0)
             ngUI.spinner(size='10em', color='#323232')
-        self.webUI.generator.callback = partial(self.update_progess, self)
+        global num_inference_steps
+        num_inference_steps = self.webUI.args.generator.num_inference_steps
+        self.webUI.generator.callback = update_progess
     
-    def update_progess(self, pipe, step, timestep, **callback_kwargs):
-        self.loading_progess.set_value(step/self.webUI.args.generator.num_inference_steps)
+def update_progess(pipe, step, timestep, callback_kwargs):
+    global num_inference_steps
+    global loading_progess
+    loading_progess.set_value(step/num_inference_steps)
