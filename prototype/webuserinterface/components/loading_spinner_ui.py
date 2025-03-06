@@ -2,7 +2,6 @@ from nicegui import ui as ngUI
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 
-generator_pipeline = None
 loading_progress = None
 
 
@@ -20,12 +19,14 @@ class LoadingSpinnerUI(UIComponent):
             ngUI.space().classes('m-4')
             global loading_progress
             loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232')
-        global generator_pipeline
-        generator_pipeline = self.webUI.generator.pipe
         self.webUI.generator.callback = update_progess
     
 def update_progess(pipe, step_index, timestep, callback_kwargs):
-    global generator_pipeline
+    print("----------------------------------------------")
+    print(step_index)
+    print(timestep)
+    print(pipe.num_timesteps)
+    print("----------------------------------------------")
     global loading_progress
-    loading_progress.set_value(step_index/generator_pipeline.num_timesteps)
+    loading_progress.set_value(step_index/pipe.num_timesteps)
     return callback_kwargs
