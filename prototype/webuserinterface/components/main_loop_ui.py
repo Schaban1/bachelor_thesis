@@ -115,6 +115,7 @@ class MainLoopUI(UIComponent):
         self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
         self.webUI.iteration = 0
+        self.webUI.loading_ui.update_loading_batch_count()
 
         # Clear plot ui for new process
         self.webUI.generator.clear_latest_images()

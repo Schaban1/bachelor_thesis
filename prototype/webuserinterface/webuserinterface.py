@@ -158,7 +158,7 @@ class WebUI:
             ngUI.space().classes('w-full h-full')
             InitialIterationUI(self)
             self.main_loop_ui = MainLoopUI(self)
-            LoadingSpinnerUI(self)
+            self.loading_ui = LoadingSpinnerUI(self)
             self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-full')
             ngUI.html(webis_template_bottom).classes('w-full')

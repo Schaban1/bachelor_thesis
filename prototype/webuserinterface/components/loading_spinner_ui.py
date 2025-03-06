@@ -22,13 +22,17 @@ class LoadingSpinnerUI(UIComponent):
             ngUI.space().classes('m-4')
             global loading_progress
             loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232').props('instant-feedback=True')
-        global generator_batch_count
-        generator_batch_count = int(math.ceil(self.webUI.num_images_to_generate/self.webUI.args.generator.batch_size))
+        self.update_loading_batch_count()
         self.webUI.generator.callback = update_progess
     
+    def update_loading_batch_count(self):
+        global generator_batch_count
+        if self.webUI.iteration < 2:
+            generator_batch_count = int(math.ceil((self.webUI.num_images_to_generate*self.webUI.first_iteration_images_factor)/self.webUI.args.generator.batch_size))
+        else:
+            generator_batch_count = int(math.ceil(self.webUI.num_images_to_generate/self.webUI.args.generator.batch_size))
+    
 def update_progess(pipe, step_index, timestep, callback_kwargs):
-    from pprint import pprint
-    pprint(vars(pipe))
     global current_step
     global generator_batch_count
     global loading_progress
