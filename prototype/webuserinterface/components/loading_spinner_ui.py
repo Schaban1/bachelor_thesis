@@ -1,4 +1,5 @@
 from nicegui import ui as ngUI
+from functools import partial
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 
@@ -17,7 +18,7 @@ class LoadingSpinnerUI(UIComponent):
             ngUI.space().classes('m-4')
             self.loading_progess = ngUI.linear_progress(value=0)
             ngUI.spinner(size='10em', color='#323232')
-        self.webUI.generator.callback = self.update_progess
+        self.webUI.generator.callback = partial(self.update_progess, self)
     
     def update_progess(self, pipe, step, timestep, **callback_kwargs):
         self.loading_progess.set_value(step/self.webUI.args.generator.num_inference_steps)
