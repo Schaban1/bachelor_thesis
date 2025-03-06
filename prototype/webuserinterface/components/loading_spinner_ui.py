@@ -4,7 +4,7 @@ import math
 from prototype.webuserinterface.components.ui_component import UIComponent
 
 current_step = 0
-generator_num_batches = 1
+generator_batch_count = 1
 loading_progress = None
 
 
@@ -22,17 +22,18 @@ class LoadingSpinnerUI(UIComponent):
             ngUI.space().classes('m-4')
             global loading_progress
             loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232').props('instant-feedback=True')
-        global generator_num_batches
-        generator_num_batches = int(math.ceil(self.webUI.num_images_to_generate/self.webUI.args.generator.batch_size))
-
+        global generator_batch_count
+        generator_batch_count = int(math.ceil(self.webUI.num_images_to_generate/self.webUI.args.generator.batch_size))
         self.webUI.generator.callback = update_progess
     
 def update_progess(pipe, step_index, timestep, callback_kwargs):
+    from pprint import pprint
+    pprint(vars(pipe))
     global current_step
-    global generator_num_batches
+    global generator_batch_count
     global loading_progress
     current_step += 1
-    loading_progress.set_value(current_step/(pipe.num_timesteps * generator_num_batches))
-    if current_step == (pipe.num_timesteps * generator_num_batches):
+    loading_progress.set_value(current_step/(pipe.num_timesteps * generator_batch_count))
+    if current_step == (pipe.num_timesteps * generator_batch_count):
         current_step = 0
     return callback_kwargs
