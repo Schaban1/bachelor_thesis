@@ -23,5 +23,5 @@ class LoadingSpinnerUI(UIComponent):
     
 def update_progess(pipe, step_index, timestep, callback_kwargs):
     global loading_progress
-    loading_progress.set_value(step_index/pipe.num_timesteps)
+    loading_progress.set_value(timestep/pipe.num_timesteps)
     return callback_kwargs
