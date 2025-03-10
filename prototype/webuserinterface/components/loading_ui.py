@@ -26,6 +26,10 @@ class LoadingUI(UIComponent):
         self.webUI.generator.callback = update_progess
     
     def update_loading_batch_count(self):
+        """
+        Updates the generator_batch_count variable, that indicates the number of batches processed by the generator.
+        This is used to determine the progress bar steps.
+        """
         global generator_batch_count
         if self.webUI.iteration < 2:
             generator_batch_count = int(math.ceil((self.webUI.num_images_to_generate*self.webUI.first_iteration_images_factor)/self.webUI.args.generator.batch_size))
@@ -33,11 +37,26 @@ class LoadingUI(UIComponent):
             generator_batch_count = int(math.ceil(self.webUI.num_images_to_generate/self.webUI.args.generator.batch_size))
     
     def reset_progress_bar(self):
+        """
+        Resets the progress bar to 0.
+        """
         global current_step
         current_step = 0
         loading_progress.set_value(0)
     
 def update_progess(pipe, step_index, timestep, callback_kwargs):
+    """
+    This function serves as the callback_function for the StableDiffusion-Pipeline to show the generation progress on the UI.
+
+    Args:
+        pipe: StableDiffusion-Pipeline
+        step_index: Index of the callback step
+        timestep: Current timestep
+        callback_kwargs: Provided by the pipeline
+
+    Returns:
+        callback_kwargs that were input
+    """
     global current_step
     global generator_batch_count
     global loading_progress
