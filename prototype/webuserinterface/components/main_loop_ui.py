@@ -106,6 +106,7 @@ class MainLoopUI(UIComponent):
         self.webUI.update_image_displays()
         self.webUI.scorer.reset_scorers()
         self.webUI.change_state(WebUIState.MAIN_STATE)
+        self.webUI.loading_ui.reset_progress_bar()
         self.webUI.update_active_image()
 
     def on_restart_process_button_click(self):

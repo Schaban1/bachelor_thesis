@@ -32,12 +32,15 @@ class LoadingSpinnerUI(UIComponent):
         else:
             generator_batch_count = int(math.ceil(self.webUI.num_images_to_generate/self.webUI.args.generator.batch_size))
     
+    def reset_progress_bar(self):
+        global current_step
+        current_step = 0
+        loading_progress.set_value(0)
+    
 def update_progess(pipe, step_index, timestep, callback_kwargs):
     global current_step
     global generator_batch_count
     global loading_progress
     current_step += 1
     loading_progress.set_value(current_step/(pipe.num_timesteps * generator_batch_count))
-    if current_step == (pipe.num_timesteps * generator_batch_count):
-        current_step = 0
     return callback_kwargs
