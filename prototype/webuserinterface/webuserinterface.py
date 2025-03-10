@@ -252,12 +252,11 @@ class WebUI:
         Args:
             idx: The image index of the new active image.
         """
-        print("Update Active Images.")
         if self.score_mode == ScoreMode.EMOJI.value:
             idx = idx % len(self.images)
-            self.images_display[self.active_image].style('border-color: lightgray')
+            self.images_display[self.active_image].style(f'width: {self.image_display_width}px; height: {self.image_display_height}px;')
             self.active_image = idx
-            self.images_display[idx].style('border-color: red')
+            self.images_display[idx].style(f'width: {int(self.image_display_width*1.2)}px; height: {int(self.image_display_height*1.2)}px;')
 
     def on_number_keystroke(self, key):
         """
