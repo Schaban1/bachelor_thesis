@@ -21,7 +21,7 @@ class LoadingUI(UIComponent):
             ngUI.label('Generating images...').style('font-size: 200%;')
             ngUI.space().classes('m-4')
             global loading_progress
-            loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232').props('size=md rounded=true;')
+            loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232').props('size=md rounded;')
         self.update_loading_batch_count()
         self.webUI.generator.callback = update_progess
     
