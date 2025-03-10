@@ -8,9 +8,9 @@ generator_batch_count = 1
 loading_progress = None
 
 
-class LoadingSpinnerUI(UIComponent):
+class LoadingUI(UIComponent):
     """
-    Contains the code for the loading spinner UI.
+    Contains the code for the loading UI.
     """
 
     def build_userinterface(self):

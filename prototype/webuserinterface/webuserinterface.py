@@ -10,7 +10,7 @@ from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator, GeneratorStream
 from prototype.utils import seed_everything
-from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer, DebugMenu
+from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingUI, PlotUI, Scorer, DebugMenu
 
 
 class WebUI:
@@ -158,7 +158,7 @@ class WebUI:
             ngUI.space().classes('w-full h-full')
             InitialIterationUI(self)
             self.main_loop_ui = MainLoopUI(self)
-            self.loading_ui = LoadingSpinnerUI(self)
+            self.loading_ui = LoadingUI(self)
             self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-full')
             ngUI.html(webis_template_bottom).classes('w-full')
