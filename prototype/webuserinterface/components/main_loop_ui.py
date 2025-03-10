@@ -97,6 +97,7 @@ class MainLoopUI(UIComponent):
         self.webUI.update_user_profile()
         ngUI.notify('Scores submitted!')
         ngUI.notify('Number of images updated!')
+        self.webUI.loading_ui.update_loading_batch_count()
         self.webUI.change_state(WebUIState.GENERATING_STATE)
         self.webUI.iteration += 1
         ngUI.notify('Generating new images...')

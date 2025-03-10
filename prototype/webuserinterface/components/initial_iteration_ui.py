@@ -70,7 +70,6 @@ class InitialIterationUI(UIComponent):
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.debug_menu.set_user_profile_updater()
         self.webUI.main_loop_ui.set_user_profile_host_beta_updater()
-        self.webUI.loading_ui.update_loading_batch_count()
         self.webUI.update_active_image()
     
     def setup_blind_mode(self):
