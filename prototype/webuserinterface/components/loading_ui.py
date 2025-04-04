@@ -20,7 +20,6 @@ class LoadingUI(UIComponent):
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_generating', value=True):
             ngUI.label('Generating images...').style('font-size: 200%;')
             ngUI.space().classes('m-4')
-        with ngUI.column().classes('w-200 items-center').bind_visibility_from(self.webUI, 'is_generating', value=True):
             global loading_progress
             loading_progress = ngUI.linear_progress(value=0, show_value=False, color='#323232').props('size=md;')
         self.update_loading_batch_count()
