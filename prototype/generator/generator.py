@@ -51,7 +51,8 @@ class Generator(GeneratorBase):
                  num_inference_steps: int = 20,
                  device: str = 'cuda',
                  guidance_scale: float = 7.,
-                 use_negative_prompt: bool = False
+                 use_negative_prompt: bool = False, 
+                 callback = None
                  ):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
@@ -72,6 +73,7 @@ class Generator(GeneratorBase):
         self.guidance_scale = guidance_scale
         self.n_images = n_images
         self.use_negative_prompt = use_negative_prompt
+        self.callback = callback
 
         self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
@@ -141,6 +143,7 @@ class Generator(GeneratorBase):
                                     num_inference_steps=self.num_inference_steps,
                                     guidance_scale=self.guidance_scale,
                                     latents=latents[i:i + batch_steps],
+                                    callback_on_step_end=self.callback,
                                     ).images
                           )
         self.latest_images.extend(images)

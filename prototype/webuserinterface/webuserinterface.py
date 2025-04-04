@@ -10,7 +10,7 @@ from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
 from prototype.generator.generator import Generator, GeneratorStream
 from prototype.utils import seed_everything
-from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingSpinnerUI, PlotUI, Scorer, DebugMenu
+from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingUI, PlotUI, Scorer, DebugMenu
 
 
 class WebUI:
@@ -158,7 +158,7 @@ class WebUI:
             ngUI.space().classes('w-full h-full')
             InitialIterationUI(self)
             self.main_loop_ui = MainLoopUI(self)
-            LoadingSpinnerUI(self)
+            self.loading_ui = LoadingUI(self)
             self.plot_ui = PlotUI(self)
             ngUI.space().classes('w-full h-full')
             ngUI.html(webis_template_bottom).classes('w-full')
@@ -252,12 +252,11 @@ class WebUI:
         Args:
             idx: The image index of the new active image.
         """
-        print("Update Active Images.")
         if self.score_mode == ScoreMode.EMOJI.value:
             idx = idx % len(self.images)
-            self.images_display[self.active_image].style('border-color: lightgray')
+            self.images_display[self.active_image].style(f'width: {self.image_display_width}px; height: {self.image_display_height}px;')
             self.active_image = idx
-            self.images_display[idx].style('border-color: red')
+            self.images_display[idx].style(f'width: {int(self.image_display_width*1.1)}px; height: {int(self.image_display_height*1.1)}px;')
 
     def on_number_keystroke(self, key):
         """
