@@ -43,10 +43,10 @@ class App:
             torch_dtype=torch.bfloat16,
         ).to(device=self.device)
 
-        pipe.unet = torch.compile(self.pipe.unet, backend="cudagraphs")
+        pipe.unet = torch.compile(pipe.unet, backend="cudagraphs")
 
-        pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=self.pipe.device, dtype=self.pipe.dtype)
-        pipe.vae = torch.compile(self.pipe.vae, backend="cudagraphs")
+        pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=pipe.device, dtype=pipe.dtype)
+        pipe.vae = torch.compile(pipe.vae, backend="cudagraphs")
     
     def start(self):
         """
