@@ -111,6 +111,7 @@ class UserProfileHost():
                 pretrained_model_name_or_path=hf_model_name,
                 cache_dir=cache_dir
             )
+        print(self.stable_dif_pipe.unet)
         self.tokenizer = self.stable_dif_pipe.tokenizer
         self.text_encoder = self.stable_dif_pipe.text_encoder
 
