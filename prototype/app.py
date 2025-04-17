@@ -1,6 +1,6 @@
 from nicegui import ui as ngUI
 import torch
-from diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionPipeline, AutoencoderKL
 
 from prototype.webuserinterface import WebUI
 
@@ -42,6 +42,11 @@ class App:
             cache_dir=global_args.path.cache_dir,
             torch_dtype=torch.bfloat16,
         ).to(device=self.device)
+
+        pipe.unet = torch.compile(self.pipe.unet, backend="cudagraphs")
+
+        pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=self.pipe.device, dtype=self.pipe.dtype)
+        pipe.vae = torch.compile(self.pipe.vae, backend="cudagraphs")
     
     def start(self):
         """

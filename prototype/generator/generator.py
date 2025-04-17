@@ -86,10 +86,10 @@ class Generator(GeneratorBase):
             torch_dtype=torch.bfloat16,
         ).to(device=self.device)
 
-        self.pipe.unet = torch.compile(self.pipe.unet, backend="cudagraphs")
+        #self.pipe.unet = torch.compile(self.pipe.unet, backend="cudagraphs")
 
-        self.pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=self.pipe.device, dtype=self.pipe.dtype)
-        self.pipe.vae = torch.compile(self.pipe.vae, backend="cudagraphs")
+        #self.pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=self.pipe.device, dtype=self.pipe.dtype)
+        #self.pipe.vae = torch.compile(self.pipe.vae, backend="cudagraphs")
 
         self.latent_height = int(self.height // self.pipe.vae_scale_factor)
         self.latent_width = int(self.width // self.pipe.vae_scale_factor)
