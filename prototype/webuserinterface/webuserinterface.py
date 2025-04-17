@@ -35,13 +35,14 @@ class WebUI:
     blind_mode = binding.BindableProperty()
 
     @classmethod
-    async def create(cls, args):
+    async def create(cls, args, pipe):
         """
         This method should be used instead of the __init__-method to create an object of the WebUI-class.
         Usage: ui = await WebUI.create(...) inside an async function.
 
         Args:
             args: The config args as an omegaconf.DictConfig object.
+            pipe: The central SD-pipeline used for the generator.
 
         Returns:
             Created object of type WebUI.
@@ -51,6 +52,7 @@ class WebUI:
         await ngUI.context.client.connected()
         # Args of global config
         self.args = args
+        self.pipe = pipe
         seed_everything(self.args.random_seed)
         self.queue_lock = threading.Lock()
         # Generate id for this session
@@ -201,7 +203,8 @@ class WebUI:
                     cache_dir=self.args.path.cache_dir,
                     device=self.args.device,
                     hf_model_name=self.args.hf_model_name,
-                    **self.args.generator
+                    **self.args.generator,
+                    pipe=self.pipe
                 )
 
     def init_user_profile_host(self):

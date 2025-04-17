@@ -1,11 +1,11 @@
 from nicegui import ui as ngUI
 import torch
 from diffusers import StableDiffusionPipeline
-from omegaconf import OmegaConf, open_dict
 
 from prototype.webuserinterface import WebUI
 
 global_args = None
+pipe = None
 
 @ngUI.page('/demo')
 async def start_demo_instance():
@@ -14,7 +14,8 @@ async def start_demo_instance():
     This instance is private with the user and not shared.
     """
     global global_args
-    ui = await WebUI.create(global_args)
+    global pipe
+    ui = await WebUI.create(global_args, pipe)
     ui.run()
 
 @ngUI.page('/')
@@ -31,17 +32,16 @@ class App:
     def __init__(self, args):
         global global_args
         global_args = args
-        OmegaConf.set_struct(global_args, True)
         self.device = torch.device("cuda") if (global_args.device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
-        with open_dict(global_args):
-            global_args.generator.pipe = StableDiffusionPipeline.from_pretrained(
-                global_args.hf_model_name,
-                safety_checker=None,
-                requires_safety_checker=False,
-                cache_dir=global_args.path.cache_dir,
-                torch_dtype=torch.bfloat16,
-            ).to(device=self.device)
+        global pipe
+        pipe = StableDiffusionPipeline.from_pretrained(
+            global_args.hf_model_name,
+            safety_checker=None,
+            requires_safety_checker=False,
+            cache_dir=global_args.path.cache_dir,
+            torch_dtype=torch.bfloat16,
+        ).to(device=self.device)
     
     def start(self):
         """
