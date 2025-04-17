@@ -52,7 +52,8 @@ class Generator(GeneratorBase):
                  device: str = 'cuda',
                  guidance_scale: float = 7.,
                  use_negative_prompt: bool = False, 
-                 callback = None
+                 callback = None,
+                 pipe = None,
                  ):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
@@ -77,7 +78,7 @@ class Generator(GeneratorBase):
 
         self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
-        self.pipe = StableDiffusionPipeline.from_pretrained(
+        self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             safety_checker=None,
             requires_safety_checker=False,

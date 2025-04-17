@@ -1,4 +1,6 @@
 from nicegui import ui as ngUI
+import torch
+from diffusers import StableDiffusionPipeline
 
 from prototype.webuserinterface import WebUI
 
@@ -28,6 +30,15 @@ class App:
     def __init__(self, args):
         global global_args
         global_args = args
+        self.device = torch.device("cuda") if (global_args.device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
+
+        global_args.generator.pipe = StableDiffusionPipeline.from_pretrained(
+            global_args.hf_model_name,
+            safety_checker=None,
+            requires_safety_checker=False,
+            cache_dir=global_args.cache_dir,
+            torch_dtype=torch.bfloat16,
+        ).to(device=self.device)
     
     def start(self):
         """
