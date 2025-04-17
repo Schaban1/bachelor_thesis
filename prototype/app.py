@@ -36,7 +36,7 @@ class App:
             global_args.hf_model_name,
             safety_checker=None,
             requires_safety_checker=False,
-            cache_dir=global_args.cache_dir,
+            cache_dir=global_args.path.cache_dir,
             torch_dtype=torch.bfloat16,
         ).to(device=self.device)
     
