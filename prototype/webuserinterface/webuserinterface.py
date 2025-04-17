@@ -203,8 +203,8 @@ class WebUI:
                     cache_dir=self.args.path.cache_dir,
                     device=self.args.device,
                     hf_model_name=self.args.hf_model_name,
+                    pipe=self.pipe,
                     **self.args.generator,
-                    pipe=self.pipe
                 )
 
     def init_user_profile_host(self):

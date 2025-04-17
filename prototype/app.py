@@ -15,6 +15,7 @@ async def start_demo_instance():
     """
     global global_args
     global pipe
+    print(pipe)
     ui = await WebUI.create(global_args, pipe)
     ui.run()
 
