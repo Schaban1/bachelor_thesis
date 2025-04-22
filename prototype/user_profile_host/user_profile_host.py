@@ -45,6 +45,7 @@ class UserProfileHost():
             ema_alpha: float = 0.5,
             beta: float = 0.3,
             beta_step_size: float = 0.1,
+            axis_style: str = 'ordered'
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -86,6 +87,7 @@ class UserProfileHost():
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
         self.include_random_rec = include_random_recommendations
+        self.axis_style = axis_style
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
@@ -136,10 +138,37 @@ class UserProfileHost():
         self.quality_terms = prompt_terms["quality_terms"]
 
         # Create Add ons with original prompt included at the semantically correct position
-        self.add_ons = []
-        for _ in range(self.n_embedding_axis):
-            ao = random.choice(self.image_styles) + self.original_prompt + random.choice(self.secondary_contexts) + random.choice(self.atmospheric_attributes) + random.choice(self.quality_terms)
-            self.add_ons.append(ao)
+        if self.axis_style == 'ordered':
+            self.add_ons = []
+            for _ in range(self.n_embedding_axis):
+                ao = random.choice(self.image_styles) + self.original_prompt + random.choice(self.secondary_contexts) + random.choice(self.atmospheric_attributes) + random.choice(self.quality_terms)
+                self.add_ons.append(ao)
+        elif self.axis_style == 'random':
+            self.add_ons = [
+                "A beautiful purple flower in a dark forest, in the style of hyper-realistic sculptures, with dark orange and green colors, set against post-apocalyptic backdrops with light red and yellow hues. it is displayed in museum gallery dioramas, featuring soft, dreamy scenes with an orange and green surreal 8k zbrush render.",
+                "Fluid abstract background, dark indigo, art, behance",
+                "hyperdetailed eyes, tee-shirt design, line art, black background, ultra detailed artistic, detailed gorgeous face, natural skin, water splash, colour splash art, fire and ice, splatter, black ink, liquid melting, dreamy, glowing, glamour, glimmer, shadows, oil on canvas, brush strokes, smooth, ultra high definition, 8k, unreal engine 5, ultra sharp focus, intricate artwork masterpiece, ominous, golden ratio, highly detailed, vibrant, production cinematic character render, ultra high quality model",
+                "Futuristic sci-fi pod chair, flat design, product-view, editorial photography",
+                "Cute girl behind window, rainy, photography surreal art, blurry, minimalistic",
+                "Shadowy figure of a woman emerging from the darkness, black and grey gradient, foggy, realistic, 8k resolution, unreal engine, cinematic",
+                "Old man standing next to a giant monster, in the style of contemporary vintage photography, necronomicon illustrations, tabletop photography, 1890, hyperrealistic animal portraits, ghostly presence, whirring contrivances",
+                "Victo ngai style",
+                "Detailed, vibrant illustration of a cowboy in the copper canyons the sierra of chihuahua state, by herge, in the style of tin-tin comics, vibrant colors, detailed, sunny day, attention to detail, 8k",
+                "Create a surreal desert with alien plants, the plants are shaped like canary_yellow_perlwhite, are partially transparent with tentacles and spines, in the sand laying pearls, backdrop is the storm of cosmic dust and cosmic clouds the heaven is dark colored unreal engine 6 color palette knives painting oel on canvas conzeptart, high qualty, cinema_stil, wide shot",
+                "beautiful field of flowers, colorful flowers everywhere, perfect lighting, leica summicron 35mm f2.0, kodak portra 400, film grain",
+                "A boy playing video games at night in his room, illustration by hergé, perfect coloring, 8k",
+                "Drawing of a cosmic extraterrestrial technology healing chamber, with many cables connecting the chamber to a large translucent transparent crystal. a body silhouette inside. ambient aircraft.",
+                "An intricate village made of psychedelic mushrooms, art by greg rutkowsk, 3d render",
+                "Some people look over tall building windows, in the style of dark hues, rural china, coded patterns, sparse and simple, uhd image, urbancore, sovietwave, negative space, award-winning design",
+                "Diesel-punk hip-hop punk ashigaru wearing diesel-punk oni armor. full body fighting pose. traditional wet ink and watercolor painting style. black, grey, red, and metallic gold ink. gestural speed paint by artgerm and jungshan. street fighter style.",
+                "A cute minimalistic simple capybara side profile, in the style of jon klassen, desaturated light and airy pastel color palette, nursery art, white background",
+                "black and red ink, a crane in chinese style, ink art by mschiffer, whimsical, rough sketch, (sketch1.3)",
+                "A cute cartoon girl in a dress holding a white kitten, full body, yellow background, keith haring style doodle, sharpie illustration, bold lines and solid colors, simple details, (((minimalism))), yellow background",
+                "Japanese animation, panoramic, colorful, a small corgi with closed eyes backstroke in the pool, most of the picture shows water, corgi accounts for a small part of the picture, water is light blue transparent and clear, water ripple texture is clear, light refraction, corgi and water are not fuzzy, in hd, phone wallpaper size, hd, 32k",
+                "Body portrait photography, in a smoke-filled office full of cables and wires and led, featuring a carbon motor head, an attractive transparent white plexiglass secretary robot reading an ancient book at her desk, 80-degree view. art by sergio lopez, natalie shau, james jean, and salvador dali."
+            ][:self.n_embedding_axis]
+        else:
+            raise NotImplementedError()
   
         self.embedding_axis = []
         print('The embedding axis will consist of the following prompts:')
