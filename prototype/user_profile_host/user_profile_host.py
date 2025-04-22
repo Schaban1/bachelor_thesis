@@ -167,6 +167,9 @@ class UserProfileHost():
                 "Japanese animation, panoramic, colorful, a small corgi with closed eyes backstroke in the pool, most of the picture shows water, corgi accounts for a small part of the picture, water is light blue transparent and clear, water ripple texture is clear, light refraction, corgi and water are not fuzzy, in hd, phone wallpaper size, hd, 32k",
                 "Body portrait photography, in a smoke-filled office full of cables and wires and led, featuring a carbon motor head, an attractive transparent white plexiglass secretary robot reading an ancient book at her desk, 80-degree view. art by sergio lopez, natalie shau, james jean, and salvador dali."
             ][:self.n_embedding_axis]
+            # Include original prompt if not using the embedding center to remain the primary context
+            if not self.use_embedding_center:
+                self.add_ons = [prompt + ', ' + a for a in self.add_ons]
         else:
             raise NotImplementedError()
   
