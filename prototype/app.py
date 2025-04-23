@@ -5,7 +5,7 @@ import threading
 
 from prototype.webuserinterface import WebUI
 
-import collections
+import collections, time
 
 class QLock:
     def __init__(self):
@@ -32,6 +32,7 @@ class QLock:
             self.count -= 1
             if self.waiters:
                 self.waiters.popleft().release()
+        time.sleep(0.1)
 
     def locked(self):
         return self.count > 0
