@@ -36,6 +36,7 @@ class App:
         global_args = args
         self.device = torch.device("cuda") if (global_args.device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
+        # Initialize a central StableDiffusionPipeline for all sessions
         global pipe
         pipe = StableDiffusionPipeline.from_pretrained(
             global_args.hf_model_name,
@@ -46,7 +47,6 @@ class App:
         ).to(device=self.device)
 
         pipe.unet = torch.compile(pipe.unet, backend="cudagraphs")
-
         pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=pipe.device, dtype=pipe.dtype)
         pipe.vae = torch.compile(pipe.vae, backend="cudagraphs")
     
