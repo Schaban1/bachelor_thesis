@@ -115,7 +115,7 @@ class Generator(GeneratorBase):
 
 
     @torch.no_grad()
-    def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress) -> list[Image]:
+    def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress, queue_lock) -> list[Image]:
         """
         Generates a list of image(s) from given embedding
 
@@ -137,17 +137,18 @@ class Generator(GeneratorBase):
 
         images = []
         for i in range(0, num_embeddings, batch_steps):
-            images.extend(self.pipe(height=self.height,
-                                    width=self.width,
-                                    num_images_per_prompt=1,
-                                    prompt_embeds=pos_prompt_embeds[i:i + batch_steps],
-                                    negative_prompt_embeds=self.negative_prompt_embed.repeat(batch_steps, 1, 1) if self.use_negative_prompt else None,
-                                    num_inference_steps=self.num_inference_steps,
-                                    guidance_scale=self.guidance_scale,
-                                    latents=latents[i:i + batch_steps],
-                                    callback_on_step_end=partial(self.callback, current_step=i, num_embeddings=num_embeddings, loading_progress=loading_progress, batch_size=batch_steps, num_steps=self.num_inference_steps)
-                                    ).images
-                          )
+            with queue_lock:
+                images.extend(self.pipe(height=self.height,
+                                        width=self.width,
+                                        num_images_per_prompt=1,
+                                        prompt_embeds=pos_prompt_embeds[i:i + batch_steps],
+                                        negative_prompt_embeds=self.negative_prompt_embed.repeat(batch_steps, 1, 1) if self.use_negative_prompt else None,
+                                        num_inference_steps=self.num_inference_steps,
+                                        guidance_scale=self.guidance_scale,
+                                        latents=latents[i:i + batch_steps],
+                                        callback_on_step_end=partial(self.callback, current_step=i, num_embeddings=num_embeddings, loading_progress=loading_progress, batch_size=batch_steps, num_steps=self.num_inference_steps)
+                                        ).images
+                            )
         self.latest_images.extend(images)
         return images
 
