@@ -18,6 +18,9 @@ MMML_venv11/
 # Saved images from the Web UI
 saved_images/
 
+# demonstrations
+docs/demonstrator/
+
 # Output folder from hydra
 output/
 outputs/
