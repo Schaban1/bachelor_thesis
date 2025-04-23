@@ -40,5 +40,8 @@ def update_progress(pipe, step_index, timestep, callback_kwargs, current_step, n
     Returns:
         callback_kwargs that were input
     """
+    print(current_step)
+    print(step_index)
+    print(f'{num_embeddings}\n\n')
     loading_progress.set_value((current_step+step_index)/num_embeddings)
     return callback_kwargs
