@@ -26,6 +26,7 @@ generator:
   batch_size: 5
 
 recommender:
+  axis_style: ordered
   n_embedding_axis : 20
   use_embedding_center : False
   n_latent_axis : 20
