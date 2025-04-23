@@ -129,7 +129,7 @@ class UserProfileHost():
             self.embedding_center = self.prompt_embedding
 
         # Generate axis to define the user profile space with extensions of the original user-promt in the clip embedding space
-        with open('prototype/user_profile_host/prompt_terms.json', 'r') as f:
+        with open('prototype/user_profile_host/prompt_terms.json', 'r') as f: 
             prompt_terms = json.load(f)
 
         self.image_styles = prompt_terms["image_styles"] 
@@ -206,33 +206,50 @@ class UserProfileHost():
                 "calm, serene, and meditative",
                 "exploring the theme of isolation",
                 "representing the passage of time",
-                "visualizing the concept of duality",
-                "inspired by the feeling of déjà vu",
-                "symbolizing the clash between nature and technology",
-                "expressing the idea of infinite recursion",
-                "showing the boundary between reality and fantasy",
-                "in a magical realm with floating islands",
-                "with steampunk machines and airships",
-                "in a dark fantasy world ruled by dragons",
-                "inside a high-tech AI lab of the future",
-                "among celestial beings and cosmic anomalies",
-                "at the center of an intergalactic council",
-                "from a bird’s-eye view",
-                "with an ultra-wide cinematic lens",
-                "seen through a foggy window",
-                "as if captured from a security camera",
-                "reflected in a broken mirror"
             ][:self.n_embedding_axis]
             # Include original prompt if not using the embedding center to remain the primary context
             if not self.use_embedding_center:
                 self.add_ons = [self.original_prompt + ', ' + a for a in self.add_ons]
+        elif self.axis_style == 'complex':
+            self.add_ons = [
+                f"an ultra-detailed cinematic image of {self.original_prompt}, surrounded by swirling fog and towering ruins, wide-angle perspective at sunrise, painted in the style of Simon Stålenhag, trending on ArtStation, volumetric lighting",
+                f"{self.original_prompt} appears in a neon-drenched dystopian alleyway, under flickering signs and heavy rain, with puddles reflecting futuristic ads, cyberpunk ambiance, shot on film",
+                f"on the edge of an infinite desert, a monument to {self.original_prompt} rises from the dunes, casting long shadows over an abandoned civilization, concept art, ambient occlusion shading",
+                f"a vivid depiction of a future memory containing echoes of {self.original_prompt}, rendered in layered glitch textures, translucent overlays, visual noise, and dreamlike color grading",
+                f"deep inside a crystalline cavern, {self.original_prompt} glows with internal light, surrounded by suspended particles and iridescent reflections, macro photography, ambient light tracing",
+                f"an expressionist oil painting of {self.original_prompt}, drenched in emotion, warped by brush strokes and distorted forms, palette knife texture, gallery-ready, 20th-century modernism",
+                f"from a bird’s eye view, {self.original_prompt} lies beneath clouds swirling above a shattered earth, post-apocalyptic horizon, diffuse sunlight, cracked terrain",
+                f"{self.original_prompt}, seen during the final seconds before an eclipse, celestial shadows sweeping the terrain, golden rim lighting, symbolic and majestic, highly cinematic",
+                f"in a cozy cottage surrounded by rain, {self.original_prompt} sits near a warm fire, illustrated in watercolor style with soft brush lines, hygge atmosphere, sketchbook texture",
+                f"fragmented dreams collide as {self.original_prompt} transitions between realities, caught in a liminal space of shifting perspectives and recursive geometry",
+                f"a bold architectural concept featuring {self.original_prompt} in the atrium of a gravity-defying museum, curved glass, reflective floors, minimalist furniture, Unreal Engine render",
+                f"concept art of a mystic traveler resembling {self.original_prompt}, journeying across snowy peaks under aurora skies, digital brushwork with atmospheric perspective and detailed layering",
+                f"highly detailed line drawing of {self.original_prompt}, like an illuminated manuscript from the 1300s, golden ink on vellum, marginalia, medieval iconography, historical illustration",
+                f"{self.original_prompt} appears as a deity in an ancient mythology scene, towering above mountains, lightning in one hand and stars in the other, epic fantasy realism, divine color palette",
+                f"set in the year 3099, the final image ever transmitted of {self.original_prompt} shows a pixelated figure in a frozen databank, glitch art with corruption trails and color inversion",
+                f"{self.original_prompt}, barely visible beneath layers of analog film grain, soft flickering VHS distortion, timestamped from the early 90s, deep nostalgia, vaporwave aesthetics",
+                f"an emotionally raw visual essay centered around {self.original_prompt}, composed entirely of fragmented memories, translucent layering, melancholy tone, hazy gradients",
+                f"the final form of {self.original_prompt} as rendered by a sentient AI learning human dreams, chaotic and beautiful, mixed media textures with poetic overlays",
+                f"a wide panoramic shot of a fantasy war zone, where {self.original_prompt} commands a mythical army amid dragons and shattered planets, concept key art, epic scale, fire particles",
+                f"{self.original_prompt}, embodied as a sacred monument atop a celestial staircase in a parallel world, surrounded by chanting monks and cosmic winds",
+                f"mid-transformation, {self.original_prompt} becomes a hybrid of machine and tree, biomechanical fusion with flowing data roots and leaves of code, sci-fi fantasy fusion",
+                f"from the perspective of a child’s dream, {self.original_prompt} floats through a candy-colored sky, with bouncing clouds, storybook outlines, and oversized animals watching below",
+                f"an interactive data sculpture of {self.original_prompt}, projected in a smart city plaza, built from real-time citizen sentiment, glowing polygons and semantic noise",
+                f"{self.original_prompt}, envisioned through the lens of retrofuturism — rayguns, chrome suits, flying saucers — painted on a 1950s sci-fi book cover",
+                f"as told in a forgotten folktale, {self.original_prompt} journeys through a golden field filled with whispering grass, magical realism, vintage ink illustrations, aged parchment texture",
+                f"{self.original_prompt}, drifting through the cosmos as a constellation of thought, each star pulsing with memories, deep space rendering, aurora veil wrapping the figure",
+                f"a Renaissance-style fresco depicting the divine origin of {self.original_prompt}, surrounded by cherubs, clouds, and sacred geometry, Baroque lighting and fresco texture",
+                f"{self.original_prompt}, suspended in an underwater ballet with glowing jellyfish and liquid threads of light, illustrated in iridescent tones and flowing silk motions",
+                f"documentary footage of {self.original_prompt} taken on an alien planet, labeled in a foreign language, with grainy subtitles and unknown landmarks in the background",
+                f"seen through the cracked lens of a drone fallen in a forbidden jungle, {self.original_prompt} looms between ancient overgrowth and flickering HUD overlays, found footage style"
+            ][:self.n_embedding_axis]
         else:
             raise NotImplementedError()
   
         self.embedding_axis = []
-        print('The embedding axis will consist of the following prompts:')
+        #print('The embedding axis will consist of the following prompts:')
         for prompt in self.add_ons:
-            print(prompt)
+            #print(prompt)
             self.embedding_axis.append(self.clip_embedding(prompt))
         self.embedding_axis = torch.stack(self.embedding_axis)
 
