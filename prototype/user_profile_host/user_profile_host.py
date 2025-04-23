@@ -169,7 +169,63 @@ class UserProfileHost():
             ][:self.n_embedding_axis]
             # Include original prompt if not using the embedding center to remain the primary context
             if not self.use_embedding_center:
-                self.add_ons = [prompt + ', ' + a for a in self.add_ons]
+                self.add_ons = [self.original_prompt + ', ' + a for a in self.add_ons]
+        elif self.axis_style == 'simple':
+            self.add_ons = [
+                "in the style of a surreal oil painting",
+                "as a vintage photograph from the 1920s",
+                "drawn like a Studio Ghibli animation",
+                "rendered as hyper-realistic 3D CGI",
+                "in minimalist flat vector art style",
+                "as a charcoal sketch on parchment",
+                "in the aesthetic of vaporwave",
+                "painted in watercolor with soft pastel tones",
+                "illustrated like a medieval manuscript",
+                "as a pixel art scene from an 8-bit video game",
+                "set in a dense futuristic megacity",
+                "inside a sunlit forest clearing",
+                "floating above the clouds at golden hour",
+                "underwater in a bioluminescent reef",
+                "in a vast desert with ancient ruins",
+                "on a snowy mountain peak during a blizzard",
+                "on a distant alien planet with purple skies",
+                "in a neon-lit alleyway at midnight",
+                "at the bottom of a dark cave",
+                "inside a massive ancient library",
+                "during the last moments of a sunset",
+                "in a post-apocalyptic future",
+                "on a quiet early morning",
+                "in the distant future, year 4000",
+                "during a Renaissance-era festival",
+                "with an eerie, unsettling atmosphere",
+                "filled with joyous, playful energy",
+                "with a dreamlike, ethereal mood",
+                "with dark and mysterious undertones",
+                "evoking nostalgia and melancholy",
+                "bursting with chaotic and surreal energy",
+                "calm, serene, and meditative",
+                "exploring the theme of isolation",
+                "representing the passage of time",
+                "visualizing the concept of duality",
+                "inspired by the feeling of déjà vu",
+                "symbolizing the clash between nature and technology",
+                "expressing the idea of infinite recursion",
+                "showing the boundary between reality and fantasy",
+                "in a magical realm with floating islands",
+                "with steampunk machines and airships",
+                "in a dark fantasy world ruled by dragons",
+                "inside a high-tech AI lab of the future",
+                "among celestial beings and cosmic anomalies",
+                "at the center of an intergalactic council",
+                "from a bird’s-eye view",
+                "with an ultra-wide cinematic lens",
+                "seen through a foggy window",
+                "as if captured from a security camera",
+                "reflected in a broken mirror"
+            ][:self.n_embedding_axis]
+            # Include original prompt if not using the embedding center to remain the primary context
+            if not self.use_embedding_center:
+                self.add_ons = [self.original_prompt + ', ' + a for a in self.add_ons]
         else:
             raise NotImplementedError()
   
