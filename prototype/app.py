@@ -32,7 +32,7 @@ class QLock:
             self.count -= 1
             if self.waiters:
                 self.waiters.popleft().release()
-        time.sleep(0.1)
+        time.sleep(0.01)
 
     def locked(self):
         return self.count > 0
