@@ -27,7 +27,7 @@ class LoadingUI(UIComponent):
         """
         self.loading_progress.set_value(0)
     
-def update_progress(pipe, step_index, timestep, callback_kwargs, current_step, num_embeddings, loading_progress):
+def update_progress(pipe, step_index, timestep, callback_kwargs, current_step, num_embeddings, loading_progress, batch_size, num_steps):
     """
     This function serves as the callback_function for the StableDiffusion-Pipeline to show the generation progress on the UI.
 
@@ -40,8 +40,5 @@ def update_progress(pipe, step_index, timestep, callback_kwargs, current_step, n
     Returns:
         callback_kwargs that were input
     """
-    print(current_step)
-    print(step_index)
-    print(f'{num_embeddings}\n\n')
-    loading_progress.set_value((current_step+step_index)/num_embeddings)
+    loading_progress.set_value((current_step+(step_index/num_steps*batch_size))/num_embeddings)
     return callback_kwargs

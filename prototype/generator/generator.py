@@ -145,7 +145,7 @@ class Generator(GeneratorBase):
                                     num_inference_steps=self.num_inference_steps,
                                     guidance_scale=self.guidance_scale,
                                     latents=latents[i:i + batch_steps],
-                                    callback_on_step_end=partial(self.callback, current_step=i, num_embeddings=num_embeddings, loading_progress=loading_progress)
+                                    callback_on_step_end=partial(self.callback, current_step=i, num_embeddings=num_embeddings, loading_progress=loading_progress, batch_size=batch_steps, num_steps=self.num_inference_steps)
                                     ).images
                           )
         self.latest_images.extend(images)
