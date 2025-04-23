@@ -1,11 +1,13 @@
 from nicegui import ui as ngUI
 import torch
 from diffusers import StableDiffusionPipeline, AutoencoderKL
+import threading
 
 from prototype.webuserinterface import WebUI
 
 global_args = None
 pipe = None
+queue_lock = threading.Lock()
 
 @ngUI.page('/demo')
 async def start_demo_instance():
@@ -15,7 +17,7 @@ async def start_demo_instance():
     """
     global global_args
     global pipe
-    ui = await WebUI.create(global_args, pipe)
+    ui = await WebUI.create(global_args, pipe, queue_lock)
     ui.run()
 
 @ngUI.page('/')

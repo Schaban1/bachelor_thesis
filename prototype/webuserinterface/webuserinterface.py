@@ -35,7 +35,7 @@ class WebUI:
     blind_mode = binding.BindableProperty()
 
     @classmethod
-    async def create(cls, args, pipe):
+    async def create(cls, args, pipe, queue_lock):
         """
         This method should be used instead of the __init__-method to create an object of the WebUI-class.
         Usage: ui = await WebUI.create(...) inside an async function.
@@ -54,7 +54,7 @@ class WebUI:
         self.args = args
         self.pipe = pipe
         seed_everything(self.args.random_seed)
-        self.queue_lock = threading.Lock()
+        self.queue_lock = queue_lock
         # Generate id for this session
         self.session_id = secrets.token_urlsafe(4)
         # State variables
