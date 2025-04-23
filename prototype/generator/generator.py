@@ -149,7 +149,6 @@ class Generator(GeneratorBase):
                                         callback_on_step_end=partial(self.callback, current_step=i, num_embeddings=num_embeddings, loading_progress=loading_progress, batch_size=batch_steps, num_steps=self.num_inference_steps)
                                         ).images
                             )
-            time.sleep(0.1)
         self.latest_images.extend(images)
         return images
 
