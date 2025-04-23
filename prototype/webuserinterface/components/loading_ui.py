@@ -1,5 +1,4 @@
 from nicegui import ui as ngUI
-import math
 
 from prototype.webuserinterface.components.ui_component import UIComponent
 
@@ -36,6 +35,11 @@ def update_progress(pipe, step_index, timestep, callback_kwargs, current_step, n
         step_index: Index of the callback step
         timestep: Current timestep
         callback_kwargs: Provided by the pipeline
+        current_step: Current step in the generation process
+        num_embeddings: Number of embeddings
+        loading_progress: The linear_progress instance of the UI to update
+        batch_size: The size of the batch
+        num_steps: Number of inference steps
 
     Returns:
         callback_kwargs that were input
