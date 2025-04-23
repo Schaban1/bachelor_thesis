@@ -9,6 +9,7 @@ from streamdiffusion.image_utils import postprocess_image
 from prototype.generator.stream_diffusion import StreamDiffusion
 import logging
 import time
+from functools import partial
 
 
 class GeneratorBase(ABC):
@@ -114,7 +115,7 @@ class Generator(GeneratorBase):
 
 
     @torch.no_grad()
-    def generate_image(self, embeddings: Tensor, latents: Tensor) -> list[Image]:
+    def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress) -> list[Image]:
         """
         Generates a list of image(s) from given embedding
 
@@ -144,7 +145,7 @@ class Generator(GeneratorBase):
                                     num_inference_steps=self.num_inference_steps,
                                     guidance_scale=self.guidance_scale,
                                     latents=latents[i:i + batch_steps],
-                                    callback_on_step_end=self.callback,
+                                    callback_on_step_end=partial(self.callback, current_step=i, num_embeddings=num_embeddings, loading_progress=loading_progress)
                                     ).images
                           )
         self.latest_images.extend(images)

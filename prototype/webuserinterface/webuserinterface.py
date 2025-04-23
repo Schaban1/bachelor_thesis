@@ -284,7 +284,7 @@ class WebUI:
                 embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate*self.first_iteration_images_factor)
             else:
                 embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
-            self.images = self.generator.generate_image(embeddings, latents)
+            self.images = self.generator.generate_image(embeddings, latents, self.loading_ui.loading_progress)
 
     def update_image_displays(self):
         """
