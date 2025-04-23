@@ -1,8 +1,13 @@
 from nicegui import ui as ngUI
+import torch
+from diffusers import StableDiffusionPipeline, AutoencoderKL
 
 from prototype.webuserinterface import WebUI
+from prototype.utils import QLock
 
 global_args = None
+pipe = None
+queue_lock = QLock()
 
 @ngUI.page('/demo')
 async def start_demo_instance():
@@ -11,7 +16,8 @@ async def start_demo_instance():
     This instance is private with the user and not shared.
     """
     global global_args
-    ui = await WebUI.create(global_args)
+    global pipe
+    ui = await WebUI.create(global_args, pipe, queue_lock)
     ui.run()
 
 @ngUI.page('/')
@@ -28,6 +34,21 @@ class App:
     def __init__(self, args):
         global global_args
         global_args = args
+        self.device = torch.device("cuda") if (global_args.device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
+
+        # Initialize a central StableDiffusionPipeline for all sessions
+        global pipe
+        pipe = StableDiffusionPipeline.from_pretrained(
+            global_args.hf_model_name,
+            safety_checker=None,
+            requires_safety_checker=False,
+            cache_dir=global_args.path.cache_dir,
+            torch_dtype=torch.bfloat16,
+        ).to(device=self.device)
+
+        pipe.unet = torch.compile(pipe.unet, backend="cudagraphs")
+        pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=pipe.device, dtype=pipe.dtype)
+        pipe.vae = torch.compile(pipe.vae, backend="cudagraphs")
     
     def start(self):
         """

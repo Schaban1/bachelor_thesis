@@ -99,7 +99,6 @@ class MainLoopUI(UIComponent):
         ngUI.notify('Number of images updated!')
         self.webUI.change_state(WebUIState.GENERATING_STATE)
         self.webUI.iteration += 1
-        self.webUI.loading_ui.update_loading_batch_count()
         ngUI.notify('Generating new images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
@@ -117,7 +116,6 @@ class MainLoopUI(UIComponent):
         self.webUI.scorer.reset_scorers()
         self.webUI.user_profile_host = None
         self.webUI.iteration = 0
-        self.webUI.loading_ui.update_loading_batch_count()
 
         # Clear plot ui for new process
         self.webUI.generator.clear_latest_images()
