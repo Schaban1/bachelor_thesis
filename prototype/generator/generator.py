@@ -173,7 +173,8 @@ class GeneratorStream(GeneratorBase):
                  device: str = 'cuda',
                  random_latents: bool = False,
                  guidance_scale: float = 7.,
-                 use_negative_prompt: bool = False
+                 use_negative_prompt: bool = False,
+                 initial_latent_seed:int =42
                  ):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
@@ -195,6 +196,9 @@ class GeneratorStream(GeneratorBase):
         self.guidance_scale = guidance_scale
         self.n_images = n_images
         self.use_negative_prompt = use_negative_prompt
+
+        self.initial_latent_generator = torch.Generator()
+        self.initial_latent_seed = initial_latent_seed
 
         self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
@@ -233,9 +237,10 @@ class GeneratorStream(GeneratorBase):
         #self.generate_image(torch.zeros(size=(1, 77, 768), dtype=self.pipe.dtype, device=self.pipe.device))
 
     def load_generator(self):
+        self.initial_latent_generator.manual_seed(self.initial_latent_seed)
         self.latents = torch.randn(
             (1, self.pipe.unet.config.in_channels, self.height, self.width),
-            device=self.pipe.device, dtype=self.pipe.dtype
+            device=self.pipe.device, dtype=self.pipe.dtype, generator=self.initial_latent_generator
         ).repeat(self.n_images, 1, 1, 1)
 
         self.negative_prompt_embeds = None
@@ -261,6 +266,7 @@ class GeneratorStream(GeneratorBase):
             latents = latents.type(self.pipe.dtype)
         else:
             if self.random_latents:
+                # todo niklas use latent generator thats seeded once per user
                 latents = torch.randn(
                     (self.n_images, self.pipe.unet.config.in_channels, self.latent_height, self.latent_width),
                     device=self.pipe.device, dtype=self.pipe.dtype

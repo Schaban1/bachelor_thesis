@@ -24,6 +24,7 @@ generator:
   guidance_scale: 8.3
   use_negative_prompt : True
   batch_size: 5
+  initial_latent_seed: 42
 
 recommender:
   n_embedding_axis : 20
