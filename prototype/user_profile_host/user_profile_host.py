@@ -99,7 +99,6 @@ class UserProfileHost():
         if self.recommendation_type == RecommendationType.SIMPLE:
             self.recommendation_prompt_generator = random.Random(self.recommendation_seed)
 
-
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
         assert self.beta_step_size >= 0. and self.beta_step_size < 1., "Beta Step Size should be in [0., 1.]"
@@ -157,7 +156,7 @@ class UserProfileHost():
         if self.axis_style == 'ordered':
             self.add_ons = []
             for _ in range(self.n_embedding_axis):
-                ao = random.choice(self.image_styles) + self.original_prompt + random.choice(self.secondary_contexts) + random.choice(self.atmospheric_attributes) + random.choice(self.quality_terms)
+                ao = self.generator.choice(self.image_styles) + self.original_prompt + self.generator.choice(self.secondary_contexts) + self.generator.choice(self.atmospheric_attributes) + self.generator.choice(self.quality_terms)
                 self.add_ons.append(ao)
         elif self.axis_style == 'random':
             self.add_ons = [
