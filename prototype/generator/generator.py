@@ -197,8 +197,9 @@ class GeneratorStream(GeneratorBase):
         self.n_images = n_images
         self.use_negative_prompt = use_negative_prompt
 
-        self.initial_latent_generator = torch.Generator()
+        self.initial_latent_generator = torch.Generator(device=self.pipe.device)
         self.initial_latent_seed = initial_latent_seed
+        self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
         self.device = torch.device("cuda") if (device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
 
@@ -266,10 +267,9 @@ class GeneratorStream(GeneratorBase):
             latents = latents.type(self.pipe.dtype)
         else:
             if self.random_latents:
-                # todo niklas use latent generator thats seeded once per user
                 latents = torch.randn(
                     (self.n_images, self.pipe.unet.config.in_channels, self.latent_height, self.latent_width),
-                    device=self.pipe.device, dtype=self.pipe.dtype
+                    device=self.pipe.device, dtype=self.pipe.dtype, generator=self.initial_latent_generator
                 )
             else:
                 latents = self.latents

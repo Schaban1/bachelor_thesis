@@ -187,6 +187,7 @@ class StreamDiffusion:
             dim=0,
         )
 
+        # TODO: seed with torch generator
         self.init_noise = torch.randn(
             (self.batch_size, 4, self.latent_height, self.latent_width)
         ).to(device=self.device, dtype=self.dtype)
@@ -418,6 +419,7 @@ class StreamDiffusion:
                             idx + 1
                         ] * x_0_pred + self.beta_prod_t_sqrt[
                             idx + 1
+                            # TODO: seed with torch generator
                         ] * torch.randn_like(
                             x_0_pred, device=self.device, dtype=self.dtype
                         )
@@ -446,6 +448,7 @@ class StreamDiffusion:
             x_t_latent = self.encode_image(x)
         else:
             # TODO: check the dimension of x_t_latent
+            # TODO: seed with torch generator
             x_t_latent = torch.randn((1, 4, self.latent_height, self.latent_width)).to(
                 device=self.device, dtype=self.dtype
             )
@@ -462,6 +465,7 @@ class StreamDiffusion:
     @torch.no_grad()
     def txt2img(self, batch_size: int = 1) -> torch.Tensor:
         x_0_pred_out = self.predict_x0_batch(
+            # TODO: seed with torch generator
             torch.randn((batch_size, 4, self.latent_height, self.latent_width)).to(
                 device=self.device, dtype=self.dtype
             )
@@ -470,6 +474,7 @@ class StreamDiffusion:
         return x_output
 
     def txt2img_sd_turbo(self, batch_size: int = 1) -> torch.Tensor:
+        # TODO: seed with torch generator
         x_t_latent = torch.randn(
             (batch_size, 4, self.latent_height, self.latent_width),
             device=self.device,

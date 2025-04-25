@@ -45,6 +45,9 @@ class UserProfileHost():
             ema_alpha: float = 0.5,
             beta: float = 0.3,
             beta_step_size: float = 0.1,
+            latent_axes_seed: int = 42,
+            recommendation_seed: int = 42,
+            prompts_seed: int = 42,
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -86,6 +89,14 @@ class UserProfileHost():
         self.beta = min(beta, 1.)
         self.beta_step_size = beta_step_size
         self.include_random_rec = include_random_recommendations
+        self.latent_axes_seed = latent_axes_seed
+        self.recommendation_seed = recommendation_seed
+        self.prompts_seed = prompts_seed # seed for random prompt selection
+
+        # intelligent prompt generation
+        if self.recommendation_type == RecommendationType.SIMPLE:
+            self.recommendation_prompt_generator = random.Random(self.recommendation_seed)
+        
 
         # Check for valid values
         assert self.beta >= 0., "Beta should be in range [0., 1.]"
@@ -137,8 +148,9 @@ class UserProfileHost():
 
         # Create Add ons with original prompt included at the semantically correct position
         self.add_ons = []
+        self.generator = random.Random(self.prompts_seed)
         for _ in range(self.n_embedding_axis):
-            ao = random.choice(self.image_styles) + self.original_prompt + random.choice(self.secondary_contexts) + random.choice(self.atmospheric_attributes) + random.choice(self.quality_terms)
+            ao = self.generator.choice(self.image_styles) + self.original_prompt + self.generator.choice(self.secondary_contexts) + self.generator.choice(self.atmospheric_attributes) + self.generator.choice(self.quality_terms)
             self.add_ons.append(ao)
   
         self.embedding_axis = []
@@ -150,12 +162,14 @@ class UserProfileHost():
 
         # Similarly, define axis in the latent space to have variations in both spaces that together build the user space
         if self.n_latent_axis:
+            generator = torch.Generator()   # cpu
+            generator.manual_seed(self.latent_axes_seed)
             self.latent_center = torch.randn((1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
-                                              self.width // 8)) if self.use_latent_center else (
+                                              self.width // 8), generator=generator) if self.use_latent_center else (
                 torch.zeros(size=(1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)))
             self.latent_axis = torch.randn(
                 (self.n_latent_axis, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
-                 self.width // 8))
+                 self.width // 8), generator=generator)
             self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
         else:
             self.num_axis = self.embedding_axis.shape[0]
@@ -166,18 +180,18 @@ class UserProfileHost():
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
             self.recommender = BayesianRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                   n_latent_axis=self.n_latent_axis)
+                                                   n_latent_axis=self.n_latent_axis, seed=self.recommendation_seed)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.RANDOM:
             self.recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                 n_latent_axis=self.n_latent_axis)
+                                                 n_latent_axis=self.n_latent_axis, seed=self.recommendation_seed)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.EMA_DIRICHLET:
             self.recommender = DirichletRecommender(n_embedding_axis=self.n_embedding_axis,
-                                                    n_latent_axis=self.n_latent_axis)
+                                                    n_latent_axis=self.n_latent_axis, seed=self.recommendation_seed)
             self.optimizer = EMAWeightedSumOptimizer(n_recommendations=self.n_recommendations, alpha=self.ema_alpha)
         elif self.recommendation_type == RecommendationType.BASELINE:
-            self.recommender = BaselineRecommender(n_latent_axis=self.n_latent_axis)
+            self.recommender = BaselineRecommender(n_latent_axis=self.n_latent_axis, seed=self.recommendation_seed)
             self.optimizer = NoOptimizer()
         elif self.recommendation_type == RecommendationType.SIMPLE:
             self.recommender = SimpleRandomRecommender(n_embedding_axis=self.n_embedding_axis,
@@ -296,11 +310,11 @@ class UserProfileHost():
                 img_weights, sec_weights, at_weights, qual_weights, lat_weights = None, None, None, None, None
 
             # Select new indices that build up the next embeddings
-            img_idx = random.choices(range(len(self.image_styles)), weights=img_weights, k=num_recommendations)
-            sec_idx = random.choices(range(len(self.secondary_contexts)), weights=sec_weights, k=num_recommendations)
-            at_idx = random.choices(range(len(self.atmospheric_attributes)), weights=at_weights, k=num_recommendations)
-            qual_idx = random.choices(range(len(self.quality_terms)), weights=qual_weights, k=num_recommendations)
-            lat_idx = random.choices(range(self.n_latent_axis), weights=lat_weights, k=num_recommendations)
+            img_idx = self.recommendation_prompt_generator.choices(range(len(self.image_styles)), weights=img_weights, k=num_recommendations)
+            sec_idx = self.recommendation_prompt_generator.choices(range(len(self.secondary_contexts)), weights=sec_weights, k=num_recommendations)
+            at_idx = self.recommendation_prompt_generator.choices(range(len(self.atmospheric_attributes)), weights=at_weights, k=num_recommendations)
+            qual_idx = self.recommendation_prompt_generator.choices(range(len(self.quality_terms)), weights=qual_weights, k=num_recommendations)
+            lat_idx = self.recommendation_prompt_generator.choices(range(self.n_latent_axis), weights=lat_weights, k=num_recommendations)
 
             # Generate respective clip embeddings (note that no inv-transformation is required here)
             print("The following prompts will be generated with various latents:")
