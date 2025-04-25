@@ -27,6 +27,7 @@ generator:
   initial_latent_seed: 42
 
 recommender:
+  axis_style: ordered
   n_embedding_axis : 20
   use_embedding_center : False
   n_latent_axis : 20
