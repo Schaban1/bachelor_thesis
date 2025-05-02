@@ -266,32 +266,59 @@ class UserProfileHost():
         if self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
                                         RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
                                         RecommendationType.HYPERSPHERICAL_BAYESIAN]:
-            base_embeddings = self.embedding_axis[:, -1, :].float().cpu().numpy()
-            n = base_embeddings.shape[0]
-            k = base_embeddings.shape[-1]
+            base_embeddings = self.embedding_axis[:, -1,
+                              :].float().cpu().numpy()  # only keep the last token sequence step (which acts as a summary)
+            n = base_embeddings.shape[0]  # n_embedding_axis
+            k = base_embeddings.shape[-1]  # CLIP dimension
 
-            A = np.block([[np.ones([1, n]), np.zeros([1, k])],
+            # Linear equations to compute the center of the circumscribed hypersphere.
+            # Conditions: The center C (in the CLIP space) lies on the hyperplane spanned by the base_embeddings
+            # (i.e. C can be (II) written as linear combination of some lambda_i of the base_embeddings
+            # with (I) sum of lambda_i = 1)
+            # and
+            # all points (base_embeddings) have equal distance from the center
+            # (i.e. (III) the same distance as the distance between base_embeddings_1 and the center).
+            # Equation (III) can be written as: For each embedding_axis i, ||x_i - C||^2 = ||x_1 - C||^2, and thus
+            # sum_j 2 (x_{1,j} - x_{i,j}) c_j = sum_j x_{1,j}^2 - sum_j x_{i,j}^2
+            # The following system A x = b gives this solution with x = [lambda_1 ... lambda_n c_1 ... c_k].
+
+            A = np.block([[np.ones([1, n]), np.zeros([1, k])],  # equation (I)
                           [base_embeddings.T, - np.eye(k)],
-                          [np.zeros([n - 1, n]), 2 * (base_embeddings[0, np.newaxis] - base_embeddings[1:])]])
+                          # equation (II), i.e. for each CLIP dimension: sum of lambda_i*x_i - c = 0
+                          [np.zeros([n - 1, n]),
+                           2 * (base_embeddings[0, np.newaxis] - base_embeddings[1:])]])  # equation (III)
 
-            b = np.concatenate([np.ones([1]),
-                                np.zeros([k]),
+            b = np.concatenate([np.ones([1]),  # equation (I)
+                                np.zeros([k]),  # equation (II)
                                 (np.sum(base_embeddings[0] ** 2, axis=-1, keepdims=True)
-                                 - np.sum(base_embeddings[1:] ** 2, axis=-1, keepdims=True)).flatten()])
+                                 - np.sum(base_embeddings[1:] ** 2, axis=-1,
+                                          keepdims=True)).flatten()])  # equation (III)
 
-            C = np.linalg.solve(A, b)[-k:]
+            C = np.linalg.solve(A, b)[-k:]  # discard solutions for lambda and only get the solution for C
 
-            rel = base_embeddings - C
+            rel = base_embeddings - C  # move the base_embeddings by C so that their new center is 0 instead
 
+            # get orthonormal basis -> any linear combination with coefficients that have the sum of squares of 1
+            # will yield an admissible point on the circumscribed hypersphere
             Q_, _ = np.linalg.qr(rel.T)
 
             self.hyperspherical_center = torch.Tensor(C)
             self.hyperspherical_radius = np.linalg.norm(base_embeddings[0] - C)
-            self.hyperspherical_basis = torch.Tensor(Q_[:, :n - 1])
+            self.hyperspherical_basis = torch.Tensor(
+                Q_[:, :n - 1])  # discard one dimension since we are in a lower-dimensional user space
 
+            # Our user space only operates on the final token sequence step (out of the 77 tokens), which acts as a
+            # summary of the whole token sequence. This means that we have to get back into the (batch x) 77 x 768
+            # space to pass back to the image generator. However, the image generator has two typical constraints:
+            # The first of the 77 steps is always the same and the other steps should converge (i.e., be identical
+            # after some point). We just copy the start token embedding from an existing real embedding to the first
+            # position and repeat the recommended (batch x) 1 x 768 embedding to fill all 76 remaining steps.
             def convert_to_full_text(embeddings, k, n_tokens, original_starttoken):
                 return torch.cat((original_starttoken.reshape([1, 1, k]).expand(embeddings.shape[0], 1, -1),
-                                  embeddings.reshape([-1, 1, k]).expand(-1, n_tokens - 1, -1)), dim=1)
+                                  # for each resulting full text (out of the batch), get one start token embedding
+                                  # (of size CLIP dimension)
+                                  embeddings.reshape([-1, 1, k]).expand(-1, n_tokens - 1, -1)),
+                                 dim=1)  # expand the single time step to 76 and concat them to the start token embedding.
 
             self.get_full_text_embeddings = partial(convert_to_full_text, k=k, n_tokens=self.embedding_axis.shape[1],
                                                     original_starttoken=self.embedding_axis[0, 0])
@@ -324,7 +351,7 @@ class UserProfileHost():
         if self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
                                         RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
                                         RecommendationType.HYPERSPHERICAL_BAYESIAN]:
-            # remove one embedding dimension due to lower-dimensional hypersphere
+            # remove one embedding dimension due to lower-dimensional circumscribed hypersphere
             self.random_recommender = HypersphericalRandomRecommender(n_embedding_axis=self.n_embedding_axis - 1,
                                                                       n_latent_axis=self.n_latent_axis,
                                                                       seed=self.initial_recommendation_seed)
@@ -399,7 +426,11 @@ class UserProfileHost():
         elif self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
                                           RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
                                           RecommendationType.HYPERSPHERICAL_BAYESIAN]:
+
+            # we only have a orthonormal basis around the origin 0, so we need to scale by the radius of the
+            # circumscribed hypersphere and translate to its center
             clip_embeddings = user_embeddings @ self.hyperspherical_basis.T * self.hyperspherical_radius + self.hyperspherical_center
+
             clip_embeddings = self.get_full_text_embeddings(clip_embeddings)
 
         else:
@@ -415,6 +446,9 @@ class UserProfileHost():
         if self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
                                         RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
                                         RecommendationType.HYPERSPHERICAL_BAYESIAN]:
+
+            # no normalization required here since we ensured that the sum of squares of the latent_factors is one,
+            # and thus we don't change the distribution parameters of the normal distribution
             latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
 
         else:
