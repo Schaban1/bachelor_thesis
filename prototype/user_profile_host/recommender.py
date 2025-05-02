@@ -1,18 +1,19 @@
-from abc import abstractmethod, ABC
-import random
 import numpy as np
+import random
 import torch
-from torch import Tensor
-
+import warnings
+from abc import abstractmethod, ABC
 from botorch.acquisition import UpperConfidenceBound
+from botorch.acquisition import qUpperConfidenceBound
 from botorch.exceptions import InputDataWarning
-
-from gpytorch.mlls import ExactMarginalLogLikelihood
-from gpytorch.means import ConstantMean
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
-
-import warnings
+from botorch.models.transforms import Standardize
+from botorch.optim import optimize_acqf
+from botorch.optim.initializers import gen_batch_initial_conditions
+from gpytorch.means import ConstantMean
+from gpytorch.mlls import ExactMarginalLogLikelihood
+from torch import Tensor
 
 from .utils import get_unnormalized_value
 
@@ -382,3 +383,108 @@ class BayesianRecommender(Recommender):
         scores = acqf._mean_and_sigma(X=search_space.reshape(search_space.shape[0], 1, search_space.shape[1]),compute_sigma=False)[0].detach()
 
         return scores
+
+
+class HypersphericalRandomRecommender(Recommender):
+
+    def __init__(self, n_embedding_axis, n_latent_axis, seed: int = 42):
+        self.generator = torch.Generator()
+        self.generator.manual_seed(seed)
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        # for embeddings
+        embedding_coeffs = torch.randn(self.n_embedding_axis, n_recommendations, generator=self.generator)
+        embedding_coeffs = embedding_coeffs / torch.linalg.norm(embedding_coeffs, dim=0, keepdim=True)
+
+        # for latents
+        latent_coeffs = torch.randn(self.n_latent_axis, n_recommendations, generator=self.generator)
+        latent_coeffs = latent_coeffs / torch.linalg.norm(latent_coeffs, dim=0, keepdim=True)
+
+        recommendation = torch.cat((embedding_coeffs, latent_coeffs), dim=0)
+        return recommendation.T
+
+
+class HypersphericalMovingCenterRecommender(Recommender):
+
+    def __init__(self, n_embedding_axis, n_latent_axis, seed: int = 42):
+        self.generator = torch.Generator()
+        self.generator.manual_seed(seed)
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        # for embeddings
+        radius = (1 - beta) * 1.0  # todo make configurable
+        center = user_profile[:self.n_embedding_axis, None]
+        pos = center + torch.randn(self.n_embedding_axis, n_recommendations, generator=self.generator)
+        moved_center = (1 - (radius ** 2) / 2) * center  # midpoint of the intersecting sphere
+        # moved_center^T \cdot (moved_pos - moved_center) = 0 (orthogonality)
+        moved_pos = pos * (moved_center.T @ moved_center) / (moved_center.T @ pos)
+        dist = torch.linalg.norm(moved_pos - moved_center, dim=0, keepdim=True)
+        embedding_recommendations = (moved_pos - moved_center) / dist * np.sqrt(
+            radius ** 2 - radius ** 4 / 4) + moved_center
+
+        # for latents
+        radius = (1 - beta) * 1.0  # todo make configurable
+        center = user_profile[-self.n_latent_axis:, None]
+        pos = center + torch.randn(self.n_latent_axis, n_recommendations, generator=self.generator)
+        moved_center = (1 - (radius ** 2) / 2) * center  # midpoint of the intersecting sphere
+        # moved_center^T \cdot (moved_pos - moved_center) = 0 (orthogonality)
+        moved_pos = pos * (moved_center.T @ moved_center) / (moved_center.T @ pos)
+        dist = torch.linalg.norm(moved_pos - moved_center, dim=0, keepdim=True)
+        latent_recommendations = (moved_pos - moved_center) / dist * np.sqrt(
+            radius ** 2 - radius ** 4 / 4) + moved_center
+
+        recommendations = torch.cat((embedding_recommendations, latent_recommendations), dim=0)
+        return recommendations.T
+
+
+class HypersphericalBayesianRecommender(Recommender):
+    def __init__(self, n_embedding_axis, n_latent_axis, seed: int = 42):
+        self.generator = torch.Generator()
+        self.generator.manual_seed(seed)
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+
+    def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        train_X, train_Y = user_profile
+
+        gp = SingleTaskGP(
+            train_X=train_X,
+            train_Y=train_Y.reshape((-1, 1)),
+            input_transform=None,
+            # todo might be that Normalize(d=self.n_embedding_axis+self.n_latent_axis) is required here.
+            outcome_transform=Standardize(m=1)
+        )
+        mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
+        fit_gpytorch_mll(mll)
+
+        beta = 20 - get_unnormalized_value(beta, 0, 20)
+        acqf = qUpperConfidenceBound(model=gp, beta=beta)
+
+        bounds = torch.stack([
+            torch.full((self.n_embedding_axis + self.n_latent_axis,), -1.0),
+            torch.full((self.n_embedding_axis + self.n_latent_axis,), 1.0),
+        ])
+
+        constraints = [
+            (lambda X: X[..., :self.n_embedding_axis].pow(2).sum(dim=-1) - 1.0, True),
+            (lambda X: 1.0 - X[..., :self.n_embedding_axis].pow(2).sum(dim=-1), True),
+            (lambda X: X[..., -self.n_latent_axis:].pow(2).sum(dim=-1) - 1.0, True),
+            (lambda X: 1.0 - X[..., -self.n_latent_axis:].pow(2).sum(dim=-1), True),
+        ]
+
+        recommendations, acq_value = optimize_acqf(
+            acq_function=acqf,
+            bounds=bounds,
+            q=n_recommendations,
+            nonlinear_inequality_constraints=constraints,
+            num_restarts=20,
+            raw_samples=500,
+            ic_generator=gen_batch_initial_conditions,  # todo doesn't work yet
+            options={"maxiter": 200},
+        )
+
+        return recommendations

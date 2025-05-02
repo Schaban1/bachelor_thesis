@@ -1,14 +1,15 @@
 import json
 import random
 import torch
-from torch import Tensor
-from sklearn.decomposition import PCA
-from nicegui import binding
-
-from .recommender import *
-from .optimizer import *
-from ..constants import RecommendationType
 from diffusers import StableDiffusionPipeline
+from functools import partial
+from nicegui import binding
+from sklearn.decomposition import PCA
+from torch import Tensor
+
+from .optimizer import *
+from .recommender import *
+from ..constants import RecommendationType
 
 
 class UserProfileHost():
@@ -47,6 +48,7 @@ class UserProfileHost():
             beta_step_size: float = 0.1,
             latent_axes_seed: int = 42,
             recommendation_seed: int = 42,
+            initial_recommendation_seed: int = 43,
             prompts_seed: int = 42,
             axis_style: str = 'ordered'
     ):
@@ -93,6 +95,7 @@ class UserProfileHost():
         self.axis_style = axis_style
         self.latent_axes_seed = latent_axes_seed
         self.recommendation_seed = recommendation_seed
+        self.initial_recommendation_seed = initial_recommendation_seed
         self.prompts_seed = prompts_seed # seed for random prompt selection
 
         # intelligent prompt generation
@@ -259,22 +262,76 @@ class UserProfileHost():
             self.embedding_axis.append(self.clip_embedding(prompt))
         self.embedding_axis = torch.stack(self.embedding_axis)
 
+        # Build user subspace parameters
+        if self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
+                                        RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
+                                        RecommendationType.HYPERSPHERICAL_BAYESIAN]:
+            base_embeddings = self.embedding_axis[:, -1, :].float().cpu().numpy()
+            n = base_embeddings.shape[0]
+            k = base_embeddings.shape[-1]
+
+            A = np.block([[np.ones([1, n]), np.zeros([1, k])],
+                          [base_embeddings.T, - np.eye(k)],
+                          [np.zeros([n - 1, n]), 2 * (base_embeddings[0, np.newaxis] - base_embeddings[1:])]])
+
+            b = np.concatenate([np.ones([1]),
+                                np.zeros([k]),
+                                (np.sum(base_embeddings[0] ** 2, axis=-1, keepdims=True)
+                                 - np.sum(base_embeddings[1:] ** 2, axis=-1, keepdims=True)).flatten()])
+
+            C = np.linalg.solve(A, b)[-k:]
+
+            rel = base_embeddings - C
+
+            Q_, _ = np.linalg.qr(rel.T)
+
+            self.hyperspherical_center = torch.Tensor(C)
+            self.hyperspherical_radius = np.linalg.norm(base_embeddings[0] - C)
+            self.hyperspherical_basis = torch.Tensor(Q_[:, :n - 1])
+
+            def convert_to_full_text(embeddings, k, n_tokens, original_starttoken):
+                return torch.cat((original_starttoken.reshape([1, 1, k]).expand(embeddings.shape[0], 1, -1),
+                                  embeddings.reshape([-1, 1, k]).expand(-1, n_tokens - 1, -1)), dim=1)
+
+            self.get_full_text_embeddings = partial(convert_to_full_text, k=k, n_tokens=self.embedding_axis.shape[1],
+                                                    original_starttoken=self.embedding_axis[0, 0])
+
         # Similarly, define axis in the latent space to have variations in both spaces that together build the user space
         if self.n_latent_axis:
             generator = torch.Generator()   # cpu
             generator.manual_seed(self.latent_axes_seed)
-            self.latent_center = torch.randn((1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
-                                              self.width // 8), generator=generator) if self.use_latent_center else (
-                torch.zeros(size=(1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)))
-            self.latent_axis = torch.randn(
-                (self.n_latent_axis, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
-                 self.width // 8), generator=generator)
+            if self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
+                                            RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
+                                            RecommendationType.HYPERSPHERICAL_BAYESIAN]:
+                # already include the standard deviation here and not via the parameter latent_space_length (will be ignored later)
+                self.latent_axis = torch.randn(
+                    (self.n_latent_axis, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
+                     self.width // 8), generator=generator) * self.stable_dif_pipe.scheduler.init_noise_sigma
+            else:
+                self.latent_center = torch.randn((1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
+                                                  self.width // 8),
+                                                 generator=generator) if self.use_latent_center else (
+                    torch.zeros(
+                        size=(1, self.stable_dif_pipe.unet.config.in_channels, self.height // 8, self.width // 8)))
+                self.latent_axis = torch.randn(
+                    (self.n_latent_axis, self.stable_dif_pipe.unet.config.in_channels, self.height // 8,
+                     self.width // 8), generator=generator)
             self.num_axis = self.embedding_axis.shape[0] + self.latent_axis.shape[0]
         else:
             self.num_axis = self.embedding_axis.shape[0]
 
         # Generally required
-        self.random_recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis, n_latent_axis=self.n_latent_axis)
+        if self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
+                                        RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
+                                        RecommendationType.HYPERSPHERICAL_BAYESIAN]:
+            # remove one embedding dimension due to lower-dimensional hypersphere
+            self.random_recommender = HypersphericalRandomRecommender(n_embedding_axis=self.n_embedding_axis - 1,
+                                                                      n_latent_axis=self.n_latent_axis,
+                                                                      seed=self.initial_recommendation_seed)
+        else:
+            self.random_recommender = RandomRecommender(n_embedding_axis=self.n_embedding_axis,
+                                                        n_latent_axis=self.n_latent_axis,
+                                                        seed=self.initial_recommendation_seed)
 
         # Initialize Optimizer and Recommender based on one Mode
         if self.recommendation_type == RecommendationType.FUNCTION_BASED:
@@ -301,6 +358,23 @@ class UserProfileHost():
                                              secondary_contexts=self.secondary_contexts,
                                              atmospheric_attributes=self.atmospheric_attributes,
                                              quality_terms=self.quality_terms)
+        elif self.recommendation_type == RecommendationType.HYPERSPHERICAL_RANDOM:
+            self.recommender = HypersphericalRandomRecommender(n_embedding_axis=self.n_embedding_axis - 1,
+                                                               n_latent_axis=self.n_latent_axis,
+                                                               seed=self.recommendation_seed)
+            self.optimizer = NoOptimizer()
+        elif self.recommendation_type == RecommendationType.HYPERSPHERICAL_MOVING_CENTER:
+            self.recommender = HypersphericalMovingCenterRecommender(n_embedding_axis=self.n_embedding_axis - 1,
+                                                                     n_latent_axis=self.n_latent_axis,
+                                                                     seed=self.recommendation_seed)
+            self.optimizer = HypersphericalEMAOptimizer(n_recommendations=self.n_recommendations,
+                                                        n_embedding_axis=self.n_embedding_axis - 1,
+                                                        n_latent_axis=self.n_latent_axis, alpha=self.ema_alpha)
+        elif self.recommendation_type == RecommendationType.HYPERSPHERICAL_BAYESIAN:
+            self.recommender = HypersphericalBayesianRecommender(n_embedding_axis=self.n_embedding_axis - 1,
+                                                                 n_latent_axis=self.n_latent_axis,
+                                                                 seed=self.recommendation_seed)
+            self.optimizer = NoOptimizer()
         else:
             raise ValueError(f"The recommendation type {self.recommendation_type} is not implemented yet.")
 
@@ -320,23 +394,35 @@ class UserProfileHost():
             user_embeddings = user_embeddings[:, :-self.latent_axis.shape[0]]
 
         # r = n_rec, a = n_axis, t = n_tokens, e = embedding_size
-        if not self.recommendation_type == RecommendationType.BASELINE:
+        if self.recommendation_type == RecommendationType.BASELINE:
+            clip_embeddings = self.prompt_embedding.repeat(user_embeddings.shape[0], 1, 1)
+        elif self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
+                                          RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
+                                          RecommendationType.HYPERSPHERICAL_BAYESIAN]:
+            clip_embeddings = user_embeddings @ self.hyperspherical_basis.T * self.hyperspherical_radius + self.hyperspherical_center
+            clip_embeddings = self.get_full_text_embeddings(clip_embeddings)
+
+        else:
             user_embeddings = user_embeddings.type(self.text_encoder.dtype)
             self.embedding_axis = self.embedding_axis.type(self.text_encoder.dtype)
             product = torch.einsum('ra,ate->rte', user_embeddings, self.embedding_axis)
             embedding_length = self.embedding_length.reshape((1, product.shape[1], 1))
             clip_embeddings = (self.embedding_center + product)
             clip_embeddings = (clip_embeddings / torch.linalg.vector_norm(clip_embeddings, ord=2, dim=-1, keepdim=True)
-                            * embedding_length)
-        else:
-            clip_embeddings = self.prompt_embedding.repeat(user_embeddings.shape[0], 1, 1)
+                               * embedding_length)
 
         latents = None
-        if self.n_latent_axis:
-            latents = self.latent_center + torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
-            latents = torch.nan_to_num(latents, nan=0.0)  # avoid SVD LinAlgError for all zero preferences
-            latents = (latents / torch.linalg.matrix_norm(latents, ord=2, dim=(-2, -1), keepdim=True)
-                       * self.latent_space_length)
+        if self.recommendation_type in [RecommendationType.HYPERSPHERICAL_RANDOM,
+                                        RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
+                                        RecommendationType.HYPERSPHERICAL_BAYESIAN]:
+            latents = torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
+
+        else:
+            if self.n_latent_axis:
+                latents = self.latent_center + torch.einsum('rl,lxyz->rxyz', latent_factors, self.latent_axis)
+                latents = torch.nan_to_num(latents, nan=0.0)  # avoid SVD LinAlgError for all zero preferences
+                latents = (latents / torch.linalg.matrix_norm(latents, ord=2, dim=(-2, -1), keepdim=True)
+                           * self.latent_space_length)
 
         return clip_embeddings, latents
 

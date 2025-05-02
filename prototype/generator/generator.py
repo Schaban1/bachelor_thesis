@@ -1,15 +1,15 @@
-from abc import abstractmethod, ABC
-from torch import Tensor
-
-from nicegui import binding
-import torch
-from PIL.Image import Image
-from diffusers import StableDiffusionPipeline, AutoencoderTiny, AutoencoderKL
-from streamdiffusion.image_utils import postprocess_image
-from prototype.generator.stream_diffusion import StreamDiffusion
 import logging
 import time
+import torch
+from PIL.Image import Image
+from abc import abstractmethod, ABC
+from diffusers import StableDiffusionPipeline, AutoencoderTiny, AutoencoderKL
 from functools import partial
+from nicegui import binding
+from streamdiffusion.image_utils import postprocess_image
+from torch import Tensor
+
+from prototype.generator.stream_diffusion import StreamDiffusion
 
 
 class GeneratorBase(ABC):
@@ -52,9 +52,11 @@ class Generator(GeneratorBase):
                  num_inference_steps: int = 20,
                  device: str = 'cuda',
                  guidance_scale: float = 7.,
-                 use_negative_prompt: bool = False, 
+                 use_negative_prompt: bool = False,
                  callback = None,
                  pipe = None,
+                 initial_latent_seed: int = 42
+                 # todo this is unused here, but currently passed from config.yaml. should be removed
                  ):
         """
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.

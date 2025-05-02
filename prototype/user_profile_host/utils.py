@@ -1,49 +1,39 @@
-import torch
-import numpy as np
 import matplotlib.pyplot as plt
-from torch import Tensor
+import numpy as np
+import torch
 from scipy import interpolate
+from torch import Tensor
 
 
-def slerp(v0, v1, num, t0=0, t1=1):
-    """Spherical linear interpolation between two vectors.
-    :param v0: start vector
-    :param v1: end vector
-    :param num: number of interpolation steps
-    :param t0: start interpolation value
-    :param t1: end interpolation value
-    :return: interpolated vectors
-    """
-    v0 = v0.detach().cpu().numpy()
-    v1 = v1.detach().cpu().numpy()
+def lerp(v0, v1, t):
+    return (1 - t) * v0 + t * v1
 
-    def interpolation(t, v0, v1, DOT_THRESHOLD=0.9995):
-        """
-        helper function to spherically interpolate two arrays v1 v2
-        :param t: interpolation value
-        :param v0: start vector
-        :param v1: end vector
-        :param DOT_THRESHOLD: threshold for dot product
-        :return: interpolated vector
-        """
-        dot = np.sum(v0 * v1 / (np.linalg.norm(v0) * np.linalg.norm(v1)))
-        if np.abs(dot) > DOT_THRESHOLD:
-            v2 = (1 - t) * v0 + t * v1
-        else:
-            theta_0 = np.arccos(dot)
-            sin_theta_0 = np.sin(theta_0)
-            theta_t = theta_0 * t
-            sin_theta_t = np.sin(theta_t)
-            s0 = np.sin(theta_0 - theta_t) / sin_theta_0
-            s1 = sin_theta_t / sin_theta_0
-            v2 = s0 * v0 + s1 * v1
-        return v2
 
-    t = np.linspace(t0, t1, num)
+def nlerp(v0, v1, t):
+    l = lerp(v0, v1, t)
+    return torch.nn.functional.normalize(l, dim=-1)
 
-    v3 = torch.tensor(np.array([interpolation(t[i], v0, v1) for i in range(num)]))
 
-    return v3
+def slerp(v0, v1, t, DOT_THRESHOLD=0.99999):
+    v0 = torch.nn.functional.normalize(v0, dim=-1)
+    v1 = torch.nn.functional.normalize(v1, dim=-1)
+
+    dot = (v0 * v1).sum(dim=-1, keepdim=True)
+    dot = torch.clamp(dot, -1.0, 1.0)  # Clamp for numerical stability
+
+    theta_0 = torch.acos(dot)  # angle between v0 and v1
+    sin_theta_0 = torch.sin(theta_0)
+
+    # If the angle is small, use linear interpolation
+    is_small_angle = dot.abs() > DOT_THRESHOLD
+
+    slerp_result = (
+            torch.sin((1 - t) * theta_0) / sin_theta_0 * v0 +
+            torch.sin(t * theta_0) / sin_theta_0 * v1
+    )
+
+    return torch.where(is_small_angle, nlerp(v0, v1, t), slerp_result)
+
 
 
 def display_generated_points(generated_points: Tensor, user_profile: Tensor, x_bounds=(-1, 1), y_bounds=(-1, 1),

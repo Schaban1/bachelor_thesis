@@ -37,6 +37,7 @@ recommender:
   beta_step_size: 0.1
   latent_axes_seed: 42
   recommendation_seed: 43
+  initial_recommendation_seed: 44
   prompts_seed: 44
 
 path:
