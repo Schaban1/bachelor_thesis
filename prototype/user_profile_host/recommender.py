@@ -474,8 +474,8 @@ class HypersphericalBayesianRecommender(Recommender):
         acqf = qUpperConfidenceBound(model=gp, beta=beta)
 
         # Sample many candidates
-        candidates = torch.cat((self.sample_on_unit_sphere(1000, self.n_embedding_axis),
-                                self.sample_on_unit_sphere(1000, self.n_latent_axis)), dim=-1)
+        candidates = torch.cat((self.sample_on_unit_sphere(10000, self.n_embedding_axis),
+                                self.sample_on_unit_sphere(10000, self.n_latent_axis)), dim=-1)
 
         values = acqf(candidates.unsqueeze(1))  # shape [N, 1] for q=1
         topk = torch.topk(values.squeeze(), n_recommendations)
