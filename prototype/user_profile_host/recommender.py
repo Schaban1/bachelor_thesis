@@ -448,6 +448,12 @@ class HypersphericalBayesianRecommender(Recommender):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
 
+    def sample_on_unit_sphere(self, n_samples: int, dim: int):
+        x = torch.randn(n_samples, dim, generator=self.generator)
+        x = x / x.norm(dim=-1, keepdim=True)
+        return x
+
+
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         train_X, train_Y = user_profile
 
@@ -464,27 +470,13 @@ class HypersphericalBayesianRecommender(Recommender):
         beta = 20 - get_unnormalized_value(beta, 0, 20)
         acqf = qUpperConfidenceBound(model=gp, beta=beta)
 
-        bounds = torch.stack([
-            torch.full((self.n_embedding_axis + self.n_latent_axis,), -1.0),
-            torch.full((self.n_embedding_axis + self.n_latent_axis,), 1.0),
-        ])
+        # Sample many candidates
+        candidates = torch.cat((self.sample_on_unit_sphere(1000, self.n_embedding_axis),
+                                self.sample_on_unit_sphere(1000, self.n_latent_axis)), dim=-1)
 
-        constraints = [
-            (lambda X: X[..., :self.n_embedding_axis].pow(2).sum(dim=-1) - 1.0, True),
-            (lambda X: 1.0 - X[..., :self.n_embedding_axis].pow(2).sum(dim=-1), True),
-            (lambda X: X[..., -self.n_latent_axis:].pow(2).sum(dim=-1) - 1.0, True),
-            (lambda X: 1.0 - X[..., -self.n_latent_axis:].pow(2).sum(dim=-1), True),
-        ]
+        values = acqf(candidates.unsqueeze(1))  # shape [N, 1] for q=1
+        topk = torch.topk(values.squeeze(), n_recommendations)
 
-        recommendations, acq_value = optimize_acqf(
-            acq_function=acqf,
-            bounds=bounds,
-            q=n_recommendations,
-            nonlinear_inequality_constraints=constraints,
-            num_restarts=20,
-            raw_samples=500,
-            ic_generator=gen_batch_initial_conditions,  # todo doesn't work yet
-            options={"maxiter": 200},
-        )
+        recommendations = candidates[topk.indices]
 
         return recommendations
