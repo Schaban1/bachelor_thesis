@@ -394,6 +394,9 @@ class HypersphericalRandomRecommender(Recommender):
         self.n_latent_axis = n_latent_axis
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
+        # The coefficients of the embeddings and the latents must be normalized independently since they both rely on
+        # the property of being unit length.
+
         # for embeddings
         embedding_coeffs = torch.randn(self.n_embedding_axis, n_recommendations, generator=self.generator)
         embedding_coeffs = embedding_coeffs / torch.linalg.norm(embedding_coeffs, dim=0, keepdim=True)

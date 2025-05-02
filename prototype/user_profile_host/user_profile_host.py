@@ -427,7 +427,7 @@ class UserProfileHost():
                                           RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
                                           RecommendationType.HYPERSPHERICAL_BAYESIAN]:
 
-            # we only have a orthonormal basis around the origin 0, so we need to scale by the radius of the
+            # we only have an orthonormal basis around the origin 0, so we need to scale by the radius of the
             # circumscribed hypersphere and translate to its center
             clip_embeddings = user_embeddings @ self.hyperspherical_basis.T * self.hyperspherical_radius + self.hyperspherical_center
 
