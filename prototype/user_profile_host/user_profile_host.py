@@ -82,7 +82,6 @@ class UserProfileHost():
         self.n_clip_tokens = 77
         self.height = 512
         self.width = 512
-        self.latent_space_length = 15.55
         self.n_latent_axis = (n_latent_axis * 2) if self.recommendation_type == RecommendationType.SIMPLE else n_latent_axis
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
@@ -128,6 +127,7 @@ class UserProfileHost():
             )
         self.tokenizer = self.stable_dif_pipe.tokenizer
         self.text_encoder = self.stable_dif_pipe.text_encoder
+        self.latent_space_length = self.stable_dif_pipe.scheduler.init_noise_sigma
 
         self.load_user_profile_host()
 
