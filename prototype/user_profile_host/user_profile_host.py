@@ -127,7 +127,7 @@ class UserProfileHost():
             )
         self.tokenizer = self.stable_dif_pipe.tokenizer
         self.text_encoder = self.stable_dif_pipe.text_encoder
-        self.latent_space_length = self.stable_dif_pipe.scheduler.init_noise_sigma
+        self.latent_space_length = 14.5
 
         self.load_user_profile_host()
 
