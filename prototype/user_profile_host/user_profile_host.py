@@ -50,7 +50,8 @@ class UserProfileHost():
             recommendation_seed: int = 42,
             initial_recommendation_seed: int = 43,
             prompts_seed: int = 42,
-            axis_style: str = 'ordered'
+            axis_style: str = 'ordered',
+            latent_space_length: float = 15.00
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
@@ -82,6 +83,7 @@ class UserProfileHost():
         self.n_clip_tokens = 77
         self.height = 512
         self.width = 512
+        self.latent_space_length = latent_space_length
         self.n_latent_axis = (n_latent_axis * 2) if self.recommendation_type == RecommendationType.SIMPLE else n_latent_axis
         self.n_embedding_axis = n_embedding_axis
         self.use_embedding_center = use_embedding_center
@@ -127,7 +129,6 @@ class UserProfileHost():
             )
         self.tokenizer = self.stable_dif_pipe.tokenizer
         self.text_encoder = self.stable_dif_pipe.text_encoder
-        self.latent_space_length = 14.5
 
         self.load_user_profile_host()
 

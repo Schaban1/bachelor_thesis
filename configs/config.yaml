@@ -39,6 +39,7 @@ recommender:
   recommendation_seed: 43
   initial_recommendation_seed: 44
   prompts_seed: 44
+  latent_space_length: 15.00
 
 path:
   output_dir: ./output/
