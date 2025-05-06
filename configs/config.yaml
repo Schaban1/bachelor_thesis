@@ -28,9 +28,9 @@ generator:
 
 recommender:
   axis_style: ordered
-  n_embedding_axis : 20
+  n_embedding_axis : 32
   use_embedding_center : False
-  n_latent_axis : 20
+  n_latent_axis : 32
   use_latent_center : False
   ema_alpha : 0.5
   beta: 0.3
@@ -39,7 +39,7 @@ recommender:
   recommendation_seed: 43
   initial_recommendation_seed: 44
   prompts_seed: 44
-  latent_space_length: 15.00
+  latent_space_length: 15.8
 
 path:
   output_dir: ./output/

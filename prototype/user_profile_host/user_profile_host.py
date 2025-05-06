@@ -185,6 +185,18 @@ class UserProfileHost():
                 "A cute cartoon girl in a dress holding a white kitten, full body, yellow background, keith haring style doodle, sharpie illustration, bold lines and solid colors, simple details, (((minimalism))), yellow background",
                 "Japanese animation, panoramic, colorful, a small corgi with closed eyes backstroke in the pool, most of the picture shows water, corgi accounts for a small part of the picture, water is light blue transparent and clear, water ripple texture is clear, light refraction, corgi and water are not fuzzy, in hd, phone wallpaper size, hd, 32k",
                 "Body portrait photography, in a smoke-filled office full of cables and wires and led, featuring a carbon motor head, an attractive transparent white plexiglass secretary robot reading an ancient book at her desk, 80-degree view. art by sergio lopez, natalie shau, james jean, and salvador dali."
+                "Fisheye lens. misty from pokemon. she`s blowing bubble gum playfully toward the camera. slight visual noise and grain texture, subtle distortion from the lens, cheeky expression, urban residential vibe, cinematic framing, high contrast shadows",
+                "A stunning iridescent male marble bust, unreal engine render 8k, vibrant colors, very reflective, perfect lighting, dark indigo background, zbrush",
+                "Blocky 8bit voxel style humanoid with a glitch mood base on a sci fi 80s look,",
+                "blow my mind",
+                "Detailed illustration of punished snake from metal gear solid v, in the copper canyons of the sierra of chihuahua state, by herge, in the style of tintin comics. blues and purples, detailed, dusk, attention to detail, 8k. charactter study.",
+                "Garden of eden tattoo design",
+                "Anime art of akira, detailed scene, red, perfect face, intricately detailed photorealism, trending on artstation, neon lights, rainy day, ray-traced environment, vintage 90's anime artwork.",
+                "A group of 20 viking elders, canon 5d mark ii, soft dim natural light, midnight, talking to an army of astronauts, with glowing deep set red eyes, in a very misty forest clearing.",
+                "90s anime art of misato katsuragi from neon genesis evangelion, detailed scene, stunning details, anime, detailed environment, 8k. anime style!!!! please ensure this is a mind blowing artwork.",
+                "A large view, full figure from the back at a 45-degree angle of a young man seated in a corner at his desk, working at his computer, in a sketch style.",
+                "A poster for a luxurious traditional japanase bath house in san francisco, minimal, plant aesthetic. natural, sensual. elite.",
+                "Double exposure, midjourney style, merging, blending, overlay double exposure image, double exposure style, an exceptional masterpiece by yukisakura revealing a fantastic double exposure composition of arthur morgan’s silhouette harmoniously intertwined with the visually striking, rugged landscapes of the american frontier during a cold winter. snow-covered pine forests, frosty mountain peaks"
             ][:self.n_embedding_axis]
             # Include original prompt if not using the embedding center to remain the primary context
             if not self.use_embedding_center:
