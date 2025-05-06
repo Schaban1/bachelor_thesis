@@ -443,7 +443,7 @@ class UserProfileHost():
             # we only have an orthonormal basis around the origin 0, so we need to scale by the radius of the
             # circumscribed hypersphere and translate to its center
             clip_embeddings = user_embeddings @ self.hyperspherical_basis.T * self.hyperspherical_radius + self.hyperspherical_center
-            clip_embeddings = clip_embeddings * self.embedding_length / torch.linalg.norm(clip_embeddings, dim=-1, keepdim=True)
+            clip_embeddings = clip_embeddings * self.embedding_length[-1] / torch.linalg.norm(clip_embeddings, dim=-1, keepdim=True)
             clip_embeddings = self.get_full_text_embeddings(clip_embeddings)
 
         else:
