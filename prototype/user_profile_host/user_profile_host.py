@@ -316,7 +316,7 @@ class UserProfileHost():
             Q_, _ = np.linalg.qr(rel.T)
 
             self.hyperspherical_center = torch.Tensor(C)
-            self.hyperspherical_radius = np.linalg.norm(base_embeddings[0] - C)
+            self.hyperspherical_radius = np.linalg.norm(base_embeddings[0] - C) / 10
             self.hyperspherical_basis = torch.Tensor(
                 Q_[:, :n - 1])  # discard one dimension since we are in a lower-dimensional user space
 
@@ -443,7 +443,7 @@ class UserProfileHost():
             # we only have an orthonormal basis around the origin 0, so we need to scale by the radius of the
             # circumscribed hypersphere and translate to its center
             clip_embeddings = user_embeddings @ self.hyperspherical_basis.T * self.hyperspherical_radius + self.hyperspherical_center
-
+            clip_embeddings = clip_embeddings / torch.linalg.norm(clip_embeddings, dim=-1, keepdim=True)
             clip_embeddings = self.get_full_text_embeddings(clip_embeddings)
 
         else:
