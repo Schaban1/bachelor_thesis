@@ -1,6 +1,8 @@
-from abc import abstractmethod, ABC
 import torch
+from abc import abstractmethod, ABC
 from torch import Tensor
+
+from .utils import slerp
 
 
 class Optimizer(ABC):  # ABC = Abstract Base Class
@@ -144,5 +146,49 @@ class EMAWeightedSumOptimizer:
             if not torch.count_nonzero(new_preferences) == 0:
                 new_user_profile = (new_preferences.reshape(-1) @ new_embeddings) / new_preferences.sum()
                 user_profile = self.alpha * new_user_profile + (1 - self.alpha) * user_profile
+
+        return user_profile
+
+
+class HypersphericalEMAOptimizer:
+
+    def __init__(self, n_recommendations, n_embedding_axis, n_latent_axis, alpha: float = 0.6):
+        self.n_recommendations = n_recommendations
+        self.n_embedding_axis = n_embedding_axis
+        self.n_latent_axis = n_latent_axis
+        self.alpha = alpha
+
+    def optimize_user_profile(self, embeddings: Tensor, preferences: Tensor, user_profile: Tensor,
+                              beta: float = None) -> Tensor:
+        # If this is the first optimization step, just create a new user profile based on current embeddings
+        if user_profile is None:
+            if torch.count_nonzero(preferences) == 0:
+                user_profile = None  # This will trigger the random recommender in embeddings
+            else:
+                user_profile = preferences.reshape(-1) @ embeddings
+                user_profile_clip_part = user_profile[:self.n_embedding_axis]
+                user_profile_clip_part = user_profile_clip_part / torch.linalg.norm(user_profile_clip_part,
+                                                                                    keepdim=True)
+                user_profile_latent_part = user_profile[-self.n_latent_axis:]
+                user_profile_latent_part = user_profile_latent_part / torch.linalg.norm(user_profile_latent_part,
+                                                                                        keepdim=True)
+                user_profile = torch.cat((user_profile_clip_part, user_profile_latent_part), dim=0)
+        else:
+            new_embeddings, new_preferences = embeddings[-self.n_recommendations:], preferences[
+                                                                                    -self.n_recommendations:]
+            if not torch.count_nonzero(new_preferences) == 0:  # only change user profile if there are positive votes
+                new_user_profile = new_preferences.reshape(-1) @ new_embeddings
+                user_profile_embedding_part = user_profile[:self.n_embedding_axis]
+                user_profile_latent_part = user_profile[-self.n_latent_axis:]
+                new_user_profile_embedding_part = new_user_profile[:self.n_embedding_axis]
+                new_user_profile_latent_part = new_user_profile[-self.n_latent_axis:]
+                new_user_profile_embedding_part = new_user_profile_embedding_part / torch.linalg.norm(
+                    new_user_profile_embedding_part, keepdim=True)
+                new_user_profile_latent_part = new_user_profile_latent_part / torch.linalg.norm(
+                    new_user_profile_latent_part, keepdim=True)
+                user_profile_embedding_part = slerp(user_profile_embedding_part, new_user_profile_embedding_part,
+                                                    self.alpha)
+                user_profile_latent_part = slerp(user_profile_latent_part, new_user_profile_latent_part, self.alpha)
+                user_profile = torch.cat((user_profile_embedding_part, user_profile_latent_part), dim=0)
 
         return user_profile

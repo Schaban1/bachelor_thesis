@@ -1,9 +1,9 @@
-from nicegui import ui as ngUI
 import asyncio
 import random
+from nicegui import ui as ngUI
 
-from prototype.webuserinterface.components.ui_component import UIComponent
 from prototype.constants import RecommendationType, WebUIState
+from prototype.webuserinterface.components.ui_component import UIComponent
 
 
 class InitialIterationUI(UIComponent):
@@ -40,8 +40,14 @@ class InitialIterationUI(UIComponent):
                                         .tooltip('Randomly selects a recommendation type and keeps it hidden') \
                                         .bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
-                    self.recommendation_field = ngUI.select({t: t.value for t in [RecommendationType.BASELINE, RecommendationType.SIMPLE, RecommendationType.RANDOM, RecommendationType.EMA_DIRICHLET]}) \
-                                            .props('size=80 borderless dense item-aligned color=secondary popup-content-class="max-w-[200px]"') \
+                    self.recommendation_field = ngUI.select({t: t.value for t in
+                                                             [RecommendationType.BASELINE, RecommendationType.SIMPLE,
+                                                              RecommendationType.RANDOM,
+                                                              RecommendationType.EMA_DIRICHLET,
+                                                              RecommendationType.HYPERSPHERICAL_RANDOM,
+                                                              RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
+                                                              RecommendationType.HYPERSPHERICAL_BAYESIAN]}) \
+                        .props('size=80 borderless dense item-aligned color=secondary popup-content-class="max-w-[200px]"') \
                                             .bind_value(self.webUI, 'recommendation_type') \
                                             .bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     with self.recommendation_field.add_slot("prepend"):
@@ -77,5 +83,6 @@ class InitialIterationUI(UIComponent):
         """
         Setups blind mode by selecting a random recommender.
         """
+        # seed with system time to get different recommender each time for each user
         random.seed()
         self.webUI.recommendation_type = random.choice([t for t in RecommendationType])
