@@ -1,10 +1,18 @@
-import torch
-import random
-import os
-import numpy as np
 import collections
-import time
+import json
+import logging
+import numpy as np
+import os
+import queue
+import random
 import threading
+import threading
+import time
+import torch
+from concurrent.futures import Future
+from logging.handlers import QueueHandler, QueueListener
+from queue import Queue
+from typing import Callable
 
 
 def seed_everything(seed: int):
@@ -19,41 +27,31 @@ def seed_everything(seed: int):
     torch.backends.cudnn.benchmark = False
 
 
-class QLock:
-    """
-    A QueueLock implementation, see: https://stackoverflow.com/questions/19688550/how-do-i-queue-my-python-locks
-    """
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.waiters = collections.deque()
-        self.count = 0
+class ProducerConsumer:
+    def __init__(self, numworkers: int = 1) -> None:
+        self.queue = Queue()
+        self.running = True
+        self.worker_threads = []
+        for _ in range(numworkers):
+            t = threading.Thread(target=self.__worker_main, daemon=True)
+            t.start()
+            self.worker_threads.append(t)
 
-    def acquire(self):
-        self.lock.acquire()
-        if self.count:
-            new_lock = threading.Lock()
-            new_lock.acquire()
-            self.waiters.append(new_lock)
-            self.lock.release()
-            new_lock.acquire()
-            self.lock.acquire()
-        self.count += 1
-        self.lock.release()
+    def __worker_main(self) -> None:
+        while self.running:
+            future, task = self.queue.get()
+            if future is None:
+                break  # Shutdown signal
+            try:
+                result = task()
+                future.set_result(result)
+            except Exception as e:
+                future.set_exception(e)
 
-    def release(self):
-        with self.lock:
-            if not self.count:
-                raise ValueError("lock not acquired")
-            self.count -= 1
-            if self.waiters:
-                self.waiters.popleft().release()
-        time.sleep(0.01)
+    def do_work(self, work: Callable) -> Future:
+        future = Future()
+        self.queue.put((future, work))
+        return future
 
-    def locked(self):
-        return self.count > 0
-    
-    def __enter__(self):
-        self.acquire()
-    
-    def __exit__(self, type, val, traceback):
-        self.release()
+    def destroy(self) -> None:
+        pass

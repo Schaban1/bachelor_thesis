@@ -64,9 +64,14 @@ class Recommender(ABC):  # ABC = Abstract Base Class
 
 class BaselineRecommender(Recommender):
 
-    def __init__(self, n_latent_axis, seed: int = 42):
+    def __init__(self, n_latent_axis, in_channels, height, width, init_noise_sigma, seed: int = 42):
         self.n_latent_axis = n_latent_axis
-        self.generator = random.Random(seed)
+        self.in_channels = in_channels
+        self.height = height
+        self.width = width
+        self.init_noise_sigma = init_noise_sigma
+        self.generator = torch.Generator()
+        self.generator.manual_seed(seed)
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         """
@@ -77,12 +82,10 @@ class BaselineRecommender(Recommender):
             user_profile where n_dims is the dimensionality of the user_profile.
         """
         # Return random recommendations
-        alpha = torch.ones(self.n_latent_axis)
-        torch.manual_seed(self.generator.randint(0,1000000))    # global seed, bc dirichlet doesn't support generator parameter
-        dist = torch.distributions.dirichlet.Dirichlet(alpha)
-        random_latents = dist.sample(sample_shape=(n_recommendations,))
+        random_latents = torch.randn((n_recommendations, self.in_channels, self.height // 8, self.width // 8),
+                                     generator=self.generator) * self.init_noise_sigma
         return random_latents
-    
+
 
 class SimpleRandomRecommender(Recommender):
 
@@ -99,7 +102,7 @@ class SimpleRandomRecommender(Recommender):
         :return: Tensor of shape (n_recommendations, n_dims) containing the samples on surface of sphere with center
             user_profile where n_dims is the dimensionality of the user_profile.
         """
-        return None # Placeholder
+        return None  # Placeholder
 
 
 class RandomRecommender(Recommender):
@@ -120,7 +123,8 @@ class RandomRecommender(Recommender):
         """
         # Return random recommendations
         alpha = torch.ones(self.n_axis)
-        torch.manual_seed(self.generator.randint(0,1000000))    # global seed, bc dirichlet doesn't support generator parameter
+        torch.manual_seed(
+            self.generator.randint(0, 1000000))  # global seed, bc dirichlet doesn't support generator parameter
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         random_user_embeddings = dist.sample(sample_shape=(n_recommendations,))
         return random_user_embeddings
@@ -128,7 +132,7 @@ class RandomRecommender(Recommender):
 
 class SinglePointWeightedAxesRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis: int, n_latent_axis: int, seed: int = 42,):
+    def __init__(self, n_embedding_axis: int, n_latent_axis: int, seed: int = 42, ):
         """
         :param n_embedding_axis: Number of axes in the embedding space.
         :param n_latent_axis: Number of axes in the latent space.
@@ -146,10 +150,10 @@ class SinglePointWeightedAxesRecommender(Recommender):
         self.bounds = torch.tensor([
             # lower bounds (1, n_axis)
             [self.bounds[0] for i in range(self.n_embedding_axis)] + [self.bounds[0] for i in
-                                                                                range(self.n_latent_axis)],
+                                                                      range(self.n_latent_axis)],
             # upper bounds (1, n_axis)
             [self.bounds[1] for i in range(self.n_embedding_axis)] + [self.bounds[1] for i in
-                                                                                range(self.n_latent_axis)]
+                                                                      range(self.n_latent_axis)]
         ])
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = 0) -> Tensor:
@@ -169,7 +173,8 @@ class SinglePointWeightedAxesRecommender(Recommender):
         upper_sampling_ranges = self.bounds[1] - user_profile
 
         alpha = torch.ones(self.n_axis)  # Concentration parameter (uniform)
-        torch.manual_seed(self.generator.randint(0,1000000))    # global seed, bc dirichlet doesn't support generator parameter
+        torch.manual_seed(
+            self.generator.randint(0, 1000000))  # global seed, bc dirichlet doesn't support generator parameter
         distribution = torch.distributions.dirichlet.Dirichlet(alpha)
         weights_dirichlet = distribution.sample(sample_shape=(n_recommendations,))
 
@@ -206,13 +211,14 @@ class DirichletRecommender(Recommender):
         """
         beta = get_unnormalized_value(beta, 1, 250)
         alpha = ((torch.ones(self.n_axis) * user_profile).reshape(-1) * beta)
-        torch.manual_seed(self.generator.randint(0,1000000))    # global seed, bc dirichlet doesn't support generator parameter
+        torch.manual_seed(
+            self.generator.randint(0, 1000000))  # global seed, bc dirichlet doesn't support generator parameter
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_recommendations,))
 
         return search_space
 
-    
+
 class DiverseDirichletRecommender(Recommender):
 
     def __init__(self, n_embedding_axis, n_latent_axis, seed: int = 42):
@@ -241,31 +247,32 @@ class DiverseDirichletRecommender(Recommender):
         user_embeddings, preferences = user_profile
         # Change preferences to numpy
         preferences = preferences.numpy()
-        
+
         new_recommendations = []
         for i_rec in range(n_recommendations):
             # Draw a random embedding from previously iterations weighted by user preference
-            idx = self.np_generator.choice(range(preferences.shape[0]), p=preferences/np.sum(preferences))
+            idx = self.np_generator.choice(range(preferences.shape[0]), p=preferences / np.sum(preferences))
 
             # Select the respective user_embedding as a center
             center = user_embeddings[idx]
 
             # Build a dirichlet distribution around it
             alpha = ((torch.ones(self.n_axis) * center).reshape(-1) * beta)
-            torch.manual_seed(self.generator.randint(0,1000000))    # global seed, bc dirichlet doesn't support generator parameter
+            torch.manual_seed(
+                self.generator.randint(0, 1000000))  # global seed, bc dirichlet doesn't support generator parameter
             dist = torch.distributions.dirichlet.Dirichlet(alpha)
 
             # Sample one sample
             sample = dist.sample(sample_shape=(1,))
             new_recommendations.append(sample)
-        
+
         new_recommendations = torch.cat(new_recommendations)
         return new_recommendations
 
 
 class BayesianRecommender(Recommender):
 
-    def __init__(self, n_embedding_axis, n_latent_axis, n_points_per_axis: int = 3, seed:int = 42):
+    def __init__(self, n_embedding_axis, n_latent_axis, n_points_per_axis: int = 3, seed: int = 42):
         self.n_embedding_axis = n_embedding_axis
         self.n_latent_axis = n_latent_axis
         self.n_axis = n_embedding_axis + n_latent_axis
@@ -276,7 +283,8 @@ class BayesianRecommender(Recommender):
     def build_search_space(self):
         n_samples = min(max(self.n_axis * 5 ** (self.n_axis // 2), 1000), 200000)
         alpha = torch.ones(self.n_axis)
-        torch.manual_seed(self.generator.randint(0,1000000))    # global seed, bc dirichlet doesn't support generator parameter
+        torch.manual_seed(
+            self.generator.randint(0, 1000000))  # global seed, bc dirichlet doesn't support generator parameter
         dist = torch.distributions.dirichlet.Dirichlet(alpha)
         search_space = dist.sample(sample_shape=(n_samples,))
         return search_space
@@ -326,7 +334,7 @@ class BayesianRecommender(Recommender):
             candidate = search_space[candidate_idx].reshape(1, -1)
 
             # Remove candidate from search space
-            search_space = torch.cat((search_space[:candidate_idx], search_space[candidate_idx+1:]))
+            search_space = torch.cat((search_space[:candidate_idx], search_space[candidate_idx + 1:]))
 
             # Extend data with new candidate and predicted preference to include this information in the next iteration
             pseudo_preference = acqf._mean_and_sigma(X=candidate, compute_sigma=False)[0].detach()
@@ -380,7 +388,8 @@ class BayesianRecommender(Recommender):
         acqf = UpperConfidenceBound(model=model, beta=beta, maximize=True)
 
         # Get the highest scoring candidates out of meshgrid
-        scores = acqf._mean_and_sigma(X=search_space.reshape(search_space.shape[0], 1, search_space.shape[1]),compute_sigma=False)[0].detach()
+        scores = acqf._mean_and_sigma(X=search_space.reshape(search_space.shape[0], 1, search_space.shape[1]),
+                                      compute_sigma=False)[0].detach()
 
         return scores
 
@@ -455,7 +464,6 @@ class HypersphericalBayesianRecommender(Recommender):
         x = torch.randn(n_samples, dim, generator=self.generator)
         x = x / x.norm(dim=-1, keepdim=True)
         return x
-
 
     def recommend_embeddings(self, user_profile: Tensor, n_recommendations: int = 5, beta: float = None) -> Tensor:
         train_X, train_Y = user_profile
