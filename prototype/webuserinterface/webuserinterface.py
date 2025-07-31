@@ -187,25 +187,24 @@ class WebUI:
         Initializes the generator and performs a warm-start.
         """
         print("Initialize Generator.")
-        with self.queue_lock:
-            if self.args.use_stream_diffusion:
-                print("using stream diffusion")
-                self.generator = GeneratorStream(
-                    n_images=self.num_images_to_generate,
-                    cache_dir=self.args.path.cache_dir,
-                    device=self.args.device,
-                    hf_model_name=self.args.hf_model_name,
-                    **self.args.generator
-                )
-            else:
-                self.generator = Generator(
-                    n_images=self.num_images_to_generate,
-                    cache_dir=self.args.path.cache_dir,
-                    device=self.args.device,
-                    hf_model_name=self.args.hf_model_name,
-                    pipe=self.pipe,
-                    **self.args.generator,
-                )
+        if self.args.use_stream_diffusion:
+            print("using stream diffusion")
+            self.generator = GeneratorStream(
+                n_images=self.num_images_to_generate,
+                cache_dir=self.args.path.cache_dir,
+                device=self.args.device,
+                hf_model_name=self.args.hf_model_name,
+                **self.args.generator
+            )
+        else:
+            self.generator = Generator(
+                n_images=self.num_images_to_generate,
+                cache_dir=self.args.path.cache_dir,
+                device=self.args.device,
+                hf_model_name=self.args.hf_model_name,
+                pipe=self.pipe,
+                **self.args.generator,
+            )
 
     def init_user_profile_host(self):
         """
@@ -279,11 +278,10 @@ class WebUI:
         images of the generator in self.images.
         """
         print("Generate new Images.")
-        with self.queue_lock:
-            if self.iteration < 2:
-                embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate*self.first_iteration_images_factor)
-            else:
-                embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
+        if self.iteration < 2:
+            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate*self.first_iteration_images_factor)
+        else:
+            embeddings, latents = self.user_profile_host.generate_recommendations(num_recommendations=self.num_images_to_generate)
         self.images = self.generator.generate_image(embeddings, latents, self.loading_ui.loading_progress, self.queue_lock)
 
     def update_image_displays(self):
