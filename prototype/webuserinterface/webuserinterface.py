@@ -68,7 +68,7 @@ class WebUI:
         self.iteration = 0
         # Provided by the user / system
         self.user_prompt = ""
-        self.recommendation_type = RecommendationType.RANDOM
+        self.recommendation_type = RecommendationType.HYPERSPHERICAL_BAYESIAN
         self.num_images_to_generate = self.args.num_recommendations
         self.first_iteration_images_factor = self.args.first_iteration_images_factor
 
