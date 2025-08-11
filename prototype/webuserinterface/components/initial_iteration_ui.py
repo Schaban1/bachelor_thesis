@@ -41,10 +41,11 @@ class InitialIterationUI(UIComponent):
                                         .bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     self.recommendation_field = ngUI.select({t: t.value for t in
-                                                             [RecommendationType.BASELINE, RecommendationType.SIMPLE,
-                                                              RecommendationType.RANDOM,
-                                                              RecommendationType.EMA_DIRICHLET,
-                                                              RecommendationType.HYPERSPHERICAL_RANDOM,
+                                                             [#RecommendationType.BASELINE,
+                                                              #RecommendationType.SIMPLE,
+                                                              #RecommendationType.RANDOM,
+                                                              #RecommendationType.EMA_DIRICHLET,
+                                                              #RecommendationType.HYPERSPHERICAL_RANDOM,
                                                               RecommendationType.HYPERSPHERICAL_MOVING_CENTER,
                                                               RecommendationType.HYPERSPHERICAL_BAYESIAN]}) \
                         .props('size=80 borderless dense item-aligned color=secondary popup-content-class="max-w-[200px]"') \
