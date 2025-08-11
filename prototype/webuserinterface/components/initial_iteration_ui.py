@@ -32,13 +32,13 @@ class InitialIterationUI(UIComponent):
                             ngUI.button(icon='start', on_click=self.on_generate_images_button_click) \
                                 .props('flat fab color=black') \
                                 .tooltip('Generate images')
-                            with ngUI.button(icon='more_vert').props('flat fab color=black'):
-                                with ngUI.menu():
-                                    ngUI.switch("Blind Mode") \
-                                        .classes('ml-2 mr-8') \
-                                        .props('color=grey-8 checked-icon=visibility_off unchecked-icon=visibility') \
-                                        .tooltip('Randomly selects a recommendation type and keeps it hidden') \
-                                        .bind_value(self.webUI, "blind_mode")
+                            #with ngUI.button(icon='more_vert').props('flat fab color=black'):
+                            #    with ngUI.menu():
+                            #        ngUI.switch("Blind Mode") \
+                            #            .classes('ml-2 mr-8') \
+                            #            .props('color=grey-8 checked-icon=visibility_off unchecked-icon=visibility') \
+                            #            .tooltip('Randomly selects a recommendation type and keeps it hidden') \
+                            #            .bind_value(self.webUI, "blind_mode")
                     ngUI.separator().bind_visibility_from(self.webUI, 'blind_mode', value=False)
                     self.recommendation_field = ngUI.select({t: t.value for t in
                                                              [#RecommendationType.BASELINE,
