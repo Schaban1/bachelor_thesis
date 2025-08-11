@@ -6,8 +6,8 @@ class RecommendationType(Enum):
     EMA_DIRICHLET = "Random Recommendations with a EMA User-Profile"
     SIMPLE = "Intelligent prompt generation based on probabilistic User-Profile"
     HYPERSPHERICAL_RANDOM = "Recommendations (randomly sampled) lie on an orthonormal basis on a circumscribed hypersphere"
-    HYPERSPHERICAL_MOVING_CENTER = "Recommendations (around a moving center) lie on an orthonormal basis on a circumscribed hypersphere"
-    HYPERSPHERICAL_BAYESIAN = "Recommendations (chosen with Bayesian optimization) lie on an orthonormal basis on a circumscribed hypersphere"
+    HYPERSPHERICAL_MOVING_CENTER = "Stepwise movement through the parameter space"#"Recommendations (around a moving center) lie on an orthonormal basis on a circumscribed hypersphere"
+    HYPERSPHERICAL_BAYESIAN = "Active-learning-based recommendations"#"Recommendations (chosen with Bayesian optimization) lie on an orthonormal basis on a circumscribed hypersphere"
     # Outdated
     WEIGHTED_AXES = "Single point generation with weighted axes"
     EMA_WEIGHTED_AXES = "Single point generation with weighted axes using exponential moving average"
