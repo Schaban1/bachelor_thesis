@@ -10,7 +10,6 @@ from io import BytesIO
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
-from prototype.generator.generator import Generator
 from prototype.utils import seed_everything
 from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingUI, PlotUI, Scorer, DebugMenu
 
@@ -37,7 +36,7 @@ class WebUI:
     blind_mode = binding.BindableProperty()
 
     @classmethod
-    async def create(cls, args, pipe, queue_lock):
+    async def create(cls, args, pipe, generator, queue_lock):
         """
         This method should be used instead of the __init__-method to create an object of the WebUI-class.
         Usage: ui = await WebUI.create(...) inside an async function.
@@ -55,6 +54,7 @@ class WebUI:
         # Args of global config
         self.args = args
         self.pipe = pipe
+        self.generator = generator
         seed_everything(self.args.random_seed)
         self.queue_lock = queue_lock
         # Generate id for this session
@@ -77,8 +77,6 @@ class WebUI:
 
         # Other modules
         self.user_profile_host = None # Initialized after initial iteration
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self.init_generator)
 
         # Lists / UI components
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
@@ -184,19 +182,6 @@ class WebUI:
 
     # <--------------------------------->
     # <---------- Initialize other non-UI components ---------->
-    def init_generator(self):
-        """
-        Initializes the generator and performs a warm-start.
-        """
-        print("Initialize Generator.")
-        self.generator = Generator(
-            n_images=self.num_images_to_generate,
-            cache_dir=self.args.path.cache_dir,
-            device=self.args.device,
-            hf_model_name=self.args.hf_model_name,
-            pipe=self.pipe,
-            **self.args.generator,
-        )
 
     def init_user_profile_host(self):
         """

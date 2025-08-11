@@ -42,15 +42,6 @@ class DebugMenu(ngUI.element):
                     ngUI.input(label="save_path").props(self.input_props).bind_value(self.webUI, 'save_path')
                     ngUI.button('Force UI Reload', on_click=self.webUI.reload_userinterface, color='red').style("margin-top: 40px; margin-left: 10px;")
                 ngUI.space()
-                with ngUI.column().classes('p-0 gap-0'):
-                    ngUI.label("Debug Generator Info").style("font-size: 50px; color: white;")
-                    ngUI.number(label="height", min=0, precision=0, step=8, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'height', forward=int)
-                    ngUI.number(label="width", min=0, precision=0, step=8, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'width', forward=int)
-                    ngUI.number(label="num_inference_steps", min=0, precision=0, step=1, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'num_inference_steps', forward=int)
-                    ngUI.number(label="guidance_scale", min=0, step=0.01, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'guidance_scale')
-                    ngUI.number(label="n_images", min=0, precision=0, step=1, on_change=self.webUI.generator.load_generator).props(self.input_props).bind_value(self.webUI.generator, 'n_images', forward=int)
-                    ngUI.checkbox('use_negative_prompt', on_change=self.webUI.generator.load_generator).style(self.checkbox_style).bind_value(self.webUI.generator, 'use_negative_prompt')
-                ngUI.space()
                 self.user_profile_host_info = ngUI.column().classes('p-0 gap-0')
                 with self.user_profile_host_info:
                     ngUI.label("Debug UP Host Info").style("font-size: 50px; color: white;")

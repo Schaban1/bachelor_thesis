@@ -4,6 +4,7 @@ from nicegui import ui as ngUI
 
 from prototype.utils import ProducerConsumer
 from prototype.webuserinterface import WebUI
+from prototype.generator.generator import Generator
 
 global_args = None
 pipe = None
@@ -18,7 +19,8 @@ async def start_demo_instance():
     """
     global global_args
     global pipe
-    ui = await WebUI.create(global_args, pipe, queue_lock)
+    global generator
+    ui = await WebUI.create(global_args, pipe, generator, queue_lock)
     ui.run()
 
 
@@ -54,6 +56,15 @@ class App:
         pipe.unet = torch.compile(pipe.unet, backend="cudagraphs")
         pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=pipe.device, dtype=pipe.dtype)
         pipe.vae = torch.compile(pipe.vae, backend="cudagraphs")
+
+        global generator
+        generator = Generator(
+                cache_dir=args.path.cache_dir,
+                device=args.device,
+                hf_model_name=args.hf_model_name,
+                pipe=pipe,
+                **args.generator,
+            )
 
     def start(self):
         """

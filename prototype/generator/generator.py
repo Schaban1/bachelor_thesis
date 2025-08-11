@@ -38,12 +38,10 @@ class Generator(GeneratorBase):
     batch_size = binding.BindableProperty()
     num_inference_steps = binding.BindableProperty()
     guidance_scale = binding.BindableProperty()
-    n_images = binding.BindableProperty()
     use_negative_prompt = binding.BindableProperty()
 
     @torch.no_grad()
     def __init__(self,
-                 n_images=5,
                  batch_size: int = None,
                  hf_model_name: str = "stable-diffusion-v1-5/stable-diffusion-v1-5",
                  cache_dir: str | None = '/cache/',
@@ -60,7 +58,6 @@ class Generator(GeneratorBase):
         Setting the image generation scheduler, SD pipeline, and latents that stay constant during the iterative refining.
 
         Args:
-            n_images: the number of embeddings that will be generated in a batch and returned from generate_images
             hf_model_name: Huggingface model identifier, default is Stable diffusion 1.5
             cache_dir: directory to download to model to
             num_inference_steps: number of denoising steps for the model to take
@@ -73,7 +70,6 @@ class Generator(GeneratorBase):
         self.batch_size = batch_size
         self.num_inference_steps = num_inference_steps
         self.guidance_scale = guidance_scale
-        self.n_images = n_images
         self.use_negative_prompt = use_negative_prompt
         self.callback = callback
 
@@ -109,9 +105,6 @@ class Generator(GeneratorBase):
         except:
             logging.warning("Cannot use xformers memory efficient attention (maybe xformers not installed)")
 
-        self.load_generator()
-
-    def load_generator(self):
         self.negative_prompt_embeds = None
         self.negative_prompt = ""
         if self.use_negative_prompt:
@@ -171,50 +164,3 @@ class Generator(GeneratorBase):
 
 
 
-
-if __name__ == "__main__":
-    import os
-    import time
-
-    n_images = 5
-    gen = Generator(n_images=n_images,
-                    batch_size=None,
-                    cache_dir=None,
-                    num_inference_steps=50,
-                    use_negative_prompt=False,
-                    random_latents=True)
-
-    prompt = "A cinematic shot of a baby racoon wearing an intricate italian priest robe."
-
-    # prompt_tokens = gen.pipe.tokenizer(prompt,
-    #                                    padding="max_length",
-    #                                    max_length=gen.pipe.tokenizer.model_max_length,
-    #                                    truncation=True,
-    #                                    return_tensors="pt",
-    #                                    ).to(gen.device)
-
-    embed = gen.pipe.encode_prompt(prompt,
-                                   device=gen.pipe.device,
-                                   num_images_per_prompt=1,
-                                   do_classifier_free_guidance=False)[0]
-
-    embed = embed.repeat(n_images, 1, 1)
-    print(f"{embed.shape=}")
-
-    start = time.time()
-    os.makedirs("output", exist_ok=True)
-    for i in range(1):
-        img = gen.generate_image(embed)
-        for i in range(n_images):
-            img[i].save(f"output/{i}.png")
-    print("normal generation took:", time.time() - start)
-
-    print("running stream")
-    start = time.time()
-    os.makedirs("output_stream", exist_ok=True)
-    for i in range(1):
-        img = gen.generate_image(embed)
-        for i in range(n_images):
-            img[i].save(f"output_stream/{i}.png")
-    print("stream generation took:", time.time() - start)
-    print(img)
