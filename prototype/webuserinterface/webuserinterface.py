@@ -10,7 +10,7 @@ from io import BytesIO
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
-from prototype.generator.generator import Generator, GeneratorStream
+from prototype.generator.generator import Generator
 from prototype.utils import seed_everything
 from prototype.webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingUI, PlotUI, Scorer, DebugMenu
 
@@ -189,24 +189,14 @@ class WebUI:
         Initializes the generator and performs a warm-start.
         """
         print("Initialize Generator.")
-        if self.args.use_stream_diffusion:
-            print("using stream diffusion")
-            self.generator = GeneratorStream(
-                n_images=self.num_images_to_generate,
-                cache_dir=self.args.path.cache_dir,
-                device=self.args.device,
-                hf_model_name=self.args.hf_model_name,
-                **self.args.generator
-            )
-        else:
-            self.generator = Generator(
-                n_images=self.num_images_to_generate,
-                cache_dir=self.args.path.cache_dir,
-                device=self.args.device,
-                hf_model_name=self.args.hf_model_name,
-                pipe=self.pipe,
-                **self.args.generator,
-            )
+        self.generator = Generator(
+            n_images=self.num_images_to_generate,
+            cache_dir=self.args.path.cache_dir,
+            device=self.args.device,
+            hf_model_name=self.args.hf_model_name,
+            pipe=self.pipe,
+            **self.args.generator,
+        )
 
     def init_user_profile_host(self):
         """

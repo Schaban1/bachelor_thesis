@@ -91,7 +91,6 @@ wsproto==1.2.0
 yarl==1.18.0
 zipp==3.21.0
 plotly
-streamdiffusion
 huggingface-hub==0.27.1
 onnx==1.17.0
 onnxscript==0.1.0.dev20250108
