@@ -47,8 +47,8 @@ class App:
         global pipe
         pipe = StableDiffusionPipeline.from_pretrained(
             global_args.hf_model_name,
-            safety_checker=None,
-            requires_safety_checker=False,
+            #safety_checker=None,
+            requires_safety_checker=True,
             cache_dir=global_args.path.cache_dir,
             torch_dtype=torch.bfloat16,
         ).to(device=self.device)

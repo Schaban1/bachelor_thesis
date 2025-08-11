@@ -81,8 +81,8 @@ class Generator(GeneratorBase):
 
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
-            safety_checker=None,
-            requires_safety_checker=False,
+            #safety_checker=None,
+            requires_safety_checker=True,
             cache_dir=cache_dir,
             torch_dtype=torch.bfloat16,
         ).to(device=self.device)
