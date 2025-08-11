@@ -3,7 +3,7 @@ import time
 import torch
 from PIL.Image import Image
 from abc import abstractmethod, ABC
-from diffusers import StableDiffusionPipeline, AutoencoderTiny, AutoencoderKL
+from diffusers import StableDiffusionPipeline, AutoencoderTiny, AutoencoderKL, LCMScheduler
 from functools import partial
 from nicegui import binding
 from streamdiffusion.image_utils import postprocess_image
@@ -92,6 +92,12 @@ class Generator(GeneratorBase):
             cache_dir=cache_dir,
             torch_dtype=torch.bfloat16,
         ).to(device=self.device)
+
+        pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
+        self.pipe.load_lora_weights(
+            "latent-consistency/lcm-lora-sdv1-5"
+        )
+        pipe.fuse_lora()
 
         # self.pipe.unet = torch.compile(self.pipe.unet, backend="cudagraphs")
 

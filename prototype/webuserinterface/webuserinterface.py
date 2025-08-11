@@ -5,6 +5,8 @@ from PIL import Image
 import asyncio
 import threading
 import secrets
+import base64
+from io import BytesIO
 
 from prototype.constants import RecommendationType, WebUIState, ScoreMode
 from prototype.user_profile_host import UserProfileHost
@@ -288,8 +290,13 @@ class WebUI:
         """
         Updates the image displays with the current images in self.images.
         """
+        def jpg(img):
+            buffered = BytesIO()
+            img.save(buffered, format="JPEG")
+            img_str = "data:image/jpeg;base64," + base64.b64encode(buffered.getvalue()).decode(encoding="utf-8")
+            return img_str
         print("Update Image Displays.")
-        [self.images_display[i].set_source(self.images[i]) for i in range(len(self.images))]
+        [self.images_display[i].set_source(jpg(self.images[i])) for i in range(len(self.images))]
 
     def update_user_profile(self):
         """
