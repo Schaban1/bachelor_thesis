@@ -16,7 +16,9 @@ class InitialIterationUI(UIComponent):
         Builds the UI for the initial iteration state.
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_initial_iteration', value=True):
-            ngUI.label('Generate images using our system.').classes('mt-8').style('font-size: 200%; font-weight: bold;')
+            ngUI.label('Get inspiration based on an initial prompt.').classes('mt-8').style('font-size: 200%; font-weight: bold;')
+            
+
             with ngUI.card() \
                         .classes('self-center no-box-shadow bg-grey-3 p-0 m-0 mt-4 gap-0') \
                         .style('border-radius: 30px;') \
