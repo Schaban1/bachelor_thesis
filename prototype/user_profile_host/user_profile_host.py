@@ -52,7 +52,7 @@ class UserProfileHost():
             prompts_seed: int = 42,
             axis_style: str = 'ordered',
             latent_space_length: float = 15.00,
-            original_prompt_share=0.0#0.75 #todo make configurable
+            original_prompt_share=0.0
     ):
         """
         This class is the main interface for the user profile host. It initializes the user profile host with the
