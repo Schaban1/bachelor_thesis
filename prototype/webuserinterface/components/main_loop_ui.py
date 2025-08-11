@@ -22,7 +22,7 @@ class MainLoopUI(UIComponent):
             #with ngUI.row().classes('w-full justify-end mb-8'):
             #    ngUI.button('Interactive plot', icon='o_scatter_plot', on_click=self.on_show_interactive_plot_button_click).style('font-weight: bold;').props('color=secondary unelevated rounded')
             with ngUI.row().classes('mx-auto items-center'):
-                ngUI.label('Please rate these images based on your satisfaction.').style('font-size: 200%;')
+                ngUI.label('Please rate these images according to your preferences.').style('font-size: 200%;')
                 if self.webUI.score_mode == ScoreMode.EMOJI.value:
                     ngUI.button(icon='o_info', on_click=lambda: ngUI.notify(
                         'Keyboard Controls:\n'

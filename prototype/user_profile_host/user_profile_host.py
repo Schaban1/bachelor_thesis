@@ -136,6 +136,7 @@ class UserProfileHost():
         self.load_user_profile_host()
 
     def load_user_profile_host(self):
+        print("Create new profile with prompt:", self.original_prompt)
         # Define the center of the user_space with the original prompt embedding
         self.prompt_embedding = self.clip_embedding(self.original_prompt)
         self.embedding_length = torch.linalg.vector_norm(self.prompt_embedding, ord=2, dim=-1, keepdim=False)

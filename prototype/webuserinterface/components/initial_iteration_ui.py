@@ -16,15 +16,29 @@ class InitialIterationUI(UIComponent):
         Builds the UI for the initial iteration state.
         """
         with ngUI.column().classes('mx-auto items-center').bind_visibility_from(self.webUI, 'is_initial_iteration', value=True):
-            ngUI.label('Get inspiration based on an initial prompt.').classes('mt-8').style('font-size: 200%; font-weight: bold;')
-            
+            ngUI.markdown("""
+**Interactive Demo**
+
+This system generates diverse images based on an initial prompt.
+
+For each set of images, you will be asked to rate the images according to your preferences.
+
+Once you have submitted your ratings, the system will use them to learn your preferences and generate the next set of images.
+
+You could start with one of the following examples:
+
+- `a fox firefighter`
+- `an avocado chair`
+- `an illustration of love`
+            """)
+            ngUI.label('Start by generating the first set of images.').classes('mt-8').style('font-size: 200%; font-weight: bold;')
 
             with ngUI.card() \
                         .classes('self-center no-box-shadow bg-grey-3 p-0 m-0 mt-4 gap-0') \
                         .style('border-radius: 30px;') \
                         .tight():
                 with ngUI.column().classes('items-stretch p-0 gap-0'):
-                    self.prompt_field = ngUI.input(placeholder='Type in your prompt') \
+                    self.prompt_field = ngUI.input(placeholder='Enter your prompt') \
                                         .props("size=80 autofocus borderless dense item-aligned") \
                                         .style('font-size: 16px;') \
                                         .bind_value(self.webUI, 'user_prompt') \
@@ -65,7 +79,7 @@ class InitialIterationUI(UIComponent):
         Initializes the user profile host with the initial user prompt and generates the first images.
         """
         if not self.webUI.user_prompt:
-            ngUI.notify('Please type in a prompt!')
+            ngUI.notify('Please enter a prompt!')
             return
         if self.webUI.blind_mode:
             self.setup_blind_mode()
