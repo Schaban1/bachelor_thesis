@@ -107,7 +107,7 @@ class Generator(GeneratorBase):
         self.latent_height = int(self.height // self.pipe.vae_scale_factor)
         self.latent_width = int(self.width // self.pipe.vae_scale_factor)
         try:
-            pass#self.pipe.enable_xformers_memory_efficient_attention()
+            self.pipe.enable_xformers_memory_efficient_attention()
         except:
             logging.warning("Cannot use xformers memory efficient attention (maybe xformers not installed)")
 
@@ -250,7 +250,7 @@ class GeneratorStream(GeneratorBase):
         self.latent_width = int(self.width // self.pipe.vae_scale_factor)
 
         try:
-            pass#self.pipe.enable_xformers_memory_efficient_attention()
+            self.pipe.enable_xformers_memory_efficient_attention()
         except:
             logging.warning("Cannot use xformers memory efficient attention (maybe xformers not installed)")
 
