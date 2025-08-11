@@ -230,8 +230,8 @@ class WebUI:
                 self.update_active_image(self.active_image + 1)
             if e.key.location != 3 and e.key.arrow_left and e.action.keydown:
                 self.update_active_image(self.active_image - 1)
-            if e.key == 's' and e.action.keydown:
-                self.main_loop_ui.on_save_button_click(self.images_display[self.active_image])
+            #if e.key == 's' and e.action.keydown:
+            #    self.main_loop_ui.on_save_button_click(self.images_display[self.active_image])
             if e.key.enter and e.action.keydown:
                 self.submit_button.run_method('click')
             if e.key.number in [1, 2, 3, 4, 5] and e.action.keydown:
