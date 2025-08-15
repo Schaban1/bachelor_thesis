@@ -1,17 +1,25 @@
 # Exploring Low-Dimensional Subspaces of Stable Diffusion Parameters
 
-## Structure
-
-- `docs`: Contains everything documentation-related, like sketches from the planning phase and links relevant for developers.
-- `prototype`: Contains the code for the prototype of a probability-based image generation system. Further information can be viewed in the `prototype`-README.
-
 ## Installation
 
-**Python Virtual Environment**
+We provide a `Dockerfile` that contains the required installation steps. If you want to install the required packages
+manually via python, use the following command:
 
-Create venv: ` python -m venv MMML_venv` (is ignored by git)
+```
+pip3 install -r requirements.txt
+```
 
-Activate venv: `source MMML_venv/bin/activate`
+## Usage
 
-Install requirements: `pip install -r requirements.txt`
+A configuration file can be found under `configs/config.yaml`.
 
+The web UI can be deployed using the following command:
+
+```
+python3 main.py
+```
+
+The web UI will be hosted under the port specified in the config.
+
+It is recommended to run the backend using CUDA on a 20 GB GPU. Our deployment runs on a 20 GB MIG partition of an
+NVIDIA A100 GPU.
