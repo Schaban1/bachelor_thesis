@@ -1,0 +1,18 @@
+num_recommendations: 4
+port: 8080
+reconnect_timeout: 30
+score_mode: sliders
+device: cuda
+image_display_size: [256, 256]
+random_seed: 47
+hf_model_name: stable-diffusion-v1-5/stable-diffusion-v1-5
+generator:
+  num_inference_steps: 4
+  guidance_scale: 0.0
+  use_negative_prompt: False
+  batch_size: 4
+  initial_latent_seed: 48
+path:
+  output_dir: ./output/
+  cache_dir: ./cache/
+  images_save_dir: ./saved_images/
