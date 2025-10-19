@@ -7,7 +7,7 @@ from functools import partial
 from nicegui import binding
 from torch import Tensor
 
-from prototype_lean.splice_custom import get_splice_model, VLMBackbone
+from splice_custom import get_splice_model, VLMBackbone
 
 class GeneratorBase(ABC):
     def __init__(self):
