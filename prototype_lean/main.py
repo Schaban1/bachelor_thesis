@@ -1,5 +1,5 @@
 import hydra
-from app import App
+from prototype_lean.app import App
 
 @hydra.main(config_path="configs", config_name="config")
 def main(cfg):
