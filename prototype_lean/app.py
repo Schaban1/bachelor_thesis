@@ -3,7 +3,7 @@ from diffusers import StableDiffusionPipeline, AutoencoderKL
 from nicegui import ui as ngUI
 from splice_custom import get_splice_model
 from generator import Generator
-from webuserinterface import WebUI
+from webuserinterface.webuserinterface import WebUI
 
 class ProducerConsumer:
     def __enter__(self): pass
