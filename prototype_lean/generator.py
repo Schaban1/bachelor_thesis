@@ -7,6 +7,8 @@ from functools import partial
 from nicegui import binding
 from torch import Tensor
 
+from prototype_lean.splice_custom import get_splice_model, VLMBackbone
+
 class GeneratorBase(ABC):
     def __init__(self):
         self.latest_images = []
@@ -58,6 +60,10 @@ class Generator(GeneratorBase):
         self.initial_latent_generator = torch.Generator(device=self.device)
         self.initial_latent_seed = initial_latent_seed
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
+
+        self.splice = get_splice_model()
+
+        self.vlm_backbone = VLMBackbone()
 
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
@@ -136,7 +142,7 @@ class Generator(GeneratorBase):
         return images
 
     @torch.no_grad()
-    def generate_with_splice(self, image: Image.Image, slider_values: dict, loading_progress, queue_lock) -> list[Image]:
+    def generate_with_splice(self, image: Image, slider_values: dict, loading_progress, queue_lock) -> list[Image]:
         """
         Generates a list of image(s) from given embedding
         """
