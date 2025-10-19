@@ -1,6 +1,6 @@
 from nicegui import ui as ngUI
 from constants import WebUIState
-from webuserinterface.components.ui_component import UIComponent
+from ui_component import UIComponent
 
 class InitialIterationUI(UIComponent):
     def build_userinterface(self):

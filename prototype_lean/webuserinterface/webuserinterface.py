@@ -1,9 +1,10 @@
 from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
-import asyncio
 from constants import WebUIState, ScoreMode
-from webuserinterface.components import InitialIterationUI, MainLoopUI, LoadingUI
+from components.initial_iteration_ui import InitialIterationUI
+from components.main_loop_ui import MainLoopUI
+from components.loading_ui import LoadingUI
 import torch
 
 class WebUI:
