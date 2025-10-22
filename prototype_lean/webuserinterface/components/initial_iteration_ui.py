@@ -1,7 +1,7 @@
 import asyncio
 from nicegui import ui as ngUI
 from constants import WebUIState
-import UIComponent
+from prototype_lean.webuserinterface.components.ui_component import UIComponent
 
 class InitialIterationUI(UIComponent):
     def build_userinterface(self):

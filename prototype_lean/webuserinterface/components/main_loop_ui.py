@@ -1,6 +1,6 @@
 from nicegui import ui as ngUI
 from constants import WebUIState
-from ui_component import UIComponent
+from prototype_lean.webuserinterface.components.ui_component import UIComponent
 import torch
 import splice
 
