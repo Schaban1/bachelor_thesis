@@ -24,7 +24,7 @@ def get_splice_model(image_mean_path="/mnt/ceph/storage/data-tmp/2025/uk077493/i
     vlm_backbone = VLMBackbone()
 
     # Build vocabulary
-    concepts = splice.get_vocabulary("mscoco")
+    concepts = splice.get_vocabulary("mscoco", 10000)
     embedded_concepts = []
     for concept in concepts:
         emb = vlm_backbone.encode_text(concept)
