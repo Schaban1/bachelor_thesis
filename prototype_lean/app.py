@@ -50,9 +50,7 @@ class App:
             cache_dir=args.path.cache_dir,
             hf_model_name=args.hf_model_name
         )
-        splicemodel, vlm_backbone = get_splice_model(
-            image_mean_path="/mnt/ceph/storage/data-tmp/2025/uk077493/image_mean_flickr_2k_vit_h.pt",
-            device=self.device)
+        splicemodel, vlm_backbone = get_splice_model()
         generator.splice = splicemodel
         generator.vlm_backbone = vlm_backbone
 
