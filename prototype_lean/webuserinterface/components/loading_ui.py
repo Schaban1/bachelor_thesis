@@ -1,5 +1,5 @@
 from nicegui import ui as ngUI
-from prototype_lean.webuserinterface.components.ui_component import UIComponent
+from .ui_component import UIComponent
 
 class LoadingUI(UIComponent):
     def build_userinterface(self):
