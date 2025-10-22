@@ -2,7 +2,7 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
 from constants import WebUIState, ScoreMode
-from components import InitialIterationUI, LoadingUI, MainLoopUI
+from .components import InitialIterationUI, LoadingUI, MainLoopUI
 import torch
 
 class WebUI:

@@ -1,3 +1,4 @@
+import asyncio
 from nicegui import ui as ngUI
 from constants import WebUIState
 from ui_component import UIComponent
