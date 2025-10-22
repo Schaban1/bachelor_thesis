@@ -1,7 +1,7 @@
 import torch
 from diffusers import StableDiffusionPipeline, AutoencoderKL
 from nicegui import ui as ngUI
-from splice_custom import get_splice_model
+from splice_custom import get_splice_model, VLMBackbone
 from generator import Generator
 from webuserinterface.webuserinterface import WebUI
 
@@ -50,9 +50,9 @@ class App:
             cache_dir=args.path.cache_dir,
             hf_model_name=args.hf_model_name
         )
-        splicemodel, vlm_backbone = get_splice_model()
+        splicemodel = get_splice_model()
         generator.splice = splicemodel
-        generator.vlm_backbone = vlm_backbone
+        generator.vlm_backbone = VLMBackbone
 
     def start(self):
         global global_args
