@@ -2,8 +2,9 @@ import torch
 from transformers import CLIPModel, CLIPProcessor
 import splice
 
-class VLMBackbone:
+class VLMBackbone(torch.nn.Module):
     def __init__(self):
+        super(VLMBackbone, self).__init__()
         self.model = CLIPModel.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K")
         self.processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K")
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
