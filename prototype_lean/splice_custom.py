@@ -19,7 +19,7 @@ class VLMBackbone:
         with torch.no_grad():
             return self.model.get_text_features(**inputs)  # [num_texts, 1024]
 
-def get_splice_model(image_mean_path="/mnt/ceph/storage/data-tmp/2025/uk077493/image_mean_flickr_2k_vit_h.pt", device="cuda"):
+def get_splice_model(image_mean_path="/mnt/ceph/storage/data-tmp/2025/uk077493/image_mean_flickr_2k_vit_h14.pt", device="cuda"):
     # Setup backbone
     vlm_backbone = VLMBackbone()
 
