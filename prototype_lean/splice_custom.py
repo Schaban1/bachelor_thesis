@@ -11,12 +11,12 @@ class VLMBackbone:
 
     def encode_image(self, image):
         inputs = self.processor(images=image, return_tensors="pt").to(self.device)
-        with torch.no-grad():
+        with torch.no_grad():
             return self.model.get_image_features(**inputs)  # [batch, 1024]
 
     def encode_text(self, text):
         inputs = self.processor(text=text, return_tensors="pt", padding=True).to(self.device)
-        with torch.no-grad():
+        with torch.no_grad():
             return self.model.get_text_features(**inputs)  # [num_texts, 1024]
 
 def get_splice_model(image_mean_path="/mnt/ceph/storage/data-tmp/2025/uk077493/image_mean_flickr_2k_vit_h.pt", device="cuda"):
