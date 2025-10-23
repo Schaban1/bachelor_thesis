@@ -56,5 +56,5 @@ class App:
 
     def start(self):
         global global_args
-        ngUI.run(title='Image Generation System Demo', port=global_args.port, reconnect_timeout=global_args.reconnect_timeout)
+        ngUI.run(title='Image Generation System Demo', port=global_args.port, reconnect_timeout=global_args.reconnect_timeout, reload=False)
         start()
