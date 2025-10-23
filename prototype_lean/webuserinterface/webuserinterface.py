@@ -4,6 +4,7 @@ from PIL import Image
 from constants import WebUIState, ScoreMode
 from .components import InitialIterationUI, LoadingUI, MainLoopUI
 import torch
+import os
 
 class WebUI:
     session_id = binding.BindableProperty()
@@ -94,8 +95,20 @@ class WebUI:
         [self.images_display[i].set_source(jpg(self.images[i])) for i in range(len(self.images))]
 
     def get_webis_demo_template_html(self):
-        with open("../webis_template_top.html") as f:
+        script_dir = os.path.dirname(__file__)
+        top_path = os.path.join(script_dir, "webis_template_top.html")
+        bottom_path = os.path.join(script_dir, "webis_template_bottom.html")
+        with open(top_path) as f:
+            top = f.read()
+        with open(bottom_path) as f:
+            bottom = f.read()
+        return top, bottom
+
+'''
+    def get_webis_demo_template_html(self):
+        with open("webis_template_top.html") as f:
             webis_template_top = f.read()
-        with open("../webis_template_bottom.html") as f:
+        with open("webis_template_bottom.html") as f:
             webis_template_bottom = f.read()
         return webis_template_top, webis_template_bottom
+'''
