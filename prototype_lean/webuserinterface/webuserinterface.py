@@ -92,10 +92,11 @@ class WebUI:
             return "data:image/jpeg;base64," + base64.b64encode(buffered.getvalue()).decode(encoding="utf-8")
         print("Update Image Displays.")
         [self.images_display[i].set_source(jpg(self.images[i])) for i in range(len(self.images))]
-
+'''
     def get_webis_demo_template_html(self):
         with open("./webuserinterface/resources/webis_template_top.html") as f:
             webis_template_top = f.read()
         with open("./webuserinterface/resources/webis_template_bottom.html") as f:
             webis_template_bottom = f.read()
         return webis_template_top, webis_template_bottom
+'''
