@@ -7,7 +7,7 @@ import splice
 class MainLoopUI(UIComponent):
     def build_userinterface(self):
         splicemodel = self.webUI.generator.splice
-        vocabulary = splice.get_vocabulary("mscoco")
+        vocabulary = splice.get_vocabulary("mscoco",10000)
         with ngUI.column().classes('mx-auto items-center pl-24 pr-24').bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
             ngUI.label('Adjust sliders to edit images (one slider at a time).').style('font-size: 200%;')
             with ngUI.column().classes('mx-auto items-center'):

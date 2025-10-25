@@ -62,8 +62,8 @@ class WebUI:
             ngUI.html(webis_template_top).classes('w-full')
             ngUI.space().classes('w-full h-full')
             InitialIterationUI(self)
-            MainLoopUI(self)
-            LoadingUI(self)
+            self.main_loop_ui = MainLoopUI(self)
+            self.loading_ui = LoadingUI(self)
             ngUI.space().classes('w-full h-full')
             ngUI.html(webis_template_bottom).classes('w-full')
 
