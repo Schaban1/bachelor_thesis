@@ -19,7 +19,7 @@ class MainLoopUI(UIComponent):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('mx-auto items-center'):
                         self.webUI.images_display[i] = ngUI.interactive_image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down;')
-                        preprocessed = self.webUI.generator.vlm_backbone.processor(images=self.webUI.images[i], return_tensors="pt").pixel_values.to(self.device)
+                        preprocessed = self.webUI.generator.vlm_backbone.processor(images=self.webUI.images[i], return_tensors="pt").pixel_values.to(self.webUI.generator.device)
                         sparse_weights = splicemodel.encode_image(preprocessed)  # [1, vocab_size] weights (concepts)
                         top_indices = torch.topk(sparse_weights[0], k=3).indices.tolist()  # Top 3 concepts
                         concept_names = [vocabulary[idx] for idx in top_indices]
@@ -37,7 +37,7 @@ class MainLoopUI(UIComponent):
                 slider.props('disable')
         # Get weights, adjust, recompose
         preprocessed = self.webUI.generator.vlm_backbone.processor(images=self.webUI.images[image_idx],
-                                                                   return_tensors="pt").pixel_values.to(self.device)
+                                                                   return_tensors="pt").pixel_values.to(self.webUI.generator.device)
         sparse_weights = splicemodel.encode_image(preprocessed)  # [1, vocab_size]
         sparse_weights[0, concept_idx] = max(0, min(1, sparse_weights[0, concept_idx] + value))  # Clamp [0, 1]
         recomposed_embedding = splicemodel.recompose_image(sparse_weights)  # [1, 1024]
