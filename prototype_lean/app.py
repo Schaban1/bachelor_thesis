@@ -4,10 +4,13 @@ from nicegui import ui as ngUI
 from splice_custom import get_splice_model, VLMBackbone
 from generator import Generator
 from webuserinterface.webuserinterface import WebUI
+from utils import ProducerConsumer
 
+'''
 class ProducerConsumer:
     def __enter__(self): pass
     def __exit__(self, exc_type, exc_val, exc_tb): pass
+'''
 
 global_args = None
 pipe = None
@@ -48,10 +51,10 @@ class App:
             initial_latent_seed=args.generator.initial_latent_seed,
             device=self.device,
             cache_dir=args.path.cache_dir,
-            hf_model_name=args.hf_model_name,
-            splice=get_splice_model(),
-            vlm_backbone=VLMBackbone
+            hf_model_name=args.hf_model_name
         )
+        generator.splice = get_splice_model(),
+        generator.vlm_backbone = VLMBackbone
 
     def start(self):
         global global_args
