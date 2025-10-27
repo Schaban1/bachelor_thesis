@@ -44,7 +44,7 @@ class WebUI:
 
     def run(self):
         print("Start running the Web UI.")
-        #self.change_state(WebUIState.INIT_STATE)
+        self.change_state(WebUIState.INIT_STATE)
         self.root.clear()
         self.build_userinterface()
 
