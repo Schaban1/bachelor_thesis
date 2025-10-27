@@ -92,7 +92,7 @@ class WebUI:
             import base64
             buffered = BytesIO()
             img.save(buffered, format="JPEG")
-            return "data:image/jpeg;base64,"+ base64.b64encode(buffered.getvalue()).decode(encoding="utf-8")
+            return "data:image/jpeg;base64,"+base64.b64encode(buffered.getvalue()).decode(encoding="utf-8")
         print("Update Image Displays.")
         [self.images_display[i].set_source(jpg(self.images[i])) for i in range(len(self.images))]
 
