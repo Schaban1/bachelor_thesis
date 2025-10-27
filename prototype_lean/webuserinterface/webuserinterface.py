@@ -10,6 +10,7 @@ class WebUI:
     session_id = binding.BindableProperty()
     state = binding.BindableProperty()
     is_initial_iteration = binding.BindableProperty()
+    is_main_loop_iteration = binding.BindableProperty()
     is_generating = binding.BindableProperty()
     user_prompt = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
@@ -43,7 +44,7 @@ class WebUI:
 
     def run(self):
         print("Start running the Web UI.")
-        self.change_state(WebUIState.INIT_STATE)
+        #self.change_state(WebUIState.INIT_STATE)
         self.root.clear()
         self.build_userinterface()
 
@@ -53,6 +54,7 @@ class WebUI:
 
     def update_state_variables(self):
         self.is_initial_iteration = self.state == WebUIState.INIT_STATE
+        self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
         self.is_generating = self.state == WebUIState.GENERATING_STATE
 
     def build_userinterface(self):
