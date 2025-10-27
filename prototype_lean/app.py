@@ -30,7 +30,9 @@ class App:
     def __init__(self, args):
         global global_args
         global_args = args
-        self.device = torch.device("cuda") if args.device == "cuda" and torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device("cuda") if (
+                global_args.device == "cuda" and torch.cuda.is_available()) else torch.device("cpu")
+
         global pipe
         pipe = StableDiffusionPipeline.from_pretrained(
             args.hf_model_name,
@@ -43,15 +45,11 @@ class App:
         pipe.vae = torch.compile(pipe.vae, backend="cudagraphs")
         global generator
         generator = Generator(
-            pipe=pipe,
-            num_inference_steps=args.generator.num_inference_steps,
-            guidance_scale=args.generator.guidance_scale,
-            use_negative_prompt=args.generator.use_negative_prompt,
-            batch_size=args.generator.batch_size,
-            initial_latent_seed=args.generator.initial_latent_seed,
-            device=self.device,
             cache_dir=args.path.cache_dir,
-            hf_model_name=args.hf_model_name
+            device=args.device,
+            hf_model_name=args.hf_model_name,
+            pipe=pipe,
+            **args.generator,
         )
         generator.splice = get_splice_model(),
         generator.vlm_backbone = VLMBackbone()

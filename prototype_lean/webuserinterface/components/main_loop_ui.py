@@ -20,6 +20,8 @@ class MainLoopUI(UIComponent):
                     with ngUI.column().classes('mx-auto items-center'):
                         self.webUI.images_display[i] = ngUI.interactive_image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down;')
                         preprocessed = self.webUI.generator.vlm_backbone.processor(images=self.webUI.images[i], return_tensors="pt").pixel_values.to(self.webUI.generator.device)
+                        print(f"Splice: {(splicemodel)}")
+                        print(f"Splice type: {type(splicemodel)}")
                         sparse_weights = splicemodel.encode_image(preprocessed)  # [1, vocab_size] weights (concepts)
                         top_indices = torch.topk(sparse_weights[0], k=3).indices.tolist()  # Top 3 concepts
                         concept_names = [vocabulary[idx] for idx in top_indices]
