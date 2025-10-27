@@ -54,7 +54,7 @@ class App:
             hf_model_name=args.hf_model_name
         )
         generator.splice = get_splice_model(),
-        generator.vlm_backbone = VLMBackbone
+        generator.vlm_backbone = VLMBackbone()
 
     def start(self):
         global global_args
