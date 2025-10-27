@@ -48,11 +48,10 @@ class App:
             initial_latent_seed=args.generator.initial_latent_seed,
             device=self.device,
             cache_dir=args.path.cache_dir,
-            hf_model_name=args.hf_model_name
+            hf_model_name=args.hf_model_name,
+            splice=get_splice_model(),
+            vlm_backbone=VLMBackbone
         )
-        splicemodel = get_splice_model()
-        generator.splice = splicemodel
-        generator.vlm_backbone = VLMBackbone
 
     def start(self):
         global global_args
