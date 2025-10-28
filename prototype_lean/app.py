@@ -51,8 +51,7 @@ class App:
             pipe=pipe,
             **args.generator,
         )
-        generator.splice = get_splice_model(),
-        print(f"Splice type in app: {type(generator.splice)}")
+        generator.splice = get_splice_model()
         generator.vlm_backbone = VLMBackbone()
 
     def start(self):
