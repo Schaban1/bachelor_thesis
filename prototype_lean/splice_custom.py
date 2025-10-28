@@ -41,4 +41,5 @@ def get_splice_model(image_mean_path="/mnt/ceph/storage/data-tmp/2025/uk077493/i
 
     # Return ready-to-use model
     splicemodel = splice.SPLICE(image_mean, concepts_tensor, clip=vlm_backbone, device=device, return_weights=True)
+    print(f"Splice type in get_splice_model: {type(splicemodel)}")
     return splicemodel

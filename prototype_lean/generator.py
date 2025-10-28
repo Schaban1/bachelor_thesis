@@ -62,6 +62,7 @@ class Generator(GeneratorBase):
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
         self.splice = get_splice_model()
+        print(f"Splice type in generator init: {type(self.splice)}")
 
         self.vlm_backbone = VLMBackbone()
 
