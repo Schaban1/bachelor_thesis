@@ -66,6 +66,7 @@ class Generator(GeneratorBase):
 
         self.vlm_backbone = VLMBackbone()
 
+        # MAIN PIPELINE: TEXT-TO-IMAGE
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             requires_safety_checker=True,
@@ -78,14 +79,6 @@ class Generator(GeneratorBase):
             "latent-consistency/lcm-lora-sdv1-5"
         )
         self.pipe.fuse_lora()
-
-        # Load IP-Adapter Plus adapter
-        self.pipe.load_ip_adapter(
-            "h94/IP-Adapter",
-            subfolder="models",
-            weight_name="ip-adapter-plus_sd15.bin"
-        )
-        self.pipe.set_ip_adapter_scale(0.8)
 
         try:
             self.pipe.enable_xformers_memory_efficient_attention()
@@ -102,6 +95,32 @@ class Generator(GeneratorBase):
                                                          truncation=True,
                                                          return_tensors="pt", ).to(self.pipe.text_encoder.device)
             self.negative_prompt_embed = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0]
+
+            # IP-ADAPTER PIPELINE
+            self.ip_pipe = StableDiffusionPipeline.from_pretrained(
+                hf_model_name,
+                requires_safety_checker=True,
+                cache_dir=cache_dir,
+                torch_dtype=torch.float16,
+            ).to(device=self.device)
+
+            self.ip_pipe.scheduler = LCMScheduler.from_config(self.ip_pipe.scheduler.config)
+            self.ip_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
+            self.ip_pipe.fuse_lora()
+
+            self.ip_pipe.load_ip_adapter(
+                "h94/IP-Adapter",
+                subfolder="models",
+                weight_name="ip-adapter-plus_sd15.bin",
+                cache_dir=cache_dir
+            )
+            self.ip_pipe.set_ip_adapter_scale(0.8)
+
+            try:
+                self.ip_pipe.enable_xformers_memory_efficient_attention()
+            except:
+                logging.warning("Cannot use xformers in IP pipe")
+
 
     @torch.no_grad()
     def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress, queue_lock) -> list[Image]:
@@ -154,7 +173,7 @@ class Generator(GeneratorBase):
         """
         Img-to-img edit using a recomposed concept embedding.
         """
-        task = lambda: self.pipe(
+        task = lambda: self.ip_pipe(
             height=self.height,
             width=self.width,
             num_images_per_prompt=1,
@@ -174,8 +193,8 @@ class Generator(GeneratorBase):
                 batch_size=1,
                 num_steps=self.num_inference_steps,
             ),
-            image=base_image,  # img2img source
-            ip_adapter_image_embeds=[concept_embedding],  # <-- list!
+            image=base_image,
+            ip_adapter_image_embeds=[concept_embedding]
         ).images[0]
 
         result = queue_lock.do_work(task)
