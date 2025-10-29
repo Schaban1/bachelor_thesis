@@ -142,46 +142,41 @@ class Generator(GeneratorBase):
         self.latest_images.extend(images)
         return images
 
+    # generator/generator.py
     @torch.no_grad()
-    def generate_with_splice(self, image: Image, slider_values: dict, loading_progress, queue_lock) -> list[Image]:
+    def generate_with_splice(
+            self,
+            base_image: Image,
+            concept_embedding: torch.Tensor,  # [1, 1024]
+            loading_progress,
+            queue_lock
+    ) -> Image:
         """
-        Generates a list of image(s) from given embedding
+        Img-to-img edit using a recomposed concept embedding.
         """
-        preprocessed = self.vlm_backbone.processor(images=image, return_tensors="pt").pixel_values.to(self.device)
-        sparse_weights = self.splice.encode_image(preprocessed)  # [1, vocab_size]
-        for concept_idx, value in slider_values.items():
-            sparse_weights[0, concept_idx] = max(0, min(1, sparse_weights[0, concept_idx] + value))  # Clamp [0, 1]
-        new_embedding = self.splice.recompose_image(sparse_weights)  # [1, 1024]
-        # Use IP-Adapter Plus for img2img
         task = lambda: self.pipe(
             height=self.height,
             width=self.width,
             num_images_per_prompt=1,
             prompt="",
-            negative_prompt_embeds=self.negative_prompt_embed.repeat(1, 1, 1) if self.use_negative_prompt else None,
+            negative_prompt_embeds=(
+                self.negative_prompt_embed.repeat(1, 1, 1)
+                if self.use_negative_prompt else None
+            ),
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
             latents=None,
-            callback_on_step_end=partial(self.callback,
-                                         current_step=0,
-                                         num_embeddings=1,
-                                         loading_progress=loading_progress,
-                                         batch_size=1,
-                                         num_steps=self.num_inference_steps
-                                         ),
-            image=image,  # img2img mode
-            ip_adapter_image_embeds=[new_embedding],
-        ).images
+            callback_on_step_end=partial(
+                self.callback,
+                current_step=0,
+                num_embeddings=1,
+                loading_progress=loading_progress,
+                batch_size=1,
+                num_steps=self.num_inference_steps,
+            ),
+            image=base_image,  # img2img source
+            ip_adapter_image_embeds=[concept_embedding],  # <-- list!
+        ).images[0]
 
         result = queue_lock.do_work(task)
-        images = result.result()
-        self.latest_images.append(images[0])  # Add the new image to latest_images
-        return images
-
-    def get_latest_images(self) -> list[Image]:
-        latest_images = self.latest_images
-        self.latest_images = []
-        return latest_images
-
-    def clear_latest_images(self) -> None:
-        self.latest_images = []
+        return result.result()  # single PIL image

@@ -1,52 +1,49 @@
 from nicegui import ui as ngUI
-from constants import WebUIState
 from .ui_component import UIComponent
-import torch
-import splice
+
 
 class MainLoopUI(UIComponent):
-    def build_userinterface(self):
-        splicemodel = self.webUI.generator.splice
-        vocabulary = splice.get_vocabulary("mscoco",10000)
-        with ngUI.column().classes('mx-auto items-center pl-24 pr-24').bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
-            ngUI.label('Adjust sliders to edit images (one slider at a time).').style('font-size: 200%;')
-            with ngUI.column().classes('mx-auto items-center'):
-                with ngUI.row().classes('w-full items-center justify-start'):
-                    ngUI.icon('subject', size='2rem').classes('mr-2')
-                    ngUI.label(self.webUI.user_prompt).style('font-size: 120%;').bind_text_from(self.webUI, 'user_prompt')
-            with ngUI.row().classes('mx-auto items-center mt-4'):
-                self.sliders = [{} for _ in range(self.webUI.num_images_to_generate)]
+    def __init__(self, webUI):
+        super().__init__()
+        self.webUI = webUI
+        self.slider_containers = []
+        self.build_userinterface()
+
+    async def build_userinterface(self):
+        with ngUI.column().classes('mx-auto items-center pl-24 pr-24') \
+                .bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
+            ngUI.label('Edit images by adjusting concepts.').style('font-size: 200%;')
+
+            with ngUI.row().classes('w-full items-center justify-start'):
+                ngUI.icon('subject', size='2rem').classes('mr-2')
+                ngUI.label().bind_text_from(self.webUI, 'user_prompt').style('font-size: 120%;')
+
+            with ngUI.row().classes('mx-auto items-start mt-4 gap-8'):
                 for i in range(self.webUI.num_images_to_generate):
-                    with ngUI.column().classes('mx-auto items-center'):
-                        self.webUI.images_display[i] = ngUI.interactive_image().style(f'width: {self.webUI.image_display_width}px; height: {self.webUI.image_display_height}px; object-fit: scale-down;')
-                        preprocessed = self.webUI.generator.vlm_backbone.processor(images=self.webUI.images[i], return_tensors="pt").pixel_values.to(self.webUI.generator.device)
-                        print(f"Splice: {(splicemodel)}")
-                        print(f"Splice type: {type(splicemodel)}")
-                        sparse_weights = splicemodel.encode_image(preprocessed)  # [1, vocab_size] weights (concepts)
-                        top_indices = torch.topk(sparse_weights[0], k=3).indices.tolist()  # Top 3 concepts
-                        concept_names = [vocabulary[idx] for idx in top_indices]
-                        with ngUI.column().classes('w-full'):
-                            for concept, idx in zip(concept_names, top_indices):
-                                slider = ngUI.slider(min=-0.3, max=0.3, step=0.15, value=0).props('label')
-                                slider.on('update:model-value',lambda e, i=i, idx=idx: self.on_slider_change(i, idx, e['args']))
-                                self.sliders[i][idx] = slider
+                    with ngUI.column().classes('items-center'):
+                        self.webUI.images_display[i] = ngUI.interactive_image() \
+                            .style(f'width: {self.webUI.image_display_width}px; '
+                                   f'height: {self.webUI.image_display_height}px; '
+                                   f'object-fit: scale-down; border: 2px solid #ccc;')
+
+                        # One container per image
+                        container = ngUI.column().classes('w-full mt-2 space-y-1')
+                        self.slider_containers.append(container)
+
             ngUI.space()
 
-    def on_slider_change(self, image_idx, concept_idx, value):
-        splicemodel = self.webUI.generator.splice  # Fix: Use correct reference
-        for idx, slider in self.sliders[image_idx].items():
-            if idx != concept_idx:
-                slider.props('disable')
-        # Get weights, adjust, recompose
-        preprocessed = self.webUI.generator.vlm_backbone.processor(images=self.webUI.images[image_idx],
-                                                                   return_tensors="pt").pixel_values.to(self.webUI.generator.device)
-        sparse_weights = splicemodel.encode_image(preprocessed)  # [1, vocab_size]
-        sparse_weights[0, concept_idx] = max(0, min(1, sparse_weights[0, concept_idx] + value))  # Clamp [0, 1]
-        recomposed_embedding = splicemodel.recompose_image(sparse_weights)  # [1, 1024]
-        self.webUI.images[image_idx] = self.webUI.generator.generate_with_splice(
-            self.webUI.images[image_idx], recomposed_embedding, self.webUI.loading_ui.loading_progress,
-            self.webUI.queue_lock
-        )[0]
-        self.webUI.update_image_displays()
-        for slider in self.sliders[image_idx].values():
-            slider.props('enable')
+    def refresh_sliders(self, concepts_per_image):
+        for idx, container in enumerate(self.slider_containers):
+            container.clear()
+            with container:
+                for concept, concept_idx in concepts_per_image[idx]:
+                    with ngUI.row().classes('items-center justify-between w-full'):
+                        ngUI.label("Less").classes('text-xs text-gray-600')
+                        slider = ngUI.slider(
+                            min=-0.3, max=0.3, step=0.15, value=0
+                        ).props('label').classes('flex-grow mx-2')
+                        ngUI.label().bind_text_from(slider, 'value', lambda v: f"{v:+.2f}")
+                        ngUI.label("More").classes('text-xs text-gray-600')
+                        slider.on('update:model-value',
+                                  lambda e, img=idx, c=concept:
+                                  self.webUI.slider_controller.on_slider_change(img, c, e['args']))

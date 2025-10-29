@@ -2,7 +2,7 @@ from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
 from constants import WebUIState, ScoreMode
-from .components import InitialIterationUI, LoadingUI, MainLoopUI
+from .components import InitialIterationUI, LoadingUI, MainLoopUI, SliderController
 import torch
 import os
 
@@ -38,6 +38,7 @@ class WebUI:
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
         self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
         self.images_display = [None for _ in range(self.num_images_to_generate)]
+        self.slider_controller = SliderController(self, generator.splice_model, generator)
         self.setup_root()
         loading_label.delete()
         return self
@@ -86,15 +87,8 @@ class WebUI:
         ) * self.pipe.scheduler.init_noise_sigma
         self.images = self.generator.generate_image(embeddings, latents, self.loading_ui.loading_progress, self.queue_lock)
 
-    def update_image_displays(self):
-        def jpg(img):
-            from io import BytesIO
-            import base64
-            buffered = BytesIO()
-            img.save(buffered, format="JPEG")
-            return "data:image/jpeg;base64,"+base64.b64encode(buffered.getvalue()).decode(encoding="utf-8")
-        print("Update Image Displays.")
-        [self.images_display[i].set_source(jpg(self.images[i])) for i in range(len(self.images))]
+        self.slider_controller.on_images_generated(self.images)
+
 
     def get_webis_demo_template_html(self):
         script_dir = os.path.dirname(__file__)
@@ -105,12 +99,3 @@ class WebUI:
         with open(bottom_path) as f:
             bottom = f.read()
         return top, bottom
-
-'''
-    def get_webis_demo_template_html(self):
-        with open("webis_template_top.html") as f:
-            webis_template_top = f.read()
-        with open("webis_template_bottom.html") as f:
-            webis_template_bottom = f.read()
-        return webis_template_top, webis_template_bottom
-'''
