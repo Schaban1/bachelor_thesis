@@ -4,7 +4,7 @@ from .ui_component import UIComponent
 
 class MainLoopUI(UIComponent):
     def __init__(self, webUI):
-        super().__init__()
+        super().__init__(webUI)
         self.webUI = webUI
         self.slider_containers = []
         self.build_userinterface()
