@@ -38,7 +38,7 @@ class WebUI:
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
         self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
         self.images_display = [None for _ in range(self.num_images_to_generate)]
-        self.slider_controller = SliderController(self, generator.splice_model, generator)
+        self.slider_controller = SliderController(self, generator.splice, generator)
         self.setup_root()
         loading_label.delete()
         return self
