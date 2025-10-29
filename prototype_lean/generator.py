@@ -111,8 +111,8 @@ class Generator(GeneratorBase):
             self.ip_pipe.load_ip_adapter(
                 "h94/IP-Adapter",
                 subfolder="models",
+                cache_dir=cache_dir,
                 weight_name="ip-adapter-plus_sd15.bin",
-                cache_dir=cache_dir
             )
             self.ip_pipe.set_ip_adapter_scale(0.8)
 
