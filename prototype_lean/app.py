@@ -52,7 +52,6 @@ class App:
             **args.generator,
         )
         generator.splice = get_splice_model()
-        generator.vlm_backbone = VLMBackbone()
 
     def start(self):
         global global_args

@@ -7,7 +7,7 @@ from functools import partial
 from nicegui import binding
 from torch import Tensor
 
-from splice_custom import get_splice_model, VLMBackbone
+from splice_custom import get_splice_model
 
 class GeneratorBase(ABC):
     def __init__(self):
@@ -62,9 +62,6 @@ class Generator(GeneratorBase):
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
         self.splice = get_splice_model()
-        print(f"Splice type in generator init: {type(self.splice)}")
-
-        self.vlm_backbone = VLMBackbone()
 
         # MAIN PIPELINE: TEXT-TO-IMAGE
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(

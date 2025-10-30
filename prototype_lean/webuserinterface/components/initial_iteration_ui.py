@@ -29,10 +29,10 @@ Example prompts:
             ngUI.notify('Please enter a prompt!')
             return
         self.webUI.change_state(WebUIState.GENERATING_STATE)
-        self.webUI.iteration += 1
+        #self.webUI.iteration += 1
         ngUI.notify('Generating images...')
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
-        self.webUI.update_image_displays()
+        #self.webUI.update_image_displays()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         self.webUI.loading_ui.reset_progress_bar()

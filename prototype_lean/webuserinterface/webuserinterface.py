@@ -31,7 +31,7 @@ class WebUI:
         self.state = None
         self.is_initial_iteration = False
         self.is_generating = False
-        self.iteration = 0
+        #self.iteration = 0
         self.user_prompt = ""
         self.num_images_to_generate = self.args.num_recommendations
         self.score_mode = self.args.score_mode
