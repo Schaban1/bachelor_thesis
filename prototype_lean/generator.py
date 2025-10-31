@@ -6,6 +6,7 @@ from diffusers import StableDiffusionPipeline, LCMScheduler
 from functools import partial
 from nicegui import binding
 from torch import Tensor
+from nicegui import ui as ngUI
 
 from splice_custom import get_splice_model
 
@@ -156,7 +157,7 @@ class Generator(GeneratorBase):
             result = queue_lock.do_work(task)
             images.extend(result.result())
 
-        print(f"[GENERATOR] FINAL: returning {len(images)} images")
+        ngUI.notify(f"[GENERATOR] FINAL: returning {len(images)} images")
         self.latest_images.extend(images)
 
         return images

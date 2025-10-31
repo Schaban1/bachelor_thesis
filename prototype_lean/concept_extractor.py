@@ -19,5 +19,5 @@ class ConceptExtractor:
         topk_indices = torch.topk(sparse_weights[0], k=topk).indices.tolist()
 
         concepts = [self.vocabulary[i] for i in topk_indices]
-        print(f"[DEBUG conceptsextractor: were the concepts extracted?]?")
+        print("[DEBUG conceptsextractor: were the concepts extracted?]?")
         return list(zip(concepts, topk_indices))
