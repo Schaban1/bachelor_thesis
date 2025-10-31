@@ -86,7 +86,7 @@ class WebUI:
             device=self.pipe.device
         ) * self.pipe.scheduler.init_noise_sigma
         self.images = self.generator.generate_image(embeddings, latents, self.loading_ui.loading_progress, self.queue_lock)
-
+        print(f"[DEBUG webuserinterface: were the images generated{type(self.images)}?")
         self.slider_controller.on_images_generated(self.images)
 
 

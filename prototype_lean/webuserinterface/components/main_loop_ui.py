@@ -31,6 +31,7 @@ class MainLoopUI(UIComponent):
                         self.slider_containers.append(container)
 
             ngUI.space()
+            print(f"[DEBUG mainloop webuserinterface builduserinterface: was async def build_userinterface() called?")
 
     def refresh_sliders(self, concepts_per_image):
         print(f"[DEBUG] refresh_sliders called with {len(concepts_per_image)} images")

@@ -155,7 +155,10 @@ class Generator(GeneratorBase):
 
             result = queue_lock.do_work(task)
             images.extend(result.result())
+
+        print(f"[GENERATOR] FINAL: returning {len(images)} images")
         self.latest_images.extend(images)
+
         return images
 
     # generator/generator.py
