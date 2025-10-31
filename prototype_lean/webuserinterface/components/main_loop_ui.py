@@ -9,7 +9,7 @@ class MainLoopUI(UIComponent):
         self.slider_containers = []
         self.build_userinterface()
 
-    async def build_userinterface(self):
+    def build_userinterface(self):
         with ngUI.column().classes('mx-auto items-center pl-24 pr-24') \
                 .bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
             ngUI.label('Edit images by adjusting concepts.').style('font-size: 200%;')
@@ -33,8 +33,10 @@ class MainLoopUI(UIComponent):
             ngUI.space()
 
     def refresh_sliders(self, concepts_per_image):
+        print(f"[DEBUG] refresh_sliders called with {len(concepts_per_image)} images")
         for idx, container in enumerate(self.slider_containers):
             container.clear()
+            print(f"[DEBUG] Clearing container {idx}")
             with container:
                 for concept, concept_idx in concepts_per_image[idx]:
                     with ngUI.row().classes('items-center justify-between w-full'):
