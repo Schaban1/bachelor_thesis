@@ -3,13 +3,18 @@ from .ui_component import UIComponent
 
 
 class MainLoopUI(UIComponent):
-    def __init__(self, webUI):
-        super().__init__(webUI)
-        self.webUI = webUI
-        self.slider_containers = []
-        self.build_userinterface()
 
-    async def build_userinterface(self):
+    '''
+    def __init__(self, webUI):
+    super().__init__(webUI)
+    self.webUI = webUI
+    self.slider_containers = []
+    self.build_userinterface()
+    '''
+
+
+    def build_userinterface(self):
+        print("[DEBUG] build_userinterface: START", flush=True)
         with ngUI.column().classes('mx-auto items-center pl-24 pr-24') \
                 .bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
             ngUI.label('Edit images by adjusting concepts.').style('font-size: 200%;')
@@ -28,14 +33,14 @@ class MainLoopUI(UIComponent):
 
                         # One container per image
                         container = ngUI.column().classes('w-full mt-2 space-y-1')
-                        self.slider_containers.append(container)
+                        self.webUI.append(container)
 
             ngUI.space()
             print("[DEBUG mainloop webuserinterface builduserinterface: was async def build_userinterface() called?",flush=True)
 
     def refresh_sliders(self, concepts_per_image):
         print("[DEBUG] refresh_sliders called with {len(concepts_per_image)} images",flush=True)
-        for idx, container in enumerate(self.slider_containers):
+        for idx, container in enumerate(self.webUI.slider_containers):
             container.clear()
             print("[DEBUG] Clearing container {idx}",flush=True)
             with container:

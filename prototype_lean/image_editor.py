@@ -15,12 +15,8 @@ class ImageEditor:
         if state_key in self.cache[image_idx]:
             return self.cache[image_idx][state_key]
 
-        # Preprocess
-        inputs = self.splice.clip.processor(images=base_image, return_tensors="pt")
-        pixel_values = inputs.pixel_values.to(self.splice.clip.device)
-
         # Modify weights
-        weights = self.splice.encode_image(pixel_values)
+        weights = self.splice.encode_image(base_image)
         for concept_idx, offset in concept_offsets.items():
             weights[0, concept_idx] = max(0, min(1, weights[0, concept_idx] + offset))
 
