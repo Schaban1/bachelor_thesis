@@ -14,7 +14,7 @@ class SliderController:
         concepts_per_image = []
 
         for i, img in enumerate(images):
-            print(f"[DEBUG slider_controller on_images_generated loop] Input img {i}: {type(img)}")
+            print(f"[DEBUG slider_controller on_images_generated loop] Input img {i}: {type(img)}",flush=True)
             concepts = self.extractor.extract_top_concepts(img)  # [(name, idx), ...]
             self.concept_maps[i] = {name: idx for name, idx in concepts}
             self.offsets[i] = {idx: 0.0 for _, idx in concepts}

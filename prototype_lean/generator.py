@@ -157,7 +157,7 @@ class Generator(GeneratorBase):
             result = queue_lock.do_work(task)
             images.extend(result.result())
 
-        ngUI.notify(f"[GENERATOR] FINAL: returning {len(images)} images")
+        print(f"[GENERATOR] FINAL: returning {len(images)} images",flush=True)
         self.latest_images.extend(images)
 
         return images
