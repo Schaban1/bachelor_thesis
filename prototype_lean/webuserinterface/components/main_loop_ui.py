@@ -45,7 +45,7 @@ class MainLoopUI(UIComponent):
 
                         # MIDDLE: Slider + Value
                         with ngUI.row().classes('flex-grow items-center'):
-                            slider = ngUI.slider(min=-0.3, max=0.3, step=0.05, value=0) \
+                            slider = ngUI.slider(min=-0.3, max=0.3, step=0.15, value=0) \
                                 .props('label-always') \
                                 .classes('flex-grow')
 
