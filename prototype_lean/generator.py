@@ -7,6 +7,8 @@ from functools import partial
 from nicegui import binding
 from torch import Tensor
 from nicegui import ui as ngUI
+from pathlib import Path
+import os
 
 from splice_custom import get_splice_model
 
@@ -64,11 +66,15 @@ class Generator(GeneratorBase):
 
         self.splice = get_splice_model()
 
+        CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        print(f"[CACHE] LOCKED TO: {CACHE_DIR}")
+
         # MAIN PIPELINE: TEXT-TO-IMAGE
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             requires_safety_checker=True,
-            cache_dir=cache_dir,
+            cache_dir=CACHE_DIR,
             torch_dtype=torch.float16,
         ).to(device=self.device)
 
@@ -98,7 +104,7 @@ class Generator(GeneratorBase):
             self.ip_pipe = StableDiffusionPipeline.from_pretrained(
                 hf_model_name,
                 requires_safety_checker=True,
-                cache_dir=cache_dir,
+                cache_dir=CACHE_DIR,
                 torch_dtype=torch.float16,
             ).to(device=self.device)
 
@@ -109,7 +115,7 @@ class Generator(GeneratorBase):
             self.ip_pipe.load_ip_adapter(
                 "h94/IP-Adapter",
                 subfolder="models",
-                cache_dir=cache_dir,
+                cache_dir=CACHE_DIR,
                 weight_name="ip-adapter-plus_sd15.bin",
             )
             self.ip_pipe.set_ip_adapter_scale(0.8)

@@ -8,7 +8,7 @@ class MainLoopUI(UIComponent):
         print("[DEBUG] build_userinterface: START", flush=True)
         with ngUI.column().classes('mx-auto items-center pl-24 pr-24') \
                 .bind_visibility_from(self.webUI, 'is_main_loop_iteration', value=True):
-            ngUI.label('Edit images by adjusting concepts.').style('font-size: 200%;')
+            ngUI.label('Edit images by adjusting concept sliders.').style('font-size: 200%;')
 
             with ngUI.row().classes('w-full items-center justify-start'):
                 ngUI.icon('subject', size='2rem').classes('mr-2')
@@ -59,6 +59,6 @@ class MainLoopUI(UIComponent):
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
 
                         slider.on('update:model-value',
-                                  lambda e, i=concept_idx, c=concept:
+                                  lambda e, i=idx, c=concept:
                                   self.webUI.slider_controller.on_slider_change(i, c, e.args)
                                   )

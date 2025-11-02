@@ -1,12 +1,17 @@
 import torch
 from transformers import CLIPModel, CLIPProcessor
 import splice
+from pathlib import Path
+import os
 
 class VLMBackbone(torch.nn.Module):
     def __init__(self):
         super(VLMBackbone, self).__init__()
-        self.model = CLIPModel.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K", cache_dir="./cache/")
-        self.processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K", cache_dir="./cache/")
+        CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        print(f"[CACHE] LOCKED TO: {CACHE_DIR}")
+        self.model = CLIPModel.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K", cache_dir=CACHE_DIR)
+        self.processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K", cache_dir=CACHE_DIR)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model.to(self.device)
 
