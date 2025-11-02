@@ -5,6 +5,8 @@ from constants import WebUIState, ScoreMode
 from .components import InitialIterationUI, LoadingUI, MainLoopUI, SliderController
 import torch
 import os
+import base64
+from io import BytesIO
 
 class WebUI:
     session_id = binding.BindableProperty()
@@ -89,6 +91,21 @@ class WebUI:
         self.images = self.generator.generate_image(embeddings, latents, self.loading_ui.loading_progress, self.queue_lock)
         print("[DEBUG webuserinterface: were the images generated?",flush=True)
         self.slider_controller.on_images_generated(self.images)
+
+    def update_image_displays(self, single_idx: int = None):
+
+        def jpg(img):
+            buf = BytesIO()
+            img.save(buf, format="JPEG")
+            return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+
+        if single_idx is not None:
+            print(f"[LIVE] Updating image {single_idx}", flush=True)
+            self.images_display[single_idx].set_source(jpg(self.images[single_idx]))
+        else:
+            print(f"[INIT] Updating {len(self.images)} images", flush=True)
+            for i in range(len(self.images)):
+                self.images_display[i].set_source(jpg(self.images[i]))
 
 
     def get_webis_demo_template_html(self):

@@ -10,7 +10,7 @@ class SliderController:
         self.offsets = [{} for _ in range(webUI.num_images_to_generate)]
 
     def on_images_generated(self, images):
-        self.webUI.images = images
+        self.webUI.update_image_displays()
         concepts_per_image = []
 
         for i, img in enumerate(images):
@@ -41,4 +41,4 @@ class SliderController:
 
         # Update
         self.webUI.images[image_idx] = new_img
-        self.webUI.images_display[image_idx].set_content(new_img)
+        self.webUI.update_image_displays(single_idx=image_idx)

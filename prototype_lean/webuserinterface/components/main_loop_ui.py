@@ -4,15 +4,6 @@ from .ui_component import UIComponent
 
 class MainLoopUI(UIComponent):
 
-    '''
-    def __init__(self, webUI):
-    super().__init__(webUI)
-    self.webUI = webUI
-    self.slider_containers = []
-    self.build_userinterface()
-    '''
-
-
     def build_userinterface(self):
         print("[DEBUG] build_userinterface: START", flush=True)
         with ngUI.column().classes('mx-auto items-center pl-24 pr-24') \
@@ -54,4 +45,5 @@ class MainLoopUI(UIComponent):
                         ngUI.label("More").classes('text-xs text-gray-600')
                         slider.on('update:model-value',
                                   lambda e, img=idx, c=concept:
-                                  self.webUI.slider_controller.on_slider_change(img, c, e['args']))
+                                  self.webUI.slider_controller.on_slider_change(img, c, e.value)
+                                  )
