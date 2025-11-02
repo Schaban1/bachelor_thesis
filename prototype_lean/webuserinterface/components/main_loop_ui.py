@@ -37,6 +37,7 @@ class MainLoopUI(UIComponent):
             with container:
                 for concept, concept_idx in concepts_per_image[idx]:
                     with ngUI.row().classes('items-center justify-between w-full'):
+                        ngUI.label(concept).classes('text-center font-bold text-sm mb-1')
                         ngUI.label("Less").classes('text-xs text-gray-600')
                         slider = ngUI.slider(
                             min=-0.3, max=0.3, step=0.15, value=0
@@ -45,5 +46,5 @@ class MainLoopUI(UIComponent):
                         ngUI.label("More").classes('text-xs text-gray-600')
                         slider.on('update:model-value',
                                   lambda e, img=idx, c=concept:
-                                  self.webUI.slider_controller.on_slider_change(img, c, e.value)
+                                  self.webUI.slider_controller.on_slider_change(img, c, e.args[0])
                                   )
