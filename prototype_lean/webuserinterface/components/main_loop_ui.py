@@ -36,15 +36,29 @@ class MainLoopUI(UIComponent):
             print("[DEBUG] Clearing container {idx}",flush=True)
             with container:
                 for concept, concept_idx in concepts_per_image[idx]:
-                    with ngUI.row().classes('items-center justify-between w-full'):
-                        ngUI.label(concept).classes('text-center font-bold text-sm mb-1')
-                        ngUI.label("Less").classes('text-xs text-gray-600')
-                        slider = ngUI.slider(
-                            min=-0.3, max=0.3, step=0.15, value=0
-                        ).props('label').classes('flex-grow mx-2')
-                        ngUI.label().bind_text_from(slider, 'value', lambda v: f"{v:+.2f}")
-                        ngUI.label("More").classes('text-xs text-gray-600')
+                    # CONCEPT NAME
+                    ngUI.label(concept).classes('text-center font-bold text-sm mb-1 text-blue-600')
+                    # SLIDER ROW
+                    with ngUI.row().classes('w-full items-center gap-2'):
+                        # LEFT: Less
+                        ngUI.label("Less").classes('text-xs text-gray-500 w-12 text-left')
+
+                        # MIDDLE: Slider + Value
+                        with ngUI.row().classes('flex-grow items-center'):
+                            slider = ngUI.slider(min=-0.3, max=0.3, step=0.05, value=0) \
+                                .props('label-always') \
+                                .classes('flex-grow')
+
+                            # LIVE VALUE
+                            ngUI.label().bind_text_from(
+                                slider, 'value',
+                                lambda v, name=concept: f"{name}: {v:+.2f}"
+                            ).classes('text-xs font-mono ml-2')
+
+                        # RIGHT
+                        ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
+
                         slider.on('update:model-value',
-                                  lambda e, img=idx, c=concept:
-                                  self.webUI.slider_controller.on_slider_change(img, c, e.args[0])
+                                  lambda e, i=concept_idx, c=concept:
+                                  self.webUI.slider_controller.on_slider_change(i, c, e.args)
                                   )
