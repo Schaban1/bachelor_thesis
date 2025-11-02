@@ -185,6 +185,8 @@ class Generator(GeneratorBase):
         """
         Img-to-img edit using a recomposed concept embedding.
         """
+
+        concept_embedding = concept_embedding.unsqueeze(0)
         task = lambda: self.ip_pipe(
             height=self.height,
             width=self.width,
