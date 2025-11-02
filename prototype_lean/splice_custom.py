@@ -9,7 +9,7 @@ class VLMBackbone(torch.nn.Module):
         super(VLMBackbone, self).__init__()
         CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
         os.makedirs(CACHE_DIR, exist_ok=True)
-        print(f"[CACHE] LOCKED TO: {CACHE_DIR}")
+        print(f"[CACHE] splice_custom LOCKED TO: {CACHE_DIR}")
         self.model = CLIPModel.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K", cache_dir=CACHE_DIR)
         self.processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K", cache_dir=CACHE_DIR)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -53,7 +53,7 @@ class MainLoopUI(UIComponent):
                             ngUI.label().bind_text_from(
                                 slider, 'value',
                                 lambda v, name=concept: f"{name}: {v:+.2f}"
-                            ).classes('text-xs font-mono ml-2')
+                            ).classes('text-xs text-gray-500 w-32 text-center')
 
                         # RIGHT
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
