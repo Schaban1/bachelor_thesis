@@ -1,3 +1,9 @@
+# Concept Sliders - Extracting concepts and editing images with Splice
+
+## Guide
+
+Follow the steps described in the README file in **prototype_lean** folder.
+
 # Exploring Low-Dimensional Subspaces of Stable Diffusion Parameters
 
 ## Installation
