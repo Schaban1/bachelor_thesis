@@ -121,7 +121,7 @@ class Generator(GeneratorBase):
                 "h94/IP-Adapter",
                 subfolder="models",
                 cache_dir=CACHE_DIR,
-                weight_name="ip-adapter-plus_sd15.bin",
+                weight_name="ip-adapter_sd15.bin",
             )
         self.ip_pipe.set_ip_adapter_scale(0.8)
 
@@ -186,7 +186,7 @@ class Generator(GeneratorBase):
         Img-to-img edit using a recomposed concept embedding.
         """
 
-        concept_embedding = concept_embedding.unsqueeze(0)
+        #concept_embedding = concept_embedding.unsqueeze(0)
         concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
         task = lambda: self.ip_pipe(
             height=self.height,
