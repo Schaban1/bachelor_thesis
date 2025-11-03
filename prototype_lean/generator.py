@@ -187,6 +187,7 @@ class Generator(GeneratorBase):
         """
 
         concept_embedding = concept_embedding.unsqueeze(0)
+        concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
         task = lambda: self.ip_pipe(
             height=self.height,
             width=self.width,
