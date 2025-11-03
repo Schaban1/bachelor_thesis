@@ -173,7 +173,6 @@ class Generator(GeneratorBase):
 
         return images
 
-    # generator/generator.py
     @torch.no_grad()
     def generate_with_splice(
             self,

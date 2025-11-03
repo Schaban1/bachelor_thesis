@@ -26,7 +26,7 @@ class ImageEditor:
         # Generate
         new_img = self.generator.generate_with_splice(
             base_image, embedding, loading_progress, queue_lock
-        )[0]
+        )
 
         # Cache
         self.cache[image_idx][state_key] = new_img
