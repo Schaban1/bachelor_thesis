@@ -33,7 +33,7 @@ class SliderController:
 
         if cache_key in self.image_cache:
             new_img = self.image_cache[cache_key]
-            self.webUI.main_loop_ui.on_image_cached(image_idx, True)
+            self.webUI.main_loop_ui.on_image_cached(True)
         else:
             new_img = self.editor.edit_image(
                 base_image=self.webUI.images[image_idx],
@@ -43,7 +43,7 @@ class SliderController:
                 queue_lock=self.webUI.queue_lock
             )
             self.image_cache[cache_key] = new_img
-            self.webUI.main_loop_ui.on_image_cached(image_idx, False)
+            self.webUI.main_loop_ui.on_image_cached(False)
 
         # Update
         self.webUI.images[image_idx] = new_img
