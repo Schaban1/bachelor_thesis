@@ -8,6 +8,7 @@ class SliderController:
         self.editor = ImageEditor(generator, splice_model)
         self.concept_maps = [{} for _ in range(webUI.num_images_to_generate)]
         self.offsets = [{} for _ in range(webUI.num_images_to_generate)]
+        self.image_cache = {}
 
     def on_images_generated(self, images):
         self.webUI.update_image_displays()
@@ -27,17 +28,22 @@ class SliderController:
         concept_idx = self.concept_maps[image_idx][concept_name]
         self.offsets[image_idx][concept_idx] = value
 
-        # Build full offset dict
-        concept_offsets = {idx: offset for idx, offset in self.offsets[image_idx].items()}
+        current_offsets = tuple(sorted(self.offsets[image_idx].items()))
+        cache_key = (image_idx, current_offsets)
 
-        # Edit image
-        new_img = self.editor.edit_image(
-            base_image=self.webUI.images[image_idx],
-            concept_offsets=concept_offsets,
-            image_idx=image_idx,
-            loading_progress=self.webUI.loading_ui.loading_progress,
-            queue_lock=self.webUI.queue_lock
-        )
+        if cache_key in self.image_cache:
+            new_img = self.image_cache[cache_key]
+            self.webUI.main_loop_ui.on_image_cached(image_idx, True)
+        else:
+            new_img = self.editor.edit_image(
+                base_image=self.webUI.images[image_idx],
+                concept_offsets=dict(current_offsets),
+                image_idx=image_idx,
+                loading_progress=self.webUI.loading_ui.loading_progress,
+                queue_lock=self.webUI.queue_lock
+            )
+            self.image_cache[cache_key] = new_img
+            self.webUI.main_loop_ui.on_image_cached(image_idx, False)
 
         # Update
         self.webUI.images[image_idx] = new_img

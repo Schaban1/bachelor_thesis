@@ -62,3 +62,9 @@ class MainLoopUI(UIComponent):
                                   lambda e, i=idx, c=concept:
                                   self.webUI.slider_controller.on_slider_change(i, c, e.args)
                                   )
+
+    def on_image_cached(self, was_cached):
+        if was_cached:
+            ngUI.notify("↺ Cached image loaded!", type='positive')
+        else:
+            ngUI.notify("✨ New image generated!", type='positive')
