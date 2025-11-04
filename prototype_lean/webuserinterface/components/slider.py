@@ -19,6 +19,13 @@ class SliderController:
             concepts = self.extractor.extract_top_concepts(img)  # [(name, idx), ...]
             self.concept_maps[i] = {name: idx for name, idx in concepts}
             self.offsets[i] = {idx: 0.0 for _, idx in concepts}
+
+            # Store original image in cache
+            zero_offsets = tuple(sorted(self.offsets[i].items()))
+            cache_key = (i, zero_offsets)
+            self.image_cache[cache_key] = img
+            print(f"[CACHE] Stored original image {i} at {zero_offsets}")
+
             concepts_per_image.append([(name, 0.0) for name, _ in concepts])
 
         self.webUI.main_loop_ui.refresh_sliders(concepts_per_image)
