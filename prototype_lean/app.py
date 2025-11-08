@@ -1,7 +1,9 @@
+import sys
+sys.modules['tensorflow'] = None
 import torch
 from diffusers import StableDiffusionPipeline, AutoencoderKL
 from nicegui import ui as ngUI
-from splice_custom import get_splice_model, VLMBackbone
+from splice_custom import get_splice_model
 from generator import Generator
 from webuserinterface.webuserinterface import WebUI
 from utils import ProducerConsumer
