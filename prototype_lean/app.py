@@ -1,5 +1,3 @@
-import sys
-sys.modules['tensorflow'] = None
 import torch
 from diffusers import StableDiffusionPipeline, AutoencoderKL
 from nicegui import ui as ngUI
