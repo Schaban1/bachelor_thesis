@@ -6,7 +6,7 @@ class ConceptExtractor:
         self.splice = splice_model
         self.vocabulary = splice.get_vocabulary("mscoco", 10000)
 
-    def extract_top_concepts(self, pil_image, topk=3):
+    def extract_top_concepts(self, pil_image, topk=5):
 
         sparse_weights = self.splice.encode_image(pil_image)
         print(f"[DEBUG] sparse_weights → type: {type(sparse_weights)}", flush=True)
