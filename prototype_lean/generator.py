@@ -1,6 +1,4 @@
 import logging
-from collections.abc import generator
-
 import torch
 from PIL.Image import Image
 from abc import abstractmethod, ABC
@@ -158,6 +156,7 @@ class Generator(GeneratorBase):
                                      num_inference_steps=self.num_inference_steps,
                                      guidance_scale=self.guidance_scale,
                                      latents=latents[i:i + batch_steps],
+                                     generator=self.initial_latent_generator,
                                      callback_on_step_end=partial(self.callback,
                                                                   current_step=i,
                                                                   num_embeddings=num_embeddings,
@@ -201,6 +200,7 @@ class Generator(GeneratorBase):
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
             latents=None,
+            generator=self.initial_latent_generator,
             callback_on_step_end=partial(
                 self.callback,
                 current_step=0,
