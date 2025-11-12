@@ -155,7 +155,7 @@ class Generator(GeneratorBase):
                                      negative_prompt_embeds=self.negative_prompt_embed.repeat(batch_steps, 1, 1) if self.use_negative_prompt else None,
                                      num_inference_steps=self.num_inference_steps,
                                      guidance_scale=self.guidance_scale,
-                                     latents=latents[i:i + batch_steps],
+                                     latents=None,
                                      generator=self.initial_latent_generator,
                                      callback_on_step_end=partial(self.callback,
                                                                   current_step=i,
