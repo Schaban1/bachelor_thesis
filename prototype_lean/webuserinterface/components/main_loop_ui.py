@@ -67,4 +67,4 @@ class MainLoopUI(UIComponent):
         if was_cached:
             ngUI.notify("↺ Cached image loaded!", type='positive')
         else:
-            ngUI.notify("✨ New image generated!", type='positive')
+            ngUI.notify("✨ New image generated!",type='positive')
