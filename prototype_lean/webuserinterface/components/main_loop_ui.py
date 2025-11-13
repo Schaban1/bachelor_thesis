@@ -52,7 +52,7 @@ class MainLoopUI(UIComponent):
                             # LIVE VALUE
                             ngUI.label().bind_text_from(
                                 slider, 'value',
-                                backward=lambda v, name=concept_name, base=concept_value: f"{name}: {base+v:+.2f}"
+                                backward=lambda v: f"{concept_name}: {concept_value+v:+.2f}"
                             ).classes('text-xs text-gray-500 w-32 text-center')
 
                         # RIGHT
