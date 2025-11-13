@@ -53,5 +53,5 @@ class SliderController:
             self.webUI.main_loop_ui.on_image_cached(False)
 
         # Update
-        self.webUI.images[image_idx] = new_img
+        self.webUI.images[image_idx] =new_img
         self.webUI.update_image_displays(single_idx=image_idx)
