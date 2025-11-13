@@ -35,9 +35,9 @@ class MainLoopUI(UIComponent):
             container.clear()
             print("[DEBUG] Clearing container {idx}",flush=True)
             with container:
-                for concept, concept_idx in concepts_per_image[idx]:
+                for concept_name, concept_value in concepts_per_image[idx]:
                     # CONCEPT NAME
-                    ngUI.label(concept).classes('text-center font-bold text-sm mb-1 text-blue-600')
+                    ngUI.label(concept_name).classes('text-center font-bold text-sm mb-1 text-blue-600')
                     # SLIDER ROW
                     with ngUI.row().classes('w-full items-center gap-2'):
                         # LEFT: Less
@@ -52,14 +52,14 @@ class MainLoopUI(UIComponent):
                             # LIVE VALUE
                             ngUI.label().bind_text_from(
                                 slider, 'value',
-                                lambda v, name=concept: f"{name}: {v:+.2f}"
+                                lambda v, name=concept_name, base=concept_value: f"{name}: {base+v:+.2f}"
                             ).classes('text-xs text-gray-500 w-32 text-center')
 
                         # RIGHT
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
 
                         slider.on('update:model-value',
-                                  lambda e, i=idx, c=concept:
+                                  lambda e, i=idx, c=concept_name:
                                   self.webUI.slider_controller.on_slider_change(i, c, e.args)
                                   )
 
