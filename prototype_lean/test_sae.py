@@ -1,4 +1,4 @@
-from sparse_autoencoder.sparse_autoencoder.autoencoder.model import SparseAutoencoder
+from sparse_autoencoder import SparseAutoencoder
 import torch
 
 print('SparseAutoencoder geladen – ohne wandb-Fehler?')
