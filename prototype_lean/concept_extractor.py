@@ -1,7 +1,6 @@
 import torch
 import splice
-from sparse_autoencoder.autoencoder.types import ResetOptimizerParameterDetails
-from sparse_autoencoder.autoencoder.model import SparseAutoencoder
+from sparse_autoencoder import SparseAutoencoder
 
 class ConceptExtractor:
     def __init__(self, splice_model):
