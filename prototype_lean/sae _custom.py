@@ -19,7 +19,7 @@ class SparseAutoencoder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x + self.tied_bias
-        hidden = F.relu(F.linear(x, self.encoder_weight, self.encoder_bias))
+        hidden = F.relu(F.linear(x,self.encoder_weight, self.encoder_bias))
         decoder_normed = self.decoder_weight / self.decoder_weight.norm(dim=0, keepdim=True).clamp(min=1e-8)
         recon = F.linear(hidden, decoder_normed.t()) + self.tied_bias
         return hidden, recon
