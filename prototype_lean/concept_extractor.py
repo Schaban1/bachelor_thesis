@@ -30,24 +30,16 @@ class SpliceExtractor:
         return list(zip(concepts, topk_values, topk_indices))
 
 class SAEExtractor:
-    def __init__(self):
+    def __init__(self, sae, concept_names):
         self.device = "cuda"
         CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
         os.makedirs(CACHE_DIR, exist_ok=True)
         print(f"[CACHE] SAEExtractor using cache: {CACHE_DIR}")
-        self.clip_model = CLIPModel.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K").to(self.device).eval()
-        self.clip_processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K")
+        self.clip_model = CLIPModel.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K", cache_dir=CACHE_DIR).to(self.device).eval()
+        self.clip_processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K",cache_dir=CACHE_DIR)
 
-        sae_path = "resources/sparse_autoencoder_final.pt"
-        names_path = "resources/concept_names.csv"
-
-        self.sae = SparseAutoencoder().to(self.device)
-        state = torch.load(sae_path, map_location=self.device)
-        self.sae.load_state_dict(state, strict=False)
-        self.sae.eval()
-
-        df = pd.read_csv(names_path, header=None)
-        self.concept_names = df[1].tolist()
+        self.sae = sae
+        self.concept_names = concept_names
 
     @torch.no_grad()
     def extract_top_concepts(self, pil_image, top_k=5):

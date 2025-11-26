@@ -2,9 +2,9 @@ from concept_extractor import SpliceExtractor, SAEExtractor
 from image_editor import ImageEditor
 
 class SliderController:
-    def __init__(self, webUI, splice_model, generator, sae_model):
+    def __init__(self, webUI, splice_model, generator, sae_model, concept_names):
         self.webUI = webUI
-        self.sae_extractor = SAEExtractor()
+        self.sae_extractor = SAEExtractor(sae_model, concept_names)
         self.splice_extractor = SpliceExtractor(splice_model)
         self.editor = ImageEditor(generator, splice_model, sae_model)
         self.concept_maps = [{} for _ in range(webUI.num_images_to_generate)]
