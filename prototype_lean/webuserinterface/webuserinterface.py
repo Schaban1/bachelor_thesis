@@ -45,7 +45,7 @@ class WebUI:
         self.images_display_splice = [None for _ in range(self.num_images_to_generate)]
         self.slider_containers = []
         self.slider_containers_splice = []
-        RESOURCES_DIR = Path(__file__).resolve().parent / "resources"
+        RESOURCES_DIR = Path(__file__).resolve().parent.parent / "resources"
         with open(RESOURCES_DIR / "concept_names.csv", newline='', encoding='utf-8') as f:
             reader = csv.reader(f)
             concept_names = [row[1] for row in reader]
