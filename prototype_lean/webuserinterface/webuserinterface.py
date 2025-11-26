@@ -8,6 +8,7 @@ import os
 import base64
 from io import BytesIO
 import csv
+from pathlib import Path
 
 class WebUI:
     session_id = binding.BindableProperty()
@@ -44,7 +45,8 @@ class WebUI:
         self.images_display_splice = [None for _ in range(self.num_images_to_generate)]
         self.slider_containers = []
         self.slider_containers_splice = []
-        with open("resources/concept_names.csv", newline='', encoding='utf-8') as f:
+        RESOURCES_DIR = Path(__file__).resolve().parent / "resources"
+        with open(RESOURCES_DIR / "concept_names.csv", newline='', encoding='utf-8') as f:
             reader = csv.reader(f)
             concept_names = [row[1] for row in reader]
         self.concept_names = concept_names

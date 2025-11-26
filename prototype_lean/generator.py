@@ -9,6 +9,7 @@ from torch import Tensor
 from nicegui import ui as ngUI
 from pathlib import Path
 import os
+from constants import RESOURCES_DIR
 
 from sae_custom import SparseAutoencoder
 from splice_custom import get_splice_model
@@ -69,7 +70,7 @@ class Generator(GeneratorBase):
 
         device = "cuda"
         sae = SparseAutoencoder().to(device)
-        state = torch.load("resources/sparse_autoencoder_final.pt", map_location=device)
+        state = torch.load(RESOURCES_DIR / "sparse_autoencoder_final.pt", map_location=device)
         sae.load_state_dict(state, strict=False)
         sae.eval()
         self.sae_model = sae

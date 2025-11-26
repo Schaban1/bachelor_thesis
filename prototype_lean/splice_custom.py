@@ -3,6 +3,7 @@ from transformers import CLIPModel, CLIPProcessor
 import splice
 from pathlib import Path
 import os
+from constants import RESOURCES_DIR
 
 class VLMBackbone(torch.nn.Module):
     def __init__(self):
@@ -25,7 +26,7 @@ class VLMBackbone(torch.nn.Module):
         with torch.no_grad():
             return self.model.get_text_features(**inputs)  # [num_texts, 1024]
 
-def get_splice_model(image_mean_path="resources/image_mean_flickr_2k_vit_h14.pt", device="cuda"):
+def get_splice_model(image_mean_path = RESOURCES_DIR / "image_mean_flickr_2k_vit_h14.pt", device="cuda"):
     # Setup backbone
     vlm_backbone = VLMBackbone()
 
@@ -42,7 +43,6 @@ def get_splice_model(image_mean_path="resources/image_mean_flickr_2k_vit_h14.pt"
     concepts_tensor = torch.nn.functional.normalize(concepts_tensor, dim=1)
 
     # Load mean
-    image_mean_path = str(Path(__file__).parent.parent / image_mean_path)
     image_mean = torch.load(image_mean_path).to(device)
 
     # Return ready-to-use model

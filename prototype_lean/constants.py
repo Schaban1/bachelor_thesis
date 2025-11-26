@@ -1,4 +1,5 @@
 from enum import Enum
+from pathlib import Path
 
 class WebUIState(str, Enum):
     INIT_STATE = "Initial Iteration"
@@ -7,3 +8,5 @@ class WebUIState(str, Enum):
 
 class ScoreMode(str, Enum):
     SLIDERS = "sliders"
+
+RESOURCES_DIR = Path(__file__).resolve().parent / "resources"
