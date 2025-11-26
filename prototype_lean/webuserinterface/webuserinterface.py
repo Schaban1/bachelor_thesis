@@ -8,7 +8,7 @@ import os
 import base64
 from io import BytesIO
 from sae_custom import Sparse
-import pandas as pd
+import csv
 
 class WebUI:
     session_id = binding.BindableProperty()
@@ -45,8 +45,11 @@ class WebUI:
         self.images_display_splice = [None for _ in range(self.num_images_to_generate)]
         self.slider_containers = []
         self.slider_containers_splice = []
-        concept_names = pd.read_csv("resources/concept_names.csv", header=None)[1].tolist()
-        self.slider_controller = SliderController(self, generator.splice, generator, generator.sae_model, concept_names)
+        with open("resources/concept_names.csv", newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            concept_names = [row[1] for row in reader]
+        self.concept_names = concept_names
+        self.slider_controller = SliderController(self, generator.splice, generator, generator.sae_model, self.concept_names)
         self.setup_root()
         loading_label.delete()
         return self

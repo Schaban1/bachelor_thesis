@@ -1,8 +1,6 @@
 import torch
 import splice
-from sae_custom import SparseAutoencoder
 from transformers import CLIPProcessor, CLIPModel
-import pandas as pd
 from pathlib import Path
 import os
 
