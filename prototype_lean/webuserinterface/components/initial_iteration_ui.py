@@ -34,7 +34,7 @@ Example prompts:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.webUI.generate_images)
         print(f"[DEBUG initialiteration: were the images generated?",flush=True)
-        #self.webUI.update_image_displays()
+        self.webUI.update_image_displays()
         self.webUI.change_state(WebUIState.MAIN_STATE)
         print(f"[DEBUG initialiteration: was the webUI state switched to MAIN_STATE?]?",flush=True)
         self.webUI.loading_ui.reset_progress_bar()

@@ -15,7 +15,7 @@ class SliderController:
         self.image_cache_splice = {}
 
     def on_images_generated(self, images):
-        self.webUI.update_image_displays()
+        #self.webUI.update_image_displays()
         concepts_per_image = []
         splice_concepts_per_image = []
 
