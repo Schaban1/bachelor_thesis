@@ -1,8 +1,12 @@
 import torch
 import splice
-from sparse_autoencoder import SparseAutoencoder
+from sae_custom import SparseAutoencoder
+from transformers import CLIPProcessor, CLIPModel
+import pandas as pd
+from pathlib import Path
+import os
 
-class ConceptExtractor:
+class SpliceExtractor:
     def __init__(self, splice_model):
         self.splice = splice_model
         self.vocabulary = splice.get_vocabulary("mscoco", 10000)
@@ -24,3 +28,36 @@ class ConceptExtractor:
         print(f"[DEBUG] final return → {list(zip(concepts, topk_indices))}", flush=True)
         print("[DEBUG conceptsextractor: were the concepts extracted?]?", flush=True)
         return list(zip(concepts, topk_values, topk_indices))
+
+class SAEExtractor:
+    def __init__(self):
+        self.device = "cuda"
+        CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        print(f"[CACHE] SAEExtractor using cache: {CACHE_DIR}")
+        self.clip_model = CLIPModel.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K").to(self.device).eval()
+        self.clip_processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-H-14-laion2B-s32B-b79K")
+
+        sae_path = "resources/sparse_autoencoder_final.pt"
+        names_path = "resources/concept_names.csv"
+
+        self.sae = SparseAutoencoder().to(self.device)
+        state = torch.load(sae_path, map_location=self.device)
+        self.sae.load_state_dict(state, strict=False)
+        self.sae.eval()
+
+        df = pd.read_csv(names_path, header=None)
+        self.concept_names = df[1].tolist()
+
+    @torch.no_grad()
+    def extract_top_concepts(self, pil_image, top_k=5):
+        inputs = self.clip_processor(images=pil_image, return_tensors="pt")["pixel_values"].to(self.device)
+        clip_feat = self.clip_model.get_image_features(inputs)
+
+        acts = self.sae.encode(clip_feat)               # → (1, 8192)
+        acts = acts.squeeze(0).cpu().numpy()
+
+        top_idx = acts.argsort()[-top_k:][::-1]
+        top_values = acts[top_idx]
+        concepts = [self.concept_names[i] for i in top_idx]
+        return list(zip(concepts, top_values.tolist(), top_idx.tolist()))

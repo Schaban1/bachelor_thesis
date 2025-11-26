@@ -7,6 +7,7 @@ import torch
 import os
 import base64
 from io import BytesIO
+from sae_custom import Sparse
 
 class WebUI:
     session_id = binding.BindableProperty()
@@ -40,8 +41,10 @@ class WebUI:
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
         self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
         self.images_display = [None for _ in range(self.num_images_to_generate)]
+        self.images_display_splice = [None for _ in range(self.num_images_to_generate)]
         self.slider_containers = []
-        self.slider_controller = SliderController(self, generator.splice, generator)
+        self.slider_containers_splice = []
+        self.slider_controller = SliderController(self, generator.splice, generator, generator.sae_model)
         self.setup_root()
         loading_label.delete()
         return self
@@ -92,20 +95,21 @@ class WebUI:
         print("[DEBUG webuserinterface: were the images generated?",flush=True)
         self.slider_controller.on_images_generated(self.images)
 
-    def update_image_displays(self, single_idx: int = None):
+    def _pil_to_data_url(self, img: Image.Image) -> str:
+        buffer = BytesIO()
+        img.save(buffer, format="JPEG", quality=95, optimize=True)
+        return f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode()}"
 
-        def jpg(img):
-            buf = BytesIO()
-            img.save(buf, format="JPEG")
-            return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
-
+    def update_image_displays(self, single_idx=None):
         if single_idx is not None:
-            print(f"[LIVE] Updating image {single_idx}", flush=True)
-            self.images_display[single_idx].set_source(jpg(self.images[single_idx]))
+            data_url = self._pil_to_data_url(self.images[single_idx])
+            self.images_display[single_idx].set_source(data_url)
+            self.images_display_splice[single_idx].set_source(data_url)  # same image displayed below
         else:
-            print(f"[INIT] Updating {len(self.images)} images", flush=True)
-            for i in range(len(self.images)):
-                self.images_display[i].set_source(jpg(self.images[i]))
+            for i, img in enumerate(self.images):
+                data_url = self._pil_to_data_url(img)
+                self.images_display[i].set_source(data_url)
+                self.images_display_splice[i].set_source(data_url)
 
 
     def get_webis_demo_template_html(self):

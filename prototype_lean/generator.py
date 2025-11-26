@@ -10,6 +10,7 @@ from nicegui import ui as ngUI
 from pathlib import Path
 import os
 
+from sae_custom import SparseAutoencoder
 from splice_custom import get_splice_model
 
 class GeneratorBase(ABC):
@@ -65,6 +66,13 @@ class Generator(GeneratorBase):
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
         self.splice = get_splice_model()
+
+        device = "cuda"
+        sae = SparseAutoencoder().to(device)
+        state = torch.load("resources/sparse_autoencoder_final.pt", map_location=device)
+        sae.load_state_dict(state, strict=False)
+        sae.eval()
+        self.sae_model = sae
 
         os.environ["HF_HOME"] = str(Path(__file__).resolve().parent / "cache")
         os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
