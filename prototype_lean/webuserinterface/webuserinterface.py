@@ -7,7 +7,6 @@ import torch
 import os
 import base64
 from io import BytesIO
-from sae_custom import Sparse
 import csv
 
 class WebUI:
