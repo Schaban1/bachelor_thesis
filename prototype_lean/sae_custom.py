@@ -12,7 +12,7 @@ class SparseAutoencoder(nn.Module):
         # Decoder
         self.decoder_weight = nn.Parameter(torch.empty(n_input_features, n_learned_features))
         # Tied bias
-        self.tied_bias = nn.Parameter(torch.zeros(1, n_input_features))
+        self.tied_bias = nn.Parameter(torch.zeros(n_input_features))
 
         nn.init.xavier_uniform_(self.encoder_weight)
         nn.init.xavier_uniform_(self.decoder_weight)
@@ -33,13 +33,9 @@ class SparseAutoencoder(nn.Module):
         state = torch.load(path, map_location=device)
         model = cls().to(device)
 
-        model.tied_bias.data = state['tied_bias']
-
-        # Encoder: transpose
+        model.tied_bias.data = state['tied_bias'].squeeze()
         model.encoder_weight.data = state['encoder._weight'].T
-        model.encoder_bias.data = state['encoder._bias']
-
-        # Decoder: transpose
+        model.encoder_bias.data = state['encoder._bias'].squeeze()
         model.decoder_weight.data = state['decoder._weight'].T
 
         print(f"SAE loaded from {path}")
