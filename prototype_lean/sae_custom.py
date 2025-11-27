@@ -43,6 +43,11 @@ class SparseAutoencoder(nn.Module):
         print(f"encoder._bias shape   : {state['encoder._bias'].shape}")
         print("=================================\n")
 
+        encoder_w = state['encoder._weight'].squeeze(0).T  # (1024, 8192)
+        decoder_w = state['decoder._weight'].squeeze(0)  # (1024, 8192)
+        tied_b = state['pre_encoder_bias._bias_reference'].squeeze(0)  # (1024,)
+        enc_b = state['encoder._bias'].squeeze(0)
+
         model = cls().to(device)
 
         ''''
@@ -52,11 +57,10 @@ class SparseAutoencoder(nn.Module):
         model.encoder_bias.data = state['encoder._bias'].squeeze(0) # [1,8192] → [8192]
         '''''
 
-        with torch.no_grad():
-            model.encoder_weight.copy_(state['encoder._weight'].squeeze(0).T)
-            model.decoder_weight.copy_(state['decoder._weight'].squeeze(0))
-            model.tied_bias.copy_(state['pre_encoder_bias._bias_reference'].squeeze(0))
-            model.encoder_bias.copy_(state['encoder._bias'].squeeze(0))
+        model.encoder_weight = nn.Parameter(encoder_w.clone().contiguous())
+        model.decoder_weight = nn.Parameter(decoder_w.clone().contiguous())
+        model.tied_bias = nn.Parameter(tied_b.clone().contiguous())
+        model.encoder_bias = nn.Parameter(enc_b.clone().contiguous())
 
         print("\nSHAPES AFTER copy_():")
         print(f"  encoder_weight : {model.encoder_weight.shape}")
