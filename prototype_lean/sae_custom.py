@@ -43,8 +43,8 @@ class SparseAutoencoder(nn.Module):
         print(f"encoder._bias shape   : {state['encoder._bias'].shape}")
         print("=================================\n")
 
-        encoder_w = state['encoder._weight'].squeeze(0).T  # (1024, 8192)
-        decoder_w = state['decoder._weight'].squeeze(0)  # (1024, 8192)
+        encoder_w = state['encoder._weight'].squeeze(0)  # (1024, 8192)
+        decoder_w = state['decoder._weight'].squeeze(0).T  # (1024, 8192)
         tied_b = state['pre_encoder_bias._bias_reference'].squeeze(0)  # (1024,)
         enc_b = state['encoder._bias'].squeeze(0)
 
