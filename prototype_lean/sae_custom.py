@@ -45,18 +45,9 @@ class SparseAutoencoder(nn.Module):
 
         model = cls().to(device)
 
-        if 'pre_encoder_bias._bias_reference' in state:
-            real_bias = state['pre_encoder_bias._bias_reference']
-        elif 'post_decoder_bias._bias_reference' in state:
-            real_bias = state['post_decoder_bias._bias_reference']
-        else:
-            raise KeyError("No real tied bias found")
-
-        model.tied_bias.data = real_bias.squeeze()
-
-        #model.tied_bias.data = state['tied_bias'].squeeze()
-        model.encoder_weight.data = state['encoder._weight'].T
-        model.encoder_bias.data = state['encoder._bias'].squeeze()
-        model.decoder_weight.data = state['decoder._weight'].T
+        model.encoder_weight.data = state['encoder._weight'].squeeze(0).T  # [1,8192,1024] → [1024,8192]
+        model.decoder_weight.data = state['decoder._weight'].squeeze(0)  # [1,1024,8192] → [1024,8192]
+        model.tied_bias.data = state['pre_encoder_bias._bias_reference'].squeeze(0)  # [1,1024] → [1024]
+        model.encoder_bias.data = state['encoder._bias'].squeeze(0) # [1,8192] → [8192]
 
         return model.eval()
