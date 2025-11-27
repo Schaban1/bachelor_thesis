@@ -43,10 +43,15 @@ class SparseAutoencoder(nn.Module):
         print(f"encoder._bias shape   : {state['encoder._bias'].shape}")
         print("=================================\n")
 
-        encoder_w = state['encoder._weight'].squeeze(0)  # (1024, 8192)
-        decoder_w = state['decoder._weight'].squeeze(0).T  # (1024, 8192)
-        tied_b = state['pre_encoder_bias._bias_reference'].squeeze(0)  # (1024,)
-        enc_b = state['encoder._bias'].squeeze(0)
+        enc_raw = state["encoder._weight"].squeeze(0)
+        dec_raw = state["decoder._weight"].squeeze(0)
+        bias_in = state["pre_encoder_bias._bias_reference"].squeeze(0)
+        bias_out = state["encoder._bias"].squeeze(0)
+
+        encoder_w = enc_raw.t().clone().contiguous()
+        decoder_w = dec_raw.clone().contiguous()
+        tied_b = bias_in.clone().contiguous()
+        enc_b = bias_out.clone().contiguous()
 
         model = cls().to(device)
 
@@ -57,10 +62,10 @@ class SparseAutoencoder(nn.Module):
         model.encoder_bias.data = state['encoder._bias'].squeeze(0) # [1,8192] → [8192]
         '''''
 
-        model.encoder_weight = nn.Parameter(encoder_w.clone().contiguous())
-        model.decoder_weight = nn.Parameter(decoder_w.clone().contiguous())
-        model.tied_bias = nn.Parameter(tied_b.clone().contiguous())
-        model.encoder_bias = nn.Parameter(enc_b.clone().contiguous())
+        model.encoder_weight = nn.Parameter(encoder_w)
+        model.decoder_weight = nn.Parameter(decoder_w)
+        model.tied_bias = nn.Parameter(tied_b)
+        model.encoder_bias = nn.Parameter(enc_b)
 
         print("\nSHAPES AFTER copy_():")
         print(f"  encoder_weight : {model.encoder_weight.shape}")
