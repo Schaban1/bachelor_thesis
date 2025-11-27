@@ -33,7 +33,16 @@ class SparseAutoencoder(nn.Module):
         state = torch.load(path, map_location=device)
         model = cls().to(device)
 
-        model.tied_bias.data = state['tied_bias'].squeeze()
+        if 'pre_encoder_bias._bias_reference' in state:
+            real_bias = state['pre_encoder_bias._bias_reference']
+        elif 'post_decoder_bias._bias_reference' in state:
+            real_bias = state['post_decoder_bias._bias_reference']
+        else:
+            raise KeyError("No real tied bias found")
+
+        model.tied_bias.data = real_bias.squeeze()
+
+        #model.tied_bias.data = state['tied_bias'].squeeze()
         model.encoder_weight.data = state['encoder._weight'].T
         model.encoder_bias.data = state['encoder._bias'].squeeze()
         model.decoder_weight.data = state['decoder._weight'].T
