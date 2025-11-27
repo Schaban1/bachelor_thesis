@@ -31,6 +31,18 @@ class SparseAutoencoder(nn.Module):
     @classmethod
     def from_pretrained(cls, path: str, device: str = "cuda"):
         state = torch.load(path, map_location=device)
+
+        print("\n=== SAE CHECKPOINT DEBUG INFO ===")
+        print(f"Keys: {list(state.keys())}")
+        print(f"encoder._weight shape : {state['encoder._weight'].shape}")
+        print(f"decoder._weight shape : {state['decoder._weight'].shape}")
+        if 'pre_encoder_bias._bias_reference' in state:
+            print(f"pre_encoder_bias._bias_reference shape : {state['pre_encoder_bias._bias_reference'].shape}")
+        if 'post_decoder_bias._bias_reference' in state:
+            print(f"post_decoder_bias._bias_reference shape : {state['post_decoder_bias._bias_reference'].shape}")
+        print(f"encoder._bias shape   : {state['encoder._bias'].shape}")
+        print("=================================\n")
+
         model = cls().to(device)
 
         if 'pre_encoder_bias._bias_reference' in state:
@@ -47,6 +59,4 @@ class SparseAutoencoder(nn.Module):
         model.encoder_bias.data = state['encoder._bias'].squeeze()
         model.decoder_weight.data = state['decoder._weight'].T
 
-        print(f"SAE loaded from {path}")
-        print(f"Keys in SAE: {list(state.keys())}")
         return model.eval()
