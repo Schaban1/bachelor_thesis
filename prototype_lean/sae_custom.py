@@ -27,3 +27,21 @@ class SparseAutoencoder(nn.Module):
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         x = x + self.tied_bias
         return F.relu(F.linear(x, self.encoder_weight, self.encoder_bias))
+
+    @classmethod
+    def from_pretrained(cls, path: str, device: str = "cuda"):
+        state = torch.load(path, map_location=device)
+        model = cls().to(device)
+
+        model.tied_bias.data = state['tied_bias']
+
+        # Encoder: transpose
+        model.encoder_weight.data = state['encoder._weight'].T
+        model.encoder_bias.data = state['encoder._bias']
+
+        # Decoder: transpose
+        model.decoder_weight.data = state['decoder._weight'].T
+
+        print(f"SAE loaded from {path}")
+        print(f"Keys in SAE: {list(state.keys())}")
+        return model.eval()
