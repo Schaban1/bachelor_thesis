@@ -75,6 +75,7 @@ class Generator(GeneratorBase):
             state['encoder.weight'] = state['encoder.weight'].T  # (8192,1024) → (1024,8192)
         if 'decoder.weight' in state:
             state['decoder.weight'] = state['decoder.weight'].T
+        print(list(state.keys()))
         sae.load_state_dict(state, strict=False)
         sae.eval()
         self.sae_model = sae
