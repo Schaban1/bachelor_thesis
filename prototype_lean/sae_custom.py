@@ -45,9 +45,16 @@ class SparseAutoencoder(nn.Module):
 
         model = cls().to(device)
 
+        ''''
         model.encoder_weight.data = state['encoder._weight'].squeeze(0).T  # [1,8192,1024] → [1024,8192]
         model.decoder_weight.data = state['decoder._weight'].squeeze(0)  # [1,1024,8192] → [1024,8192]
         model.tied_bias.data = state['pre_encoder_bias._bias_reference'].squeeze(0)  # [1,1024] → [1024]
         model.encoder_bias.data = state['encoder._bias'].squeeze(0) # [1,8192] → [8192]
+        '''''
+
+        model.encoder_weight = nn.Parameter(state['encoder._weight'].squeeze(0).T)
+        model.decoder_weight = nn.Parameter(state['decoder._weight'].squeeze(0))
+        model.tied_bias = nn.Parameter(state['pre_encoder_bias._bias_reference'].squeeze(0))
+        model.encoder_bias = nn.Parameter(state['encoder._bias'].squeeze(0))
 
         return model.eval()
