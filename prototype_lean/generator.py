@@ -71,6 +71,10 @@ class Generator(GeneratorBase):
         device = "cuda"
         sae = SparseAutoencoder().to(device)
         state = torch.load(RESOURCES_DIR / "sparse_autoencoder_final.pt", map_location=device)
+        if 'encoder.weight' in state:
+            state['encoder.weight'] = state['encoder.weight'].T  # (8192,1024) → (1024,8192)
+        if 'decoder.weight' in state:
+            state['decoder.weight'] = state['decoder.weight'].T
         sae.load_state_dict(state, strict=False)
         sae.eval()
         self.sae_model = sae
