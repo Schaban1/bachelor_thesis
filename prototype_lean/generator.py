@@ -11,7 +11,7 @@ from pathlib import Path
 import os
 from constants import RESOURCES_DIR
 
-from sae_custom import SparseAutoencoder
+from sparse_autoencoder import SparseAutoencoder
 from splice_custom import get_splice_model
 
 class GeneratorBase(ABC):
@@ -68,10 +68,15 @@ class Generator(GeneratorBase):
 
         self.splice = get_splice_model()
 
-        self.sae_model = SparseAutoencoder.from_pretrained(
-            RESOURCES_DIR / "sparse_autoencoder_final.pt",
-            device="cuda"
-        )
+        SAE_PATH = RESOURCES_DIR / "sparse_autoencoder_final.pt"
+        state_dict = torch.load(SAE_PATH, map_location=self.device)
+        self.sae_model = SparseAutoencoder(
+            n_input_features=1024,
+            n_learned_features=8192
+        ).to(self.device)
+
+        self.sae_model.load_state_dict(state_dict, strict=False)
+        self.sae_model.eval()
 
         os.environ["HF_HOME"] = str(Path(__file__).resolve().parent / "cache")
         os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]

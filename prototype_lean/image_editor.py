@@ -64,13 +64,16 @@ class ImageEditor:
         inputs = self.clip_processor(images=base_image, return_tensors="pt")["pixel_values"].to(self.device)
         clip_feat = self.clip_model.get_image_features(inputs)
 
-        steered = clip_feat.clone()
-        decoder_normed = self.sae.decoder_weight / self.sae.decoder_weight.norm(dim=0, keepdim=True).clamp(min=1e-8)
+        with torch.no_grad():
+            acts = self.sae.encode(clip_feat)
+            acts = acts.clone()
 
-        for concept_idx, offset in concept_offsets.items():
-            steered += offset * decoder_normed[:, concept_idx]
+            for concept_idx, offset in concept_offsets.items():
+                acts[0, concept_idx] += offset
 
-        steered = steered / steered.norm(dim=-1, keepdim=True)
+            # reconstruct steered CLIP feature vector
+            steered = self.sae.decode(acts)
+            steered = steered / steered.norm(dim=-1, keepdim=True)
 
         # Generate
         new_img = self.generator.generate_with_splice(
