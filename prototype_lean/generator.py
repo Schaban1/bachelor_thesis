@@ -105,6 +105,13 @@ class Generator(GeneratorBase):
         print(f"Loading SAE from: {SAE_PATH}")
         state_dict = torch.load(SAE_PATH, map_location=self.device)
 
+        print("Fixing dimensions in state_dict...")
+        for key in list(state_dict.keys()):
+            tensor = state_dict[key]
+            if len(tensor.shape) > 0 and tensor.shape[0] == 1:
+                state_dict[key] = tensor.squeeze(0)
+                print(f"Fixed {key}: {tensor.shape} -> {state_dict[key].shape}")
+
         self.sae_model.load_state_dict(state_dict, strict=False)
         self.sae_model.eval()
 
