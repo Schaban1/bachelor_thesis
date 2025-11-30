@@ -37,7 +37,7 @@ class MainLoopUI(UIComponent):
 
                         # One container per image
                         container = ngUI.column().classes('w-full mt-2 space-y-1')
-                        self.webUI.slider_containers.append(container)
+                        self.webUI.slider_containers_splice.append(container)
 
             ngUI.space()
             print("[DEBUG mainloop webuserinterface builduserinterface: was async def build_userinterface() called?",flush=True)
