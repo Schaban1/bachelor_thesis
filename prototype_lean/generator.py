@@ -12,16 +12,31 @@ import os
 from constants import RESOURCES_DIR
 
 import torch.optim.optimizer as opt_fix
+import torch.nn as nn
 from typing import Union, Iterable, Dict, Any
 from unittest.mock import MagicMock
 import sys
 
-if "transformer_lens" not in sys.modules:
-    mock_tl = MagicMock()
-    mock_tl.HookedTransformer = MagicMock
-    sys.modules["transformer_lens"] = mock_tl
 if not hasattr(opt_fix, "params_t"):
     opt_fix.params_t = Union[Iterable[torch.Tensor], Iterable[Dict[str, Any]]]
+
+class MockHookPoint(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+tl_module = MagicMock()
+tl_module.HookedTransformer = MagicMock
+
+hp_module = MagicMock()
+hp_module.HookPoint = MockHookPoint
+utils_module = MagicMock()
+
+sys.modules["transformer_lens"] = tl_module
+sys.modules["transformer_lens.hook_points"] = hp_module
+sys.modules["transformer_lens.utils"] = utils_module
+
+tl_module.hook_points = hp_module
+tl_module.utils = utils_module
 
 from sparse_autoencoder import SparseAutoencoder
 from splice_custom import get_splice_model
