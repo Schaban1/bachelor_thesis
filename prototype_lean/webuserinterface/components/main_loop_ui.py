@@ -30,7 +30,7 @@ class MainLoopUI(UIComponent):
             with ngUI.row().classes('mx-auto items-start mt-4 gap-8'):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
-                        self.webUI.images_display[i] = ngUI.interactive_image() \
+                        self.webUI.images_display_splice[i] = ngUI.interactive_image() \
                             .style(f'width: {self.webUI.image_display_width}px; '
                                    f'height: {self.webUI.image_display_height}px; '
                                    f'object-fit: scale-down; border: 2px solid #ccc;')
