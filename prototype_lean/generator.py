@@ -10,6 +10,9 @@ from nicegui import ui as ngUI
 from pathlib import Path
 import os
 from constants import RESOURCES_DIR
+if not hasattr(torch.optim.optimizer, "params_t"):
+    from typing import Union, Iterable, Dict, Any
+    torch.optim.optimizer.params_t = Union[Iterable[torch.Tensor], Iterable[Dict[str, Any]]]
 
 from sparse_autoencoder import SparseAutoencoder
 from splice_custom import get_splice_model
