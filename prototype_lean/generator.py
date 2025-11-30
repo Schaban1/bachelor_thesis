@@ -38,7 +38,7 @@ sys.modules["transformer_lens.utils"] = utils_module
 tl_module.hook_points = hp_module
 tl_module.utils = utils_module
 
-from sparse_autoencoder import SparseAutoencoder
+from sparse_autoencoder import SparseAutoencoder,SparseAutoencoderConfig
 from splice_custom import get_splice_model
 
 class GeneratorBase(ABC):
@@ -96,11 +96,14 @@ class Generator(GeneratorBase):
         self.splice = get_splice_model()
 
         SAE_PATH = RESOURCES_DIR / "sparse_autoencoder_final.pt"
-        state_dict = torch.load(SAE_PATH, map_location=self.device)
-        self.sae_model = SparseAutoencoder(
+        config = SparseAutoencoderConfig(
             n_input_features=1024,
-            n_learned_features=8192
-        ).to(self.device)
+            n_learned_features=8192,
+        )
+
+        self.sae_model = SparseAutoencoder(config).to(self.device)
+        print(f"Loading SAE from: {SAE_PATH}")
+        state_dict = torch.load(SAE_PATH, map_location=self.device)
 
         self.sae_model.load_state_dict(state_dict, strict=False)
         self.sae_model.eval()
