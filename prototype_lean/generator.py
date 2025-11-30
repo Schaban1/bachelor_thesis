@@ -13,6 +13,7 @@ from constants import RESOURCES_DIR
 
 import torch.optim.optimizer as opt_fix
 import torch.nn as nn
+import torch.nn.functional as F
 from typing import Union, Iterable, Dict, Any
 from unittest.mock import MagicMock
 import sys
@@ -37,6 +38,37 @@ sys.modules["transformer_lens.utils"] = utils_module
 
 tl_module.hook_points = hp_module
 tl_module.utils = utils_module
+
+
+def manual_encode_fix(self, x):
+    # Logic: (Input - PreBias) -> Encoder -> Activation (ReLU/Other)
+
+    # 1. Apply pre-encoder bias (Centering)
+    if hasattr(self, 'pre_encoder_bias'):
+        # Assumes the component is a module or tensor that can be subtracted/added
+        x = x - self.pre_encoder_bias
+
+    # 2. Linear Encoding Layer
+    x = self.encoder(x)
+
+    # 3. Activation
+    if hasattr(self, 'activation'):
+        x = self.activation(x)
+    else:
+        x = F.relu(x)
+
+    return x
+
+
+def manual_decode_fix(self, f):
+    # Logic: Features -> Decoder -> + PostBias (Reconstruction)
+    x = self.decoder(f)
+
+    # 1. Apply post-decoder bias
+    if hasattr(self, 'post_decoder_bias'):
+        x = x + self.post_decoder_bias
+
+    return x
 
 from sparse_autoencoder import SparseAutoencoder,SparseAutoencoderConfig
 from splice_custom import get_splice_model
