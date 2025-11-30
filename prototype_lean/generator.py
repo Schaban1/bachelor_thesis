@@ -71,6 +71,8 @@ def manual_decode_fix(self, f):
     return x
 
 from sparse_autoencoder import SparseAutoencoder,SparseAutoencoderConfig
+SparseAutoencoder.encode = manual_encode_fix
+SparseAutoencoder.decode = manual_decode_fix
 from splice_custom import get_splice_model
 
 class GeneratorBase(ABC):
