@@ -10,8 +10,16 @@ from nicegui import ui as ngUI
 from pathlib import Path
 import os
 from constants import RESOURCES_DIR
+
 import torch.optim.optimizer as opt_fix
 from typing import Union, Iterable, Dict, Any
+from unittest.mock import MagicMock
+import sys
+
+if "transformer_lens" not in sys.modules:
+    mock_tl = MagicMock()
+    mock_tl.HookedTransformer = MagicMock
+    sys.modules["transformer_lens"] = mock_tl
 if not hasattr(opt_fix, "params_t"):
     opt_fix.params_t = Union[Iterable[torch.Tensor], Iterable[Dict[str, Any]]]
 
