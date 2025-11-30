@@ -40,13 +40,29 @@ tl_module.hook_points = hp_module
 tl_module.utils = utils_module
 
 
+def get_bias_tensor(module_or_tensor):
+    """
+    Extracts the raw tensor from a bias module or returns the tensor itself
+    """
+    if isinstance(module_or_tensor, torch.Tensor):
+        return module_or_tensor
+
+    if hasattr(module_or_tensor, '_bias_reference'):
+        return module_or_tensor._bias_reference
+
+    if hasattr(module_or_tensor, 'bias'):
+        return module_or_tensor.bias
+
+    return module_or_tensor
+
+
 def manual_encode_fix(self, x):
     # Logic: (Input - PreBias) -> Encoder -> Activation (ReLU/Other)
 
-    # 1. Apply pre-encoder bias (Centering)
+    # 1. Apply pre-encoder bias
     if hasattr(self, 'pre_encoder_bias'):
-        # Assumes the component is a module or tensor that can be subtracted/added
-        x = x - self.pre_encoder_bias
+        bias = get_bias_tensor(self.pre_encoder_bias)
+        x = x - bias
 
     # 2. Linear Encoding Layer
     x = self.encoder(x)
@@ -56,7 +72,6 @@ def manual_encode_fix(self, x):
         x = self.activation(x)
     else:
         x = F.relu(x)
-
     return x
 
 
@@ -66,7 +81,8 @@ def manual_decode_fix(self, f):
 
     # 1. Apply post-decoder bias
     if hasattr(self, 'post_decoder_bias'):
-        x = x + self.post_decoder_bias
+        bias = get_bias_tensor(self.post_decoder_bias)
+        x = x + bias
 
     return x
 
