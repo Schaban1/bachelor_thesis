@@ -15,7 +15,7 @@ class MainLoopUI(UIComponent):
                 ngUI.label().bind_text_from(self.webUI, 'user_prompt').style('font-size: 120%;')
 
             # FIRST ROW: SAE extractor
-            with ngUI.row().classes('mx-auto items-start mt-4 gap-8'):
+            with ngUI.row().classes('mx-auto items-start mt-4 gap-8 justify-center'):
                 ngUI.label('SAE Extractor').classes('w-full text-center font-bold')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
@@ -27,7 +27,7 @@ class MainLoopUI(UIComponent):
                         self.webUI.slider_containers.append(container)  # SAE sliders
 
             # SECOND ROW: Splice extractor
-            with ngUI.row().classes('mx-auto items-start mt-4 gap-8'):
+            with ngUI.row().classes('mx-auto items-start mt-4 gap-8 justify-center'):
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
                         self.webUI.images_display_splice[i] = ngUI.interactive_image() \

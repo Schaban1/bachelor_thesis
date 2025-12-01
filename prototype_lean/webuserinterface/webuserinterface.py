@@ -40,7 +40,8 @@ class WebUI:
         self.num_images_to_generate = self.args.num_recommendations
         self.score_mode = self.args.score_mode
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
-        self.images = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
+        self.images_sae = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
+        self.images_splice = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
         self.images_display = [None for _ in range(self.num_images_to_generate)]
         self.images_display_splice = [None for _ in range(self.num_images_to_generate)]
         self.slider_containers = []
@@ -97,9 +98,11 @@ class WebUI:
             (self.num_images_to_generate, self.pipe.unet.config.in_channels, 512 // 8, 512 // 8),
             device=self.pipe.device
         ) * self.pipe.scheduler.init_noise_sigma
-        self.images = self.generator.generate_image(embeddings, latents, self.loading_ui.loading_progress, self.queue_lock)
+        generated_images = self.generator.generate_image(embeddings, latents, self.loading_ui.loading_progress, self.queue_lock)
+        self.images_sae = [img.copy() for img in generated_images]
+        self.images_splice = [img.copy() for img in generated_images]
         print("[DEBUG webuserinterface: were the images generated?",flush=True)
-        self.slider_controller.on_images_generated(self.images)
+        self.slider_controller.on_images_generated(generated_images)
 
     def _pil_to_data_url(self, img: Image.Image) -> str:
         buffer = BytesIO()
@@ -108,14 +111,23 @@ class WebUI:
 
     def update_image_displays(self, single_idx=None):
         if single_idx is not None:
-            data_url = self._pil_to_data_url(self.images[single_idx])
-            self.images_display[single_idx].set_source(data_url)
-            self.images_display_splice[single_idx].set_source(data_url)  # same image displayed below
+            # Update SAE Row
+            data_url_sae = self._pil_to_data_url(self.images_sae[single_idx])
+            self.images_display[single_idx].set_source(data_url_sae)
+
+            # Update Splice Row
+            data_url_splice = self._pil_to_data_url(self.images_splice[single_idx])
+            self.images_display_splice[single_idx].set_source(data_url_splice)
         else:
-            for i, img in enumerate(self.images):
-                data_url = self._pil_to_data_url(img)
-                self.images_display[i].set_source(data_url)
-                self.images_display_splice[i].set_source(data_url)
+            for i in range(self.num_images_to_generate):
+                # Update SAE
+                data_url_sae = self._pil_to_data_url(self.images_sae[i])
+                self.images_display[i].set_source(data_url_sae)
+
+                # Update Splice
+                data_url_splice = self._pil_to_data_url(self.images_splice[i])
+                self.images_display_splice[i].set_source(data_url_splice)
+
 
 
     def get_webis_demo_template_html(self):

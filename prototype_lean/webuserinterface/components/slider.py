@@ -51,13 +51,15 @@ class SliderController:
             concept_idx = self.concept_maps[image_idx][concept_name]
             self.offsets[image_idx][concept_idx] = value
             current_offsets = dict(sorted(self.offsets[image_idx].items()))
+
+            # Use separate cache for SAE
             cache_key = (image_idx, tuple(current_offsets.items()))
             if cache_key in self.image_cache:
                 new_img = self.image_cache[cache_key]
                 self.webUI.main_loop_ui.on_image_cached(True)
             else:
                 new_img = self.editor.sae_edit(
-                    base_image=self.webUI.images[image_idx],
+                    base_image=self.webUI.images_sae[image_idx],
                     concept_offsets=current_offsets,
                     image_idx=image_idx,
                     loading_progress=self.webUI.loading_ui.loading_progress,
@@ -65,20 +67,23 @@ class SliderController:
                 )
                 self.image_cache[cache_key] = new_img
                 self.webUI.main_loop_ui.on_image_cached(False)
-            self.webUI.images[image_idx] = new_img
+            self.webUI.images_sae[image_idx] = new_img
             self.webUI.update_image_displays(single_idx=image_idx)
+
         else:
             # Splice editing
             concept_idx = self.concept_maps_splice[image_idx][concept_name]
             self.offsets_splice[image_idx][concept_idx] = value
             current_offsets = dict(sorted(self.offsets_splice[image_idx].items()))
+
             cache_key = (image_idx, tuple(current_offsets.items()))
+
             if cache_key in self.image_cache_splice:
                 new_img = self.image_cache_splice[cache_key]
                 self.webUI.main_loop_ui.on_image_cached(True)
             else:
                 new_img = self.editor.splice_edit(
-                    base_image=self.webUI.images[image_idx],
+                    base_image=self.webUI.images_splice[image_idx],
                     concept_offsets=current_offsets,
                     image_idx=image_idx,
                     loading_progress=self.webUI.loading_ui.loading_progress,
@@ -86,5 +91,5 @@ class SliderController:
                 )
                 self.image_cache_splice[cache_key] = new_img
                 self.webUI.main_loop_ui.on_image_cached(False)
-            self.webUI.images[image_idx] = new_img
+            self.webUI.images_splice[image_idx] = new_img
             self.webUI.update_image_displays(single_idx=image_idx)
