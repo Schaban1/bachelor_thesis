@@ -3,6 +3,11 @@ from .ui_component import UIComponent
 
 
 class MainLoopUI(UIComponent):
+    def create_label_updater(self, name, base_value):
+        """
+        Creates a dedicated function for a specific label to prevent loop variable capture bugs.
+        """
+        return lambda v: f"{name}: {max(0.0, base_value + v):.2f}"
 
     def build_userinterface(self):
         print("[DEBUG] build_userinterface: START", flush=True)
@@ -64,7 +69,7 @@ class MainLoopUI(UIComponent):
                             # LIVE VALUE
                             ngUI.label().bind_text_from(
                                 slider, 'value',
-                                backward=lambda v: f"{concept_name}: {max(0.0, min(1.0, concept_value + v)):+.2f}"
+                                backward=self.create_label_updater(concept_name, concept_value)
                             ).classes('text-xs text-gray-500 w-32 text-center')
                         # RIGHT
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
@@ -86,7 +91,7 @@ class MainLoopUI(UIComponent):
                                 .classes('flex-grow')
                             ngUI.label().bind_text_from(
                                 slider, 'value',
-                                backward=lambda v: f"{concept_name}: {max(0.0, min(1.0, value + v)):+.2f}"
+                                backward=self.create_label_updater(concept_name, value)
                             ).classes('text-xs text-gray-500 w-32 text-center')
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
                         slider.on('update:model-value',

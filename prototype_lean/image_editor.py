@@ -62,22 +62,30 @@ class ImageEditor:
             return self.cache[image_idx][state_key]
 
         inputs = self.clip_processor(images=base_image, return_tensors="pt")["pixel_values"].to(self.device)
-        clip_feat = self.clip_model.get_image_features(inputs)
+
+        original_clip_feat = self.clip_model.get_image_features(inputs)
+
+        # normalized version for calculations
+        clip_feat_norm = original_clip_feat / original_clip_feat.norm(dim=-1, keepdim=True)
 
         with torch.no_grad():
-            acts = self.sae.encode(clip_feat)
-            acts = acts.clone()
+            acts_original = self.sae.encode(clip_feat_norm)
+            recon_original = self.sae.decode(acts_original)
 
+            acts_modified = acts_original.clone()
             for concept_idx, offset in concept_offsets.items():
-                acts[0, concept_idx] += offset
+                acts_modified[0, concept_idx] += offset
 
-            # reconstruct steered CLIP feature vector
-            steered = self.sae.decode(acts)
-            steered = steered / steered.norm(dim=-1, keepdim=True)
+            recon_modified = self.sae.decode(acts_modified)
+            steering_delta = recon_modified - recon_original
+            target_feat = clip_feat_norm + steering_delta
+            print(f"\n[DEBUG SAE EDIT] Target_feat BEFORE manual renormalization: {target_feat:.6f}", flush=True)
+            target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True)
+            print(f"\n[DEBUG SAE EDIT] Target_feat AFTER manual renormalization: {target_feat:.6f}", flush=True)
 
-        # Generate
+        # Generate using the new target embedding
         new_img = self.generator.generate_with_splice(
-            base_image, steered, loading_progress, queue_lock
+            base_image, target_feat, loading_progress, queue_lock
         )
 
         # Cache result
