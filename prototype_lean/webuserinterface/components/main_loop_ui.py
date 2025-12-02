@@ -91,7 +91,7 @@ class MainLoopUI(UIComponent):
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
                         slider.on('update:model-value',
                                 lambda e, i=idx, c=concept_name:
-                                self.webUI.slider_controller.on_slider_change(i, c, e, is_sae=False)
+                                self.webUI.slider_controller.on_slider_change(i, c, e.args, is_sae=False)
                                 )
 
 

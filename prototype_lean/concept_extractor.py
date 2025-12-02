@@ -58,4 +58,9 @@ class SAEExtractor:
         top_idx = acts.argsort()[-top_k:][::-1]
         top_values = acts[top_idx]
         concepts = [self.concept_names[i] for i in top_idx]
+        print(f"[DEBUG SAE] concepts → type: {type(concepts)} | length: {len(concepts)}", flush=True)
+        print(f"[DEBUG SAE] concepts → {concepts}", flush=True)
+        print(f"[DEBUG SAE] values → {top_values.tolist()}", flush=True)
+        print(f"[DEBUG SAE] final return → {list(zip(concepts, top_values.tolist(), top_idx.tolist()))}", flush=True)
+        print("[DEBUG SAE: were the concepts extracted?]", flush=True)
         return list(zip(concepts, top_values.tolist(), top_idx.tolist()))
