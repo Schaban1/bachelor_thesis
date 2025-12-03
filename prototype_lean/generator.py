@@ -235,6 +235,7 @@ class Generator(GeneratorBase):
         """
         Generates a list of image(s) from given embedding
         """
+        self.initial_latent_generator.manual_seed(self.initial_latent_seed)
         if embeddings.dtype != self.pipe.dtype:
             embeddings = embeddings.type(self.pipe.dtype)
         embeddings = embeddings.to(self.pipe.device)
@@ -284,6 +285,7 @@ class Generator(GeneratorBase):
         """
         Img-to-img edit using a recomposed concept embedding.
         """
+        self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
         concept_embedding = concept_embedding.unsqueeze(0)
         concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
