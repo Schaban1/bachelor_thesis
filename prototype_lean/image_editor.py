@@ -79,9 +79,9 @@ class ImageEditor:
             recon_modified = self.sae.decode(acts_modified)
             steering_delta = recon_modified - recon_original
             target_feat = clip_feat_norm + steering_delta
-            print(f"\n[DEBUG SAE EDIT] Target_feat BEFORE manual renormalization: {target_feat:.6f}", flush=True)
+            #print(f"\n[DEBUG SAE EDIT] Target_feat BEFORE manual renormalization: {target_feat:.6f}", flush=True)
             target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True)
-            print(f"\n[DEBUG SAE EDIT] Target_feat AFTER manual renormalization: {target_feat:.6f}", flush=True)
+            #print(f"\n[DEBUG SAE EDIT] Target_feat AFTER manual renormalization: {target_feat:.6f}", flush=True)
 
         # Generate using the new target embedding
         new_img = self.generator.generate_with_splice(
