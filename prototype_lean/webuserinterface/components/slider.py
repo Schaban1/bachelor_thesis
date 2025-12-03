@@ -1,11 +1,15 @@
 from concept_extractor import SpliceExtractor, SAEExtractor
 from image_editor import ImageEditor
+from sparse_autoencoder import SparseAutoencoder, SparseAutoencoderConfig
+from constants import RESOURCES_DIR
+import torch
 
 class SliderController:
     def __init__(self, webUI, splice_model, generator, sae_model, concept_names):
         self.webUI = webUI
         self.sae_model = sae_model
         self.concept_names = concept_names
+        self.generator = generator
         #self.sae_extractor = SAEExtractor(sae_model, concept_names)
         self.splice_extractor = SpliceExtractor(splice_model)
         self.editor = ImageEditor(generator, splice_model, sae_model)
@@ -16,6 +20,28 @@ class SliderController:
         self.image_cache = {}
         self.image_cache_splice = {}
         self.original_images = {}
+
+    def load_fresh_sae(self):
+        """Loads a new SAE model from disk"""
+        print("[DEBUG] Loading FRESH SAE Model from disk...", flush=True)
+        config = SparseAutoencoderConfig(
+            n_input_features=1024,
+            n_learned_features=8192,
+        )
+        # Create new instance
+        clean_sae = SparseAutoencoder(config).to(self.generator.device)
+
+        SAE_PATH = RESOURCES_DIR / "sparse_autoencoder_final.pt"
+        state_dict = torch.load(SAE_PATH, map_location=self.generator.device)
+
+        for key in list(state_dict.keys()):
+            tensor = state_dict[key]
+            if len(tensor.shape) > 0 and tensor.shape[0] == 1:
+                state_dict[key] = tensor.squeeze(0)
+
+        clean_sae.load_state_dict(state_dict, strict=False)
+        clean_sae.eval()
+        return clean_sae
 
     def on_images_generated(self, images):
         #self.webUI.update_image_displays()
