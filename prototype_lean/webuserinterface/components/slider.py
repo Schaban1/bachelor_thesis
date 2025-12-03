@@ -13,13 +13,20 @@ class SliderController:
         self.offsets_splice = [{} for _ in range(webUI.num_images_to_generate)]
         self.image_cache = {}
         self.image_cache_splice = {}
+        self.original_images = {}
 
     def on_images_generated(self, images):
         #self.webUI.update_image_displays()
         concepts_per_image = []
         splice_concepts_per_image = []
 
+        # Clear old caches for new generation
+        self.image_cache = {}
+        self.image_cache_splice = {}
+        self.original_images = {}
+
         for i, img in enumerate(images):
+            self.original_images[i] = img.copy()
             # SAE ROW
             concepts = self.sae_extractor.extract_top_concepts(img)  # [(name, idx), ...]
             self.concept_maps[i] = {name: idx for name, _, idx in concepts}
@@ -59,7 +66,7 @@ class SliderController:
                 self.webUI.main_loop_ui.on_image_cached(True)
             else:
                 new_img = self.editor.sae_edit(
-                    base_image=self.webUI.images_sae[image_idx],
+                    base_image=self.original_images[image_idx],
                     concept_offsets=current_offsets,
                     image_idx=image_idx,
                     loading_progress=self.webUI.loading_ui.loading_progress,
@@ -83,7 +90,7 @@ class SliderController:
                 self.webUI.main_loop_ui.on_image_cached(True)
             else:
                 new_img = self.editor.splice_edit(
-                    base_image=self.webUI.images_splice[image_idx],
+                    base_image=self.original_images[image_idx],
                     concept_offsets=current_offsets,
                     image_idx=image_idx,
                     loading_progress=self.webUI.loading_ui.loading_progress,
