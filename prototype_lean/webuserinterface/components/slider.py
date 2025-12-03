@@ -4,7 +4,9 @@ from image_editor import ImageEditor
 class SliderController:
     def __init__(self, webUI, splice_model, generator, sae_model, concept_names):
         self.webUI = webUI
-        self.sae_extractor = SAEExtractor(sae_model, concept_names)
+        self.sae_model = sae_model
+        self.concept_names = concept_names
+        #self.sae_extractor = SAEExtractor(sae_model, concept_names)
         self.splice_extractor = SpliceExtractor(splice_model)
         self.editor = ImageEditor(generator, splice_model, sae_model)
         self.concept_maps = [{} for _ in range(webUI.num_images_to_generate)]
@@ -17,6 +19,7 @@ class SliderController:
 
     def on_images_generated(self, images):
         #self.webUI.update_image_displays()
+        self.sae_extractor = SAEExtractor(self.sae_model, self.concept_names)
         concepts_per_image = []
         splice_concepts_per_image = []
 
