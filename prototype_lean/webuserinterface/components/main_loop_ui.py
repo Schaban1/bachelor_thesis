@@ -33,6 +33,7 @@ class MainLoopUI(UIComponent):
 
             # SECOND ROW: Splice extractor
             with ngUI.row().classes('mx-auto items-start mt-4 gap-8 justify-center'):
+                ngUI.label('Splice Extractor').classes('w-full text-center font-bold')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
                         self.webUI.images_display_splice[i] = ngUI.interactive_image() \
