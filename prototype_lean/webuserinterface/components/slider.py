@@ -50,12 +50,27 @@ class SliderController:
         SAE_PATH = RESOURCES_DIR / "sparse_autoencoder_final.pt"
         state_dict = torch.load(SAE_PATH, map_location=self.generator.device)
 
-        for key in list(state_dict.keys()):
-            tensor = state_dict[key]
-            if len(tensor.shape) > 0 and tensor.shape[0] == 1:
-                state_dict[key] = tensor.squeeze(0)
+        new_state_dict = {}
+        for key, value in state_dict.items():
+            new_key = key
 
-        clean_sae.load_state_dict(state_dict, strict=False)
+            # 1. Fix: encoder._weight -> encoder.weight
+            if key.endswith("_weight"):
+                new_key = key.replace("_weight", "weight")
+
+            # 2. Fix: encoder._bias -> encoder.bias
+            elif key.endswith("_bias") and "encoder" in key:
+                new_key = key.replace("_bias", "bias")
+
+            # 3. Squeeze Check
+            if len(value.shape) > 0 and value.shape[0] == 1:
+                value = value.squeeze(0)
+
+            new_state_dict[new_key] = value
+
+        keys = clean_sae.load_state_dict(new_state_dict, strict=False)
+        print(f"[DEBUG] Missing Keys: {keys.missing_keys}")
+
         clean_sae.eval()
         return clean_sae
 
