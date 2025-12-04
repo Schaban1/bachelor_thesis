@@ -2,14 +2,11 @@
 
 ## Guide for running the system
 
-- `image_mean` file: There needs to be a correct path to the 
-`image_mean`file so that the custom backbone of Splice is 
-correctly set up. Adjust the path to the `image_mean` 
-file in **line 28** of `splice_custom.py` if necessary.
+- **EDIT**: No manual inclusion/adjustment of `image_mean` file needed anymore.
 
-- Use the following image when running the container:
+- **EDIT**: Use the following image when running the container:
 ```
---container-image=schaban1/concept-slider:latest
+--container-image=schaban1/thesis:latest
 ```
 
 - After you have cloned the repo, use this command, which enables navigation to the 

@@ -44,8 +44,8 @@ class SliderController:
         return clean_sae
 
     def on_images_generated(self, images):
-        #self.webUI.update_image_displays()
-        self.sae_extractor = SAEExtractor(self.sae_model, self.concept_names)
+        clean_sae_model = self.load_fresh_sae()
+        self.sae_extractor = SAEExtractor(clean_sae_model, self.concept_names)
         concepts_per_image = []
         splice_concepts_per_image = []
 
