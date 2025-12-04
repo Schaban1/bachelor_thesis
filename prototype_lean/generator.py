@@ -61,13 +61,20 @@ def manual_encode_fix(self, x):
 
     x = x / x.norm(dim=-1, keepdim=True)
 
-    result = self.forward(x)
+    # 1. Apply pre-encoder bias
+    if hasattr(self, 'pre_encoder_bias'):
+        bias = get_bias_tensor(self.pre_encoder_bias)
+        x = x - bias
 
-    if hasattr(result, 'learned_activations'):
-        return result.learned_activations
+    # 2. Linear Encoding Layer
+    x = self.encoder(x)
+
+    # 3. Activation
+    if hasattr(self, 'activation'):
+        x = self.activation(x)
     else:
-        # Fallback if it returns a tuple
-        return result[0]
+        x = F.relu(x)
+    return x
 
 
 def manual_decode_fix(self, f):
@@ -76,12 +83,8 @@ def manual_decode_fix(self, f):
 
     # 1. Apply post-decoder bias
     if hasattr(self, 'post_decoder_bias'):
-        try:
-            x = self.post_decoder_bias(x)
-        except:
-            # Fallback to manual if the module call fails (The TiedBias crash fix)
-            bias = get_bias_tensor(self.post_decoder_bias)
-            x = x + bias
+        bias = get_bias_tensor(self.post_decoder_bias)
+        x = x + bias
 
     return x
 
