@@ -30,22 +30,7 @@ class SliderController:
         )
         # Create new instance
         clean_sae = SparseAutoencoder(config).to(self.generator.device)
-        print("\n=== MODEL EXPECTATION VS CHECKPOINT REALITY ===")
 
-        # 1. What the Model wants (The Empty Slots)
-        model_keys = set(clean_sae.state_dict().keys())
-        print(f"Model expects these keys: {sorted(list(model_keys))}")
-
-        # 2. What the File has (The Data)
-        SAE_PATH = RESOURCES_DIR / "sparse_autoencoder_final.pt"
-        file_state_dict = torch.load(SAE_PATH, map_location=self.generator.device)
-        file_keys = set(file_state_dict.keys())
-        print(f"File contains these keys: {sorted(list(file_keys))}")
-
-        # 3. The Mismatch
-        print(f"Missing in File (Model won't load these): {model_keys - file_keys}")
-        print(f"Extra in File (Model will ignore these): {file_keys - model_keys}")
-        print("===============================================\n")
 
         SAE_PATH = RESOURCES_DIR / "sparse_autoencoder_final.pt"
         state_dict = torch.load(SAE_PATH, map_location=self.generator.device)
@@ -67,6 +52,22 @@ class SliderController:
                 value = value.squeeze(0)
 
             new_state_dict[new_key] = value
+
+        print("\n=== MODEL EXPECTATION VS CHECKPOINT REALITY ===")
+
+        # 1. What the Model wants (The Empty Slots)
+        model_keys = set(clean_sae.state_dict().keys())
+        print(f"Model expects these keys: {sorted(list(model_keys))}")
+
+        # 2. What the File has (The Data)
+
+        file_keys = set(new_state_dict.keys())
+        print(f"File contains these keys: {sorted(list(file_keys))}")
+
+        # 3. The Mismatch
+        print(f"Missing in File (Model won't load these): {model_keys - file_keys}")
+        print(f"Extra in File (Model will ignore these): {file_keys - model_keys}")
+        print("===============================================\n")
 
         keys = clean_sae.load_state_dict(new_state_dict, strict=False)
         print(f"[DEBUG] Missing Keys: {keys.missing_keys}")
