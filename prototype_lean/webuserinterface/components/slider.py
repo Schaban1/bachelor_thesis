@@ -53,6 +53,11 @@ class SliderController:
 
             new_state_dict[new_key] = value
 
+        print("Fixing dimensions in state_dict...")
+        for key in list(new_state_dict.keys()):
+            tensor = new_state_dict[key]
+            print(f"Fixed {key}: {tensor.shape} -> {new_state_dict[key].shape}")
+
         print("\n=== MODEL EXPECTATION VS CHECKPOINT REALITY ===")
 
         # 1. What the Model wants (The Empty Slots)
