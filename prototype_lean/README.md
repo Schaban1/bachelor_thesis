@@ -6,7 +6,7 @@
 
 - **EDIT**: Use the following image when running the container:
 ```
---container-image=schaban1/thesis:latest
+--container-image=schaban1/bachelor:latest
 ```
 
 - After you have cloned the repo, use this command, which enables navigation to the 
