@@ -57,7 +57,9 @@ def get_bias_tensor(module_or_tensor):
 
 
 def manual_encode_fix(self, x):
-    # Logic: (Input - PreBias) -> Encoder -> Activation (ReLU/Other)
+    # Logic: (Input - PreBias) -> Encoder -> Activation
+
+    x = x / x.norm(dim=-1, keepdim=True)
 
     # 1. Apply pre-encoder bias
     if hasattr(self, 'pre_encoder_bias'):
@@ -239,8 +241,8 @@ class Generator(GeneratorBase):
         if embeddings.dtype != self.pipe.dtype:
             embeddings = embeddings.type(self.pipe.dtype)
         embeddings = embeddings.to(self.pipe.device)
-        latents = latents.to(self.pipe.device)
-        latents = latents.type(self.pipe.dtype)
+        #latents = latents.to(self.pipe.device)
+        #latents = latents.type(self.pipe.dtype)
 
         pos_prompt_embeds = embeddings
         num_embeddings = pos_prompt_embeds.shape[0]
