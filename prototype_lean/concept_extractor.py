@@ -42,9 +42,7 @@ class SAEExtractor:
 
     @torch.no_grad()
     def extract_top_concepts(self, pil_image, top_k=5):
-        inputs = self.clip_processor(images=pil_image, padding=True,
-            do_center_crop=True,
-            do_resize=True,return_tensors="pt")["pixel_values"].to(self.device)
+        inputs = self.clip_processor(images=pil_image,return_tensors="pt")["pixel_values"].to(self.device)
         clip_feat = self.clip_model.get_image_features(inputs)
         print(f"[DEBUG SAE] clip_feat shape: {clip_feat.shape}", flush=True)
         norm_before = clip_feat.norm(dim=-1).mean().item()
