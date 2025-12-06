@@ -64,7 +64,7 @@ def manual_encode_fix(self, x):
     # 1. Apply pre-encoder bias
     if hasattr(self, 'pre_encoder_bias'):
         bias = get_bias_tensor(self.pre_encoder_bias)
-        x = x - (bias * 0.5)
+        x = x - bias
 
     # 2. Linear Encoding Layer
     x = self.encoder(x)
