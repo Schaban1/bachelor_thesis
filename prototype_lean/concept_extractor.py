@@ -54,7 +54,7 @@ class SAEExtractor:
         norm_after = clip_feat.norm(dim=-1).mean().item()
         print(f"[DEBUG SAE] Norm AFTER manual fix:  {norm_after:.6f}\n", flush=True)
         '''
-        acts = self.sae.encode(clip_feat)               # → (1, 8192)
+        acts = self.sae.encode(clip_feat)               # → (1,8192)
         acts = acts.squeeze(0).cpu().numpy()
 
         top_idx = acts.argsort()[-top_k:][::-1]
