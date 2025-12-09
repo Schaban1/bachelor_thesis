@@ -59,7 +59,7 @@ def get_bias_tensor(module_or_tensor):
 def manual_encode_fix(self, x):
     # Logic: (Input - PreBias) -> Encoder -> Activation
 
-    x = x / x.norm(dim=-1, keepdim=True)
+    #x = x / x.norm(dim=-1, keepdim=True)
 
     # 1. Apply pre-encoder bias
     if hasattr(self, 'pre_encoder_bias'):
