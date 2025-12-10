@@ -1,9 +1,9 @@
-# generator/image_editor.py
 from collections import defaultdict
 import torch
 from transformers import CLIPModel, CLIPProcessor
 from pathlib import Path
 import os
+import torch.nn.functional as F
 
 class ImageEditor:
     def __init__(self, generator, splice_model, sae_model):
@@ -55,39 +55,31 @@ class ImageEditor:
 
     @torch.no_grad()
     def sae_edit(self, base_image, concept_offsets, image_idx, loading_progress=None, queue_lock=None):
-        state_items = sorted(concept_offsets.items())
-        state_key = tuple(state_items)
+        if not concept_offsets:
+            return base_image
 
+        state_key = tuple(sorted(concept_offsets.items()))
         if state_key in self.cache[image_idx]:
             return self.cache[image_idx][state_key]
 
+        # 1. Raw CLIP feature
         inputs = self.clip_processor(images=base_image, return_tensors="pt")["pixel_values"].to(self.device)
+        clip_feat = self.clip_model.get_image_features(inputs)  # (1, 1024), norm ≈20
 
-        original_clip_feat = self.clip_model.get_image_features(inputs)
+        # 2. SAE encode
+        acts = self.sae.encode(clip_feat)  # (1, 8192)
+        acts = acts.clone()
 
-        # normalized version for calculations
-        clip_feat_norm = original_clip_feat / original_clip_feat.norm(dim=-1, keepdim=True)
+        # 3. Steering
+        for idx, offset in concept_offsets.items():
+            acts[0, idx] = F.relu(acts[0, idx] + offset)
 
-        with torch.no_grad():
-            acts_original = self.sae.encode(clip_feat_norm)
-            recon_original = self.sae.decode(acts_original)
+        # 4. Decode
+        steered = self.sae.decode(acts)
+        steered = steered / steered.norm(dim=-1, keepdim=True).clamp(min=1e-8)
 
-            acts_modified = acts_original.clone()
-            for concept_idx, offset in concept_offsets.items():
-                acts_modified[0, concept_idx] += offset
+        # 5. Generate
+        new_img = self.generator.generate_with_splice(base_image, steered, loading_progress, queue_lock)
 
-            recon_modified = self.sae.decode(acts_modified)
-            steering_delta = recon_modified - recon_original
-            target_feat = clip_feat_norm + steering_delta
-            #print(f"\n[DEBUG SAE EDIT] Target_feat BEFORE manual renormalization: {target_feat:.6f}", flush=True)
-            target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True)
-            #print(f"\n[DEBUG SAE EDIT] Target_feat AFTER manual renormalization: {target_feat:.6f}", flush=True)
-
-        # Generate using the new target embedding
-        new_img = self.generator.generate_with_splice(
-            base_image, target_feat, loading_progress, queue_lock
-        )
-
-        # Cache result
         self.cache[image_idx][state_key] = new_img
         return new_img

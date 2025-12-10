@@ -44,16 +44,7 @@ class SAEExtractor:
     def extract_top_concepts(self, pil_image, top_k=5):
         inputs = self.clip_processor(images=pil_image,return_tensors="pt")["pixel_values"].to(self.device)
         clip_feat = self.clip_model.get_image_features(inputs)
-        '''
-        print(f"[DEBUG SAE] clip_feat shape: {clip_feat.shape}", flush=True)
-        norm_before = clip_feat.norm(dim=-1).mean().item()
-        print(f"\n[DEBUG SAE] Norm BEFORE manual fix: {norm_before:.6f}", flush=True)
 
-        #clip_feat = clip_feat / clip_feat.norm(dim=-1, keepdim=True)
-
-        norm_after = clip_feat.norm(dim=-1).mean().item()
-        print(f"[DEBUG SAE] Norm AFTER manual fix:  {norm_after:.6f}\n", flush=True)
-        '''
         acts = self.sae.encode(clip_feat)               # → (1,8192)
         acts = acts.squeeze(0).cpu().numpy()
 
