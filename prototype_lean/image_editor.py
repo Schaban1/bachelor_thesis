@@ -76,6 +76,11 @@ class ImageEditor:
                 new_val = acts_modified[0, concept_idx] + offset
                 acts_modified[0, concept_idx] = torch.clamp(new_val, min=0.0)
 
+            if torch.allclose(acts_original, acts_modified):
+                print(f"[DEBUG] Clamping resulted in no change for Image {image_idx}. Skipping generation.")
+                self.cache[image_idx][state_key] = base_image
+                return base_image
+
             recon_modified = self.sae.decode(acts_modified)
             steering_delta = recon_modified - recon_original
             target_feat = clip_feat_norm + steering_delta
