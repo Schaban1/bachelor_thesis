@@ -3,6 +3,7 @@ import torch
 from transformers import CLIPModel, CLIPProcessor
 from pathlib import Path
 import os
+import hashlib
 
 class ImageEditor:
     def __init__(self, generator, splice_model, sae_model):
@@ -58,7 +59,10 @@ class ImageEditor:
         state_key = tuple(state_items)
 
         if state_key in self.cache[image_idx]:
-            return self.cache[image_idx][state_key]
+            cached_img = self.cache[image_idx][state_key]
+            img_hash = hashlib.md5(cached_img.tobytes()).hexdigest()[:8]
+            print(f"[CACHE HIT] Returning image {image_idx} | ID: {img_hash}", flush=True)
+            return cached_img
 
         inputs = self.clip_processor(images=base_image, return_tensors="pt")["pixel_values"].to(self.device)
 
@@ -85,6 +89,9 @@ class ImageEditor:
         new_img = self.generator.generate_with_splice(
             base_image, target_feat, loading_progress, queue_lock
         )
+
+        img_hash = hashlib.md5(new_img.tobytes()).hexdigest()[:8]
+        print(f"[GENERATOR] New Image {image_idx} Created | Pixel Hash: {img_hash}", flush=True)
 
         # Cache result
         self.cache[image_idx][state_key] = new_img
