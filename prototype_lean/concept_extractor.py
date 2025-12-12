@@ -42,18 +42,43 @@ class SAEExtractor:
 
     @torch.no_grad()
     def extract_top_concepts(self, pil_image, top_k=5):
-        inputs = self.clip_processor(images=pil_image,return_tensors="pt")["pixel_values"].to(self.device)
+        inputs = self.clip_processor(images=pil_image, return_tensors="pt")["pixel_values"].to(self.device)
         clip_feat = self.clip_model.get_image_features(inputs)
 
-        acts = self.sae.encode(clip_feat)               # → (1,8192)
+        acts = self.sae.encode(clip_feat)  # → (1, 8192)
         acts = acts.squeeze(0).cpu().numpy()
 
-        top_idx = acts.argsort()[-top_k:][::-1]
-        top_values = acts[top_idx]
-        concepts = [self.concept_names[i] for i in top_idx]
-        print(f"[DEBUG SAE] concepts → type: {type(concepts)} | length: {len(concepts)}", flush=True)
-        print(f"[DEBUG SAE] concepts → {concepts}", flush=True)
-        print(f"[DEBUG SAE] values → {top_values.tolist()}", flush=True)
-        print(f"[DEBUG SAE] final return → {list(zip(concepts, top_values.tolist(), top_idx.tolist()))}", flush=True)
-        print("[DEBUG SAE: were the concepts extracted?]", flush=True)
-        return list(zip(concepts, top_values.tolist(), top_idx.tolist()))
+        # 1. Sort ALL indices by activation value (descending)
+        # We process more than top_k because we might skip duplicates
+        sorted_indices = acts.argsort()[::-1]
+
+        unique_concepts = []
+        seen_names = set()
+
+        # 2. Iterate until we fill top_k with UNIQUE names
+        for idx in sorted_indices:
+            if len(unique_concepts) >= top_k:
+                break
+
+            val = acts[idx]
+
+            # Optimization: Stop if activation is 0
+            if val <= 0:
+                break
+
+            name = self.concept_names[idx]
+
+            # 3. Check for duplicates
+            if name not in seen_names:
+                seen_names.add(name)
+                unique_concepts.append((name, float(val), int(idx)))
+
+        # Unpack for logging
+        if unique_concepts:
+            concepts, top_values, top_idx = zip(*unique_concepts)
+            print(f"[DEBUG SAE] concepts → {list(concepts)}", flush=True)
+            print(f"[DEBUG SAE] values → {list(top_values)}", flush=True)
+        else:
+            print("[DEBUG SAE] No active concepts found.", flush=True)
+
+        return unique_concepts
