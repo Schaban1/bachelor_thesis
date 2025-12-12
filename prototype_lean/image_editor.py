@@ -69,10 +69,10 @@ class ImageEditor:
         original_clip_feat = self.clip_model.get_image_features(inputs)
 
         # normalized version for calculations
-        clip_feat_norm = original_clip_feat / original_clip_feat.norm(dim=-1, keepdim=True)
+        #clip_feat_norm = original_clip_feat / original_clip_feat.norm(dim=-1, keepdim=True)
 
         with torch.no_grad():
-            acts_original = self.sae.encode(clip_feat_norm)
+            acts_original = self.sae.encode(original_clip_feat)
             recon_original = self.sae.decode(acts_original)
 
             acts_modified = acts_original.clone()
@@ -82,7 +82,7 @@ class ImageEditor:
 
             recon_modified = self.sae.decode(acts_modified)
             steering_delta = recon_modified - recon_original
-            target_feat = clip_feat_norm + steering_delta
+            target_feat = original_clip_feat + steering_delta
             target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True)
 
         # Generate using the new target embedding
