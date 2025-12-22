@@ -77,7 +77,7 @@ class MainLoopUI(UIComponent):
                                 .classes('flex-grow')
                             ngUI.label().bind_text_from(
                                 slider, 'value',
-                                backward=self.create_label_updater(concept_name, concept_value)
+                                backward=self.create_label_updater(concept_name, concept_value, is_relative=True)
                             ).classes('text-xs text-gray-500 w-32 text-center')
                         # RIGHT
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')

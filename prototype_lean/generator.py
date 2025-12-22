@@ -289,8 +289,16 @@ class Generator(GeneratorBase):
         """
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
-        concept_embedding = concept_embedding.unsqueeze(0)
+        if concept_embedding.dim() == 2:
+            concept_embedding = concept_embedding.unsqueeze(1)
+
         concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
+        negative_embedding = torch.zeros_like(concept_embedding)
+
+        stacked_embedding = torch.cat([negative_embedding, concept_embedding], dim=0)
+
+        #concept_embedding = concept_embedding.unsqueeze(0)
+        #concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
         task = lambda: self.ip_pipe(
             height=self.height,
             width=self.width,
@@ -314,7 +322,7 @@ class Generator(GeneratorBase):
                 num_steps=self.num_inference_steps,
             ),
             image=base_image,
-            ip_adapter_image_embeds=[concept_embedding]
+            ip_adapter_image_embeds=[stacked_embedding]
         ).images[0]
 
         result = queue_lock.do_work(task)
