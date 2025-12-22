@@ -288,16 +288,6 @@ class Generator(GeneratorBase):
         Img-to-img edit using a recomposed concept embedding.
         """
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
-        """
-                if concept_embedding.dim() == 2:
-            concept_embedding = concept_embedding.unsqueeze(1)
-
-        concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
-        negative_embedding = torch.zeros_like(concept_embedding)
-
-        stacked_embedding = torch.cat([negative_embedding, concept_embedding], dim=0)
-
-        """
 
         concept_embedding = concept_embedding.unsqueeze(0)
         concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
@@ -312,6 +302,7 @@ class Generator(GeneratorBase):
             ),
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
+            strength=0.65,
             latents=None,
             generator=self.initial_latent_generator,
             callback_on_step_end=partial(
