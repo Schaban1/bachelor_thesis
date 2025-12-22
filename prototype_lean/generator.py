@@ -224,7 +224,7 @@ class Generator(GeneratorBase):
                 cache_dir=CACHE_DIR,
                 weight_name="ip-adapter_sd15.bin",
             )
-        self.ip_pipe.set_ip_adapter_scale(0.8)
+        self.ip_pipe.set_ip_adapter_scale(1.2)
 
         try:
             self.ip_pipe.enable_xformers_memory_efficient_attention()
@@ -288,8 +288,8 @@ class Generator(GeneratorBase):
         Img-to-img edit using a recomposed concept embedding.
         """
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
-
-        if concept_embedding.dim() == 2:
+        """
+                if concept_embedding.dim() == 2:
             concept_embedding = concept_embedding.unsqueeze(1)
 
         concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
@@ -297,8 +297,10 @@ class Generator(GeneratorBase):
 
         stacked_embedding = torch.cat([negative_embedding, concept_embedding], dim=0)
 
-        #concept_embedding = concept_embedding.unsqueeze(0)
-        #concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
+        """
+
+        concept_embedding = concept_embedding.unsqueeze(0)
+        concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
         task = lambda: self.ip_pipe(
             height=self.height,
             width=self.width,
@@ -309,8 +311,7 @@ class Generator(GeneratorBase):
                 if self.use_negative_prompt else None
             ),
             num_inference_steps=self.num_inference_steps,
-            strength=0.65,
-            guidance_scale=7.5,
+            guidance_scale=self.guidance_scale,
             latents=None,
             generator=self.initial_latent_generator,
             callback_on_step_end=partial(
@@ -322,7 +323,7 @@ class Generator(GeneratorBase):
                 num_steps=self.num_inference_steps,
             ),
             image=base_image,
-            ip_adapter_image_embeds=[stacked_embedding]
+            ip_adapter_image_embeds=[concept_embedding]
         ).images[0]
 
         result = queue_lock.do_work(task)

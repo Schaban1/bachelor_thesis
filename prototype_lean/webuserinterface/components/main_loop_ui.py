@@ -72,8 +72,7 @@ class MainLoopUI(UIComponent):
                         with ngUI.row().classes('flex-grow items-center'):
                             # FIX: Added 'label-value' prop to show % sign on the handle
                             slider = ngUI.slider(min=-0.1, max=0.1, step=0.05, value=0) \
-                                .props(
-                                'label-always :label-value="(value > 0 ? \'+\' : \'\') + Math.round(value * 100) + \'%\'"') \
+                                .props('label-always :label-value="(value * 100).toFixed(0) + \'%\'"') \
                                 .classes('flex-grow')
                             ngUI.label().bind_text_from(
                                 slider, 'value',
