@@ -301,7 +301,8 @@ class Generator(GeneratorBase):
                 if self.use_negative_prompt else None
             ),
             num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
+            strength=0.65,
+            guidance_scale=7.5,
             latents=None,
             generator=self.initial_latent_generator,
             callback_on_step_end=partial(

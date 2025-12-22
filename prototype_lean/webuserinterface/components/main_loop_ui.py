@@ -3,12 +3,18 @@ from .ui_component import UIComponent
 
 
 class MainLoopUI(UIComponent):
-    def create_label_updater(self, name, base_value):
+    def create_label_updater(self, name, base_value, is_relative=False):
         """
-        Creates a dedicated function for a specific label to prevent loop variable capture bugs.
+        Creates a dedicated function for updating labels.
+        - If is_relative=True (SAE): Calculates Base * (1 + v)
+        - If is_relative=False (Splice): Calculates Base + v
         """
-        return lambda v: f"{name}: {max(0.0, base_value + v):.2f}"
-
+        if is_relative:
+            # SAE Logic: Percentage change (e.g. 0.05 is +5%)
+            return lambda v: f"{name}: {max(0.0, base_value * (1.0 + v)):.2f}"
+        else:
+            # Splice Logic: Absolute addition (e.g. 0.1 is +0.1)
+            return lambda v: f"{name}: {max(0.0, base_value + v):.2f}"
     def build_userinterface(self):
         print("[DEBUG] build_userinterface: START", flush=True)
         with ngUI.column().classes('mx-auto items-center pl-24 pr-24') \
@@ -64,10 +70,11 @@ class MainLoopUI(UIComponent):
                         ngUI.label("Less").classes('text-xs text-gray-500 w-12 text-left')
                         # MIDDLE: Slider + Value
                         with ngUI.row().classes('flex-grow items-center'):
-                            slider = ngUI.slider(min=-0.2, max=0.2, step=0.1, value=0) \
-                                .props('label-always') \
+                            # FIX: Added 'label-value' prop to show % sign on the handle
+                            slider = ngUI.slider(min=-0.1, max=0.1, step=0.05, value=0) \
+                                .props(
+                                'label-always :label-value="(value > 0 ? \'+\' : \'\') + Math.round(value * 100) + \'%\'"') \
                                 .classes('flex-grow')
-                            # LIVE VALUE
                             ngUI.label().bind_text_from(
                                 slider, 'value',
                                 backward=self.create_label_updater(concept_name, concept_value)

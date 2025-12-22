@@ -83,7 +83,7 @@ class ImageEditor:
             recon_modified = self.sae.decode(acts_modified)
             steering_delta = recon_modified - recon_original
             target_feat = original_clip_feat + steering_delta
-            target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True)
+            #target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True)
 
         # Generate using the new target embedding
         new_img = self.generator.generate_with_splice(
