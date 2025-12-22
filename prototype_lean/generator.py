@@ -322,7 +322,7 @@ class Generator(GeneratorBase):
                 batch_size=1,
                 num_steps=self.num_inference_steps,
             ),
-            image=base_image,
+            #image=base_image,
             ip_adapter_image_embeds=[concept_embedding]
         ).images[0]
 
