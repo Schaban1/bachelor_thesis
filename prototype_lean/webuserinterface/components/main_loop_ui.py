@@ -28,6 +28,8 @@ class MainLoopUI(UIComponent):
             # FIRST ROW: SAE extractor
             with ngUI.row().classes('mx-auto items-start mt-4 gap-8 justify-center'):
                 ngUI.label('SAE Extractor').classes('w-full text-center font-bold')
+                ngUI.label("SAE sliders adjust concept strength relatively in 5 % steps (min./max.: ±10%)").classes(
+                    'text-xs text-gray-600 italic mb-2 text-center')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
                         self.webUI.images_display[i] = ngUI.interactive_image() \
@@ -40,6 +42,8 @@ class MainLoopUI(UIComponent):
             # SECOND ROW: Splice extractor
             with ngUI.row().classes('mx-auto items-start mt-4 gap-8 justify-center'):
                 ngUI.label('Splice Extractor').classes('w-full text-center font-bold')
+                ngUI.label("Splice sliders adjust concept strength in absolute 0.1 steps (min./max.: ±0.2)").classes(
+                    'text-xs text-gray-600 italic mb-2 text-center')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
                         self.webUI.images_display_splice[i] = ngUI.interactive_image() \
@@ -61,8 +65,6 @@ class MainLoopUI(UIComponent):
             container.clear()
             print("[DEBUG] Clearing container {idx}",flush=True)
             with container:
-                ngUI.label("SAE sliders adjust concept strength relatively in 5 % steps (min./max.: ±10%)").classes(
-                    'text-xs text-gray-600 italic mb-2 text-center')
                 for concept_name, concept_value in concepts_per_image[idx]:
                     # CONCEPT NAME
                     ngUI.label(concept_name).classes('text-center font-bold text-sm mb-1 text-blue-600')
@@ -90,8 +92,6 @@ class MainLoopUI(UIComponent):
         for idx, container in enumerate(self.webUI.slider_containers_splice):
             container.clear()
             with container:
-                ngUI.label("Splice sliders adjust concept strength in absolute 0.1 steps (min./max.: ±0.2)").classes(
-                    'text-xs text-gray-600 italic mb-2 text-center')
                 for concept_name, value in splice_concepts_per_image[idx]:
                     ngUI.label(concept_name).classes('text-center font-bold text-sm mb-1 text-blue-600')
                     with ngUI.row().classes('w-full items-center gap-2'):

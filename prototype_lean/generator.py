@@ -224,7 +224,7 @@ class Generator(GeneratorBase):
                 cache_dir=CACHE_DIR,
                 weight_name="ip-adapter_sd15.bin",
             )
-        self.ip_pipe.set_ip_adapter_scale(1.2)
+        self.ip_pipe.set_ip_adapter_scale(1.5)
 
         try:
             self.ip_pipe.enable_xformers_memory_efficient_attention()
@@ -313,7 +313,7 @@ class Generator(GeneratorBase):
                 batch_size=1,
                 num_steps=self.num_inference_steps,
             ),
-            image=base_image,
+            #image=base_image,
             ip_adapter_image_embeds=[concept_embedding]
         ).images[0]
 
