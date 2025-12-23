@@ -61,6 +61,8 @@ class MainLoopUI(UIComponent):
             container.clear()
             print("[DEBUG] Clearing container {idx}",flush=True)
             with container:
+                ngUI.label("SAE sliders adjust concept strength relatively in 5 % steps (min./max.: ±10%)").classes(
+                    'text-xs text-gray-600 italic mb-2 text-center')
                 for concept_name, concept_value in concepts_per_image[idx]:
                     # CONCEPT NAME
                     ngUI.label(concept_name).classes('text-center font-bold text-sm mb-1 text-blue-600')
@@ -74,7 +76,6 @@ class MainLoopUI(UIComponent):
                             slider = ngUI.slider(min=-0.1, max=0.1, step=0.05, value=0) \
                                 .props('label-always') \
                                 .classes('flex-grow')
-                            slider.bind_label_from(slider, 'value', lambda v: f"{v * 100:+.0f}%")
                             ngUI.label().bind_text_from(
                                 slider, 'value',
                                 backward=self.create_label_updater(concept_name, concept_value, is_relative=True)
@@ -89,6 +90,8 @@ class MainLoopUI(UIComponent):
         for idx, container in enumerate(self.webUI.slider_containers_splice):
             container.clear()
             with container:
+                ngUI.label("Splice sliders adjust concept strength in absolute 0.1 steps (min./max.: ±0.2)").classes(
+                    'text-xs text-gray-600 italic mb-2 text-center')
                 for concept_name, value in splice_concepts_per_image[idx]:
                     ngUI.label(concept_name).classes('text-center font-bold text-sm mb-1 text-blue-600')
                     with ngUI.row().classes('w-full items-center gap-2'):
