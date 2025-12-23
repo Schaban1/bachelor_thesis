@@ -27,9 +27,11 @@ class MainLoopUI(UIComponent):
 
             # FIRST ROW: SAE extractor
             with ngUI.row().classes('mx-auto items-start mt-4 gap-8 justify-center'):
-                ngUI.label('SAE Extractor').classes('w-full text-center font-bold')
-                ngUI.label("SAE sliders adjust concept strength relatively in 5 % steps (min./max.: ±10%)").classes(
-                    'text-xs text-gray-600 italic mb-2 text-center')
+                with ngUI.column().classes('w-full items-center'):
+                    ngUI.label('SAE Extractor').classes('text-center font-bold')
+                    ngUI.label(
+                        "SAE sliders adjust concept strength relatively in 5 % steps (min./max.: ±10%)"
+                    ).classes('text-xs text-gray-600 italic mb-2 text-center')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
                         self.webUI.images_display[i] = ngUI.interactive_image() \
@@ -41,9 +43,11 @@ class MainLoopUI(UIComponent):
 
             # SECOND ROW: Splice extractor
             with ngUI.row().classes('mx-auto items-start mt-4 gap-8 justify-center'):
-                ngUI.label('Splice Extractor').classes('w-full text-center font-bold')
-                ngUI.label("Splice sliders adjust concept strength in absolute 0.1 steps (min./max.: ±0.2)").classes(
-                    'text-xs text-gray-600 italic mb-2 text-center')
+                with ngUI.column().classes('w-full items-center'):
+                    ngUI.label('Splice Extractor').classes('text-center font-bold')
+                    ngUI.label(
+                        "Splice sliders adjust concept strength in absolute 0.1 steps (min./max.: ±0.2)"
+                    ).classes('text-xs text-gray-600 italic mb-2 text-center')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
                         self.webUI.images_display_splice[i] = ngUI.interactive_image() \

@@ -218,6 +218,7 @@ class Generator(GeneratorBase):
         self.ip_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
         self.ip_pipe.fuse_lora()
 
+        """
         self.ip_pipe.load_ip_adapter(
                 "h94/IP-Adapter",
                 subfolder="models",
@@ -225,7 +226,7 @@ class Generator(GeneratorBase):
                 weight_name="ip-adapter_sd15.bin",
             )
         self.ip_pipe.set_ip_adapter_scale(1.5)
-
+        """
         try:
             self.ip_pipe.enable_xformers_memory_efficient_attention()
         except:
@@ -275,7 +276,7 @@ class Generator(GeneratorBase):
         self.latest_images.extend(images)
 
         return images
-
+    """
     @torch.no_grad()
     def generate_with_splice(
             self,
@@ -284,9 +285,6 @@ class Generator(GeneratorBase):
             loading_progress,
             queue_lock
     ) -> Image:
-        """
-        Img-to-img edit using a recomposed concept embedding.
-        """
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
         concept_embedding = concept_embedding.unsqueeze(0)
@@ -319,3 +317,39 @@ class Generator(GeneratorBase):
 
         result = queue_lock.do_work(task)
         return result.result()  # single PIL image
+    """
+
+    @torch.no_grad()
+    def generate_with_splice(
+            self,
+            base_image: Image,
+            concept_embedding: torch.Tensor,
+            loading_progress,
+            queue_lock
+    ) -> Image:
+        """ Generate using steered embedding as prompt_embeds """
+        self.initial_latent_generator.manual_seed(self.initial_latent_seed)
+
+        prompt_embeds = concept_embedding.unsqueeze(0).to(dtype=torch.float16, device=self.device)
+
+        task = lambda: self.ip_pipe(
+            height=self.height,
+            width=self.width,
+            num_images_per_prompt=1,
+            prompt_embeds=prompt_embeds,
+            negative_prompt_embeds=self.negative_prompt_embed.repeat(1, 1, 1) if self.use_negative_prompt else None,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=self.initial_latent_generator,
+            callback_on_step_end=partial(
+                self.callback,
+                current_step=0,
+                num_embeddings=1,
+                loading_progress=loading_progress,
+                batch_size=1,
+                num_steps=self.num_inference_steps,
+            ),
+        ).images[0]
+
+        result = queue_lock.do_work(task)
+        return result.result()
