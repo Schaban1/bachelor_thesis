@@ -2,7 +2,7 @@ import logging
 import torch
 from PIL.Image import Image
 from abc import abstractmethod, ABC
-from diffusers import StableDiffusionPipeline, LCMScheduler
+from diffusers import StableDiffusionPipeline, LCMScheduler, EulerDiscreteScheduler
 from functools import partial
 from nicegui import binding
 from torch import Tensor
@@ -167,10 +167,6 @@ class Generator(GeneratorBase):
         self.sae_model.load_state_dict(state_dict, strict=False)
         self.sae_model.eval()
 
-        self.projection = torch.nn.Linear(1024, 768, bias=False).to(self.device)
-        with torch.no_grad():
-            torch.nn.init.normal_(self.projection.weight, std=0.02)
-
         os.environ["HF_HOME"] = str(Path(__file__).resolve().parent / "cache")
         os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
         os.environ["DIFFUSERS_CACHE"] = os.environ["HF_HOME"]
@@ -218,9 +214,10 @@ class Generator(GeneratorBase):
                 torch_dtype=torch.float16,
             ).to(device=self.device)
 
-        self.ip_pipe.scheduler = LCMScheduler.from_config(self.ip_pipe.scheduler.config)
-        self.ip_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
-        self.ip_pipe.fuse_lora()
+        self.ip_pipe.scheduler = EulerDiscreteScheduler.from_config(self.ip_pipe.scheduler.config)
+        #self.ip_pipe.scheduler = LCMScheduler.from_config(self.ip_pipe.scheduler.config)
+        #self.ip_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
+        #self.ip_pipe.fuse_lora()
 
         """
         self.ip_pipe.load_ip_adapter(
@@ -280,7 +277,7 @@ class Generator(GeneratorBase):
         self.latest_images.extend(images)
 
         return images
-    """
+
     @torch.no_grad()
     def generate_with_splice(
             self,
@@ -302,7 +299,7 @@ class Generator(GeneratorBase):
                 self.negative_prompt_embed.repeat(1, 1, 1)
                 if self.use_negative_prompt else None
             ),
-            num_inference_steps=self.num_inference_steps,
+            num_inference_steps=50,
             guidance_scale=self.guidance_scale,
             strength=0.65,
             latents=None,
@@ -321,42 +318,3 @@ class Generator(GeneratorBase):
 
         result = queue_lock.do_work(task)
         return result.result()  # single PIL image
-    """
-
-    @torch.no_grad()
-    def generate_with_splice(
-            self,
-            base_image: Image,
-            concept_embedding: torch.Tensor,
-            loading_progress,
-            queue_lock
-    ) -> Image:
-        """ Generate using steered embedding as prompt_embeds """
-        self.initial_latent_generator.manual_seed(self.initial_latent_seed)
-
-        #prompt_embeds = concept_embedding.unsqueeze(0).to(dtype=torch.float16, device=self.device)
-
-        projected = self.projection(concept_embedding.unsqueeze(0))
-        prompt_embeds = projected.to(dtype=torch.float16, device=self.device)
-
-        task = lambda: self.ip_pipe(
-            height=self.height,
-            width=self.width,
-            num_images_per_prompt=1,
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=self.negative_prompt_embed.repeat(1, 1, 1) if self.use_negative_prompt else None,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            generator=self.initial_latent_generator,
-            callback_on_step_end=partial(
-                self.callback,
-                current_step=0,
-                num_embeddings=1,
-                loading_progress=loading_progress,
-                batch_size=1,
-                num_steps=self.num_inference_steps,
-            ),
-        ).images[0]
-
-        result = queue_lock.do_work(task)
-        return result.result()
