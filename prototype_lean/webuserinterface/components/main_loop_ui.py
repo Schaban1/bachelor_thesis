@@ -31,7 +31,7 @@ class MainLoopUI(UIComponent):
                     ngUI.label('SAE Extractor').classes('text-center font-bold')
                     ngUI.label(
                         "SAE sliders adjust concept strength relatively in 5 % steps (min./max.: ±10%)"
-                    ).classes('text-xs text-gray-600 italic mb-2 text-center')
+                    ).classes('text-sm text-gray-600 italic mb-2 text-center')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
                         self.webUI.images_display[i] = ngUI.interactive_image() \
@@ -47,7 +47,7 @@ class MainLoopUI(UIComponent):
                     ngUI.label('Splice Extractor').classes('text-center font-bold')
                     ngUI.label(
                         "Splice sliders adjust concept strength in absolute 0.1 steps (min./max.: ±0.2)"
-                    ).classes('text-xs text-gray-600 italic mb-2 text-center')
+                    ).classes('text-sm text-gray-600 italic mb-2 text-center')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
                         self.webUI.images_display_splice[i] = ngUI.interactive_image() \

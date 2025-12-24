@@ -167,6 +167,10 @@ class Generator(GeneratorBase):
         self.sae_model.load_state_dict(state_dict, strict=False)
         self.sae_model.eval()
 
+        self.projection = torch.nn.Linear(1024, 768, bias=False).to(self.device)
+        with torch.no_grad():
+            torch.nn.init.normal_(self.projection.weight, std=0.02)
+
         os.environ["HF_HOME"] = str(Path(__file__).resolve().parent / "cache")
         os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
         os.environ["DIFFUSERS_CACHE"] = os.environ["HF_HOME"]
@@ -330,7 +334,10 @@ class Generator(GeneratorBase):
         """ Generate using steered embedding as prompt_embeds """
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
-        prompt_embeds = concept_embedding.unsqueeze(0).to(dtype=torch.float16, device=self.device)
+        #prompt_embeds = concept_embedding.unsqueeze(0).to(dtype=torch.float16, device=self.device)
+
+        projected = self.projection(concept_embedding.unsqueeze(0))
+        prompt_embeds = projected.to(dtype=torch.float16, device=self.device)
 
         task = lambda: self.ip_pipe(
             height=self.height,
