@@ -219,7 +219,6 @@ class Generator(GeneratorBase):
         #self.ip_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
         #self.ip_pipe.fuse_lora()
 
-        """
         self.ip_pipe.load_ip_adapter(
                 "h94/IP-Adapter",
                 subfolder="models",
@@ -227,7 +226,7 @@ class Generator(GeneratorBase):
                 weight_name="ip-adapter_sd15.bin",
             )
         self.ip_pipe.set_ip_adapter_scale(1.5)
-        """
+
         try:
             self.ip_pipe.enable_xformers_memory_efficient_attention()
         except:
@@ -299,7 +298,7 @@ class Generator(GeneratorBase):
                 self.negative_prompt_embed.repeat(1, 1, 1)
                 if self.use_negative_prompt else None
             ),
-            num_inference_steps=50,
+            num_inference_steps=30,
             guidance_scale=self.guidance_scale,
             strength=0.65,
             latents=None,
