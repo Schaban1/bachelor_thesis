@@ -7,7 +7,7 @@ import os
 class SpliceExtractor:
     def __init__(self, splice_model):
         self.splice = splice_model
-        self.vocabulary = splice.get_vocabulary("mscoco", 10000)
+        self.vocabulary = splice.get_vocabulary("laion", 10000)
 
     def extract_top_concepts(self, pil_image, topk=5):
 
