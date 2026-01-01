@@ -41,8 +41,8 @@ class SliderController:
         """Loads a new SAE model from disk"""
         print("[DEBUG] Loading FRESH SAE Model from disk...", flush=True)
         config = SparseAutoencoderConfig(
-            n_input_features=1024,
-            n_learned_features=8192,
+            n_input_features=768,
+            n_learned_features=6144,
         )
         clean_sae = SparseAutoencoder(config).to(self.generator.device)
 

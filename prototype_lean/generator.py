@@ -149,8 +149,8 @@ class Generator(GeneratorBase):
 
         SAE_PATH = RESOURCES_DIR / "sparse_autoencoder_final.pt"
         config = SparseAutoencoderConfig(
-            n_input_features=1024,
-            n_learned_features=8192,
+            n_input_features=768,
+            n_learned_features=6144,
         )
 
         self.sae_model = SparseAutoencoder(config).to(self.device)

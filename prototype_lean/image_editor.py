@@ -17,12 +17,12 @@ class ImageEditor:
 
         self.device = "cuda"
         self.clip_model = CLIPModel.from_pretrained(
-            "laion/CLIP-ViT-H-14-laion2B-s32B-b79K",
+            "laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
             cache_dir=CACHE_DIR
         ).to(self.device).eval()
 
         self.clip_processor = CLIPProcessor.from_pretrained(
-            "laion/CLIP-ViT-H-14-laion2B-s32B-b79K",
+            "laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
             cache_dir=CACHE_DIR
         )
 
