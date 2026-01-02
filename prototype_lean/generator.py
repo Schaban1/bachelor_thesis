@@ -214,18 +214,9 @@ class Generator(GeneratorBase):
                 torch_dtype=torch.float16,
             ).to(device=self.device)
 
-        self.ip_pipe.scheduler = EulerDiscreteScheduler.from_config(self.ip_pipe.scheduler.config)
-        #self.ip_pipe.scheduler = LCMScheduler.from_config(self.ip_pipe.scheduler.config)
-        #self.ip_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
-        #self.ip_pipe.fuse_lora()
-
-        self.ip_pipe.load_ip_adapter(
-                "h94/IP-Adapter",
-                subfolder="models",
-                cache_dir=CACHE_DIR,
-                weight_name="ip-adapter_sd15.bin",
-            )
-        self.ip_pipe.set_ip_adapter_scale(1.5)
+        self.ip_pipe.scheduler = LCMScheduler.from_config(self.ip_pipe.scheduler.config)
+        self.ip_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
+        self.ip_pipe.fuse_lora()
 
         try:
             self.ip_pipe.enable_xformers_memory_efficient_attention()
@@ -293,15 +284,10 @@ class Generator(GeneratorBase):
             height=self.height,
             width=self.width,
             num_images_per_prompt=1,
-            prompt="",
-            negative_prompt_embeds=(
-                self.negative_prompt_embed.repeat(1, 1, 1)
-                if self.use_negative_prompt else None
-            ),
-            num_inference_steps=30,
+            prompt_embeds=concept_embedding,
+            negative_prompt_embeds=self.negative_prompt_embed.repeat(1, 1, 1) if self.use_negative_prompt else None,
+            num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
-            strength=0.65,
-            latents=None,
             generator=self.initial_latent_generator,
             callback_on_step_end=partial(
                 self.callback,
@@ -311,8 +297,7 @@ class Generator(GeneratorBase):
                 batch_size=1,
                 num_steps=self.num_inference_steps,
             ),
-            #image=base_image,
-            ip_adapter_image_embeds=[concept_embedding]
+
         ).images[0]
 
         result = queue_lock.do_work(task)
