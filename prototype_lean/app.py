@@ -41,7 +41,7 @@ class App:
             torch_dtype=torch.bfloat16,
         ).to(device=self.device)
         pipe.unet = torch.compile(pipe.unet, backend="cudagraphs")
-        pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse").to(device=pipe.device, dtype=pipe.dtype)
+        pipe.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", cache_dir=args.path.cache_dir).to(device=pipe.device, dtype=pipe.dtype)
         pipe.vae = torch.compile(pipe.vae, backend="cudagraphs")
         global generator
         generator = Generator(
