@@ -307,15 +307,21 @@ class Generator(GeneratorBase):
         latents = self.ip_pipe.vae.encode(image).latent_dist.sample()
         latents = latents * self.ip_pipe.vae.config.scaling_factor
 
+        latents = latents.to(self.ip_pipe.device, dtype=self.ip_pipe.dtype)
+
         self.ip_pipe.scheduler.set_timesteps(num_inference_steps, device=self.device)
         start_idx = int((1.0 - strength) * num_inference_steps)
         start_idx = min(start_idx, num_inference_steps - 1)
         timestep = self.ip_pipe.scheduler.timesteps[start_idx]
 
-        noise = torch.randn_like(latents, generator=self.initial_latent_generator)
-        latents = self.ip_pipe.scheduler.add_noise(latents, noise, timestep)
+        noise = torch.randn(
+            latents.shape,
+            device=latents.device,
+            dtype=latents.dtype,
+            generator=self.initial_latent_generator,
+        )
 
-        latents = latents.to(self.ip_pipe.device, dtype=self.ip_pipe.dtype)
+        latents = self.ip_pipe.scheduler.add_noise(latents, noise, timestep)
 
         task = lambda: self.ip_pipe(
             height=self.height,
