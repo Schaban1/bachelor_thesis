@@ -297,7 +297,14 @@ class Generator(GeneratorBase):
         num_inference_steps = 6
         guidance_scale = 1.5
 
-        latents = self.ip_pipe.vae.encode(base_image).latent_dist.sample()
+        # PIL -> model tensor
+        image = self.ip_pipe.image_processor.preprocess(
+            base_image,
+            height=self.height,
+            width=self.width
+        ).to(self.device, self.ip_pipe.dtype)
+
+        latents = self.ip_pipe.vae.encode(image).latent_dist.sample()
         latents = latents * self.ip_pipe.vae.config.scaling_factor
 
         self.ip_pipe.scheduler.set_timesteps(num_inference_steps, device=self.device)
