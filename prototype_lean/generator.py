@@ -268,6 +268,7 @@ class Generator(GeneratorBase):
 
         return images
 
+    @staticmethod
     def expand_to_prompt_embeds(x: torch.Tensor, seq_len: int = 77):
         """
         x: [768] oder [1,768]
