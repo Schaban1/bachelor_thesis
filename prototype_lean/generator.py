@@ -268,27 +268,57 @@ class Generator(GeneratorBase):
 
         return images
 
+    def expand_to_prompt_embeds(x: torch.Tensor, seq_len: int = 77):
+        """
+        x: [768] oder [1,768]
+        return: [1,77,768]
+        """
+        if x.dim() == 1:
+            x = x.unsqueeze(0)  # [1,768]
+        x = x.unsqueeze(1)  # [1,1,768]
+        x = x.repeat(1, seq_len, 1)  # [1,77,768]
+        return x
+
     @torch.no_grad()
     def generate_with_splice(
             self,
             base_image: Image,
-            concept_embedding: torch.Tensor,  # [1, 1024]
+            concept_embedding: torch.Tensor,
             loading_progress,
             queue_lock
     ) -> Image:
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
-        concept_embedding = concept_embedding.unsqueeze(0)
+        concept_embedding = self.expand_to_prompt_embeds(concept_embedding)
         concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
+
+        strength = 0.4
+        num_inference_steps = 6
+        guidance_scale = 1.5
+
+        latents = self.ip_pipe.vae.encode(base_image).latent_dist.sample()
+        latents = latents * self.ip_pipe.vae.config.scaling_factor
+
+        self.ip_pipe.scheduler.set_timesteps(num_inference_steps, device=self.device)
+        start_idx = int((1.0 - strength) * num_inference_steps)
+        start_idx = min(start_idx, num_inference_steps - 1)
+        timestep = self.ip_pipe.scheduler.timesteps[start_idx]
+
+        noise = torch.randn_like(latents, generator=self.initial_latent_generator)
+        latents = self.ip_pipe.scheduler.add_noise(latents, noise, timestep)
+
+        latents = latents.to(self.ip_pipe.device, dtype=self.ip_pipe.dtype)
+
         task = lambda: self.ip_pipe(
             height=self.height,
             width=self.width,
             num_images_per_prompt=1,
             prompt_embeds=concept_embedding,
             negative_prompt_embeds=self.negative_prompt_embed.repeat(1, 1, 1) if self.use_negative_prompt else None,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
             generator=self.initial_latent_generator,
+            latents=latents,
             callback_on_step_end=partial(
                 self.callback,
                 current_step=0,

@@ -11,7 +11,7 @@ class MainLoopUI(UIComponent):
         """
         if is_relative:
             # SAE Logic: Percentage change (e.g. 0.05 is +5%)
-            return lambda v: f"{name}: {max(0.0, base_value * (1.0 + v)):.2f}"
+            return lambda v: f"{name}: {max(0.0, base_value + v):.2f}"
         else:
             # Splice Logic: Absolute addition (e.g. 0.1 is +0.1)
             return lambda v: f"{name}: {max(0.0, base_value + v):.2f}"

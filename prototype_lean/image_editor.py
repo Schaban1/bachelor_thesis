@@ -39,7 +39,19 @@ class ImageEditor:
         # Modify weights
         weights = self.splice.encode_image(base_image)
         for concept_idx, offset in concept_offsets.items():
-            weights[0, concept_idx] = max(0, min(1, weights[0, concept_idx] + offset))
+            base_val = weights[0, concept_idx].item()
+
+            steps = int(abs(offset) / 0.1)
+            direction = 1.0 if offset > 0 else -1.0
+
+            delta = direction * steps * 0.3 * base_val
+            new_val = base_val + delta
+
+            weights[0, concept_idx] = torch.clamp(
+                torch.tensor(new_val, device=weights.device),
+                min=0.0,
+                max=1.0
+            )
 
         # Recompose
         embedding = self.splice.recompose_image(weights)
@@ -77,8 +89,18 @@ class ImageEditor:
 
             acts_modified = acts_original.clone()
             for concept_idx, offset in concept_offsets.items():
-                new_val = acts_modified[0, concept_idx] + offset
-                acts_modified[0, concept_idx] = torch.clamp(new_val, min=0.0)
+                base_val = acts_modified[0, concept_idx].item()
+
+                steps = int(abs(offset) / 0.1)
+                direction = 1.0 if offset > 0 else -1.0
+
+                delta = direction * steps * 0.3 * base_val
+                new_val = base_val + delta
+
+                acts_modified[0, concept_idx] = torch.clamp(
+                    torch.tensor(new_val, device=acts_modified.device),
+                    min=0.0
+                )
 
             recon_modified = self.sae.decode(acts_modified)
             steering_delta = recon_modified - recon_original
