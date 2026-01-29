@@ -332,7 +332,7 @@ class Generator(GeneratorBase):
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             generator=self.initial_latent_generator,
-            latents=None,
+            latents= None,
             callback_on_step_end=partial(
                 self.callback,
                 current_step=0,
