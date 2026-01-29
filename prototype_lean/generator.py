@@ -293,9 +293,9 @@ class Generator(GeneratorBase):
         concept_embedding = self.expand_to_prompt_embeds(concept_embedding)
         concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
 
-        strength = 0.4
-        num_inference_steps = 6
-        guidance_scale = 1.5
+        strength = 0.8
+        num_inference_steps = 8
+        guidance_scale = 8.0
 
         # PIL -> model tensor
         image = self.ip_pipe.image_processor.preprocess(
