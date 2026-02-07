@@ -12,7 +12,7 @@ class SliderController:
         self.concept_names = concept_names
         self.generator = generator
         self.splice_extractor = SpliceExtractor(splice_model)
-        self.editor = ImageEditor(generator, splice_model, sae_model)
+        self.editor = ImageEditor(generator)
 
         # State Containers
         self.concept_maps = [{} for _ in range(webUI.num_images_to_generate)]
