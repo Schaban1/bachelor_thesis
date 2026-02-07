@@ -51,7 +51,6 @@ class App:
             pipe=pipe,
             **args.generator,
         )
-        generator.splice = get_splice_model()
 
     def start(self):
         global global_args

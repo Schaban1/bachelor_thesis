@@ -145,8 +145,6 @@ class Generator(GeneratorBase):
         self.initial_latent_seed = initial_latent_seed
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
 
-        self.splice = get_splice_model()
-
         SAE_PATH = RESOURCES_DIR / "sparse_autoencoder_final.pt"
         config = SparseAutoencoderConfig(
             n_input_features=768,
@@ -223,6 +221,7 @@ class Generator(GeneratorBase):
         except:
             logging.warning("Cannot use xformers in IP pipe")
 
+        self.splice = get_splice_model(self.pipe, self.device)
 
     @torch.no_grad()
     def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress, queue_lock) -> list[Image]:
@@ -268,6 +267,20 @@ class Generator(GeneratorBase):
 
         return images
 
+    @torch.no_grad()
+    def generate_with_splice(self, prompt_embeds: Tensor, loading_progress=None, queue_lock=None):
+        task = lambda: self.pipe(
+            prompt_embeds=prompt_embeds,
+            num_inference_steps=self.num_inference_steps,
+            guidance_scale=self.guidance_scale,
+            generator=self.initial_latent_generator,
+        ).images
+
+        result = queue_lock.do_work(task) if queue_lock else task()
+        images = result
+        self.latest_images.extend(images)
+        return images
+
     @staticmethod
     def expand_to_prompt_embeds(x: torch.Tensor, seq_len: int = 77):
         """
@@ -281,7 +294,7 @@ class Generator(GeneratorBase):
         return x
 
     @torch.no_grad()
-    def generate_with_splice(
+    def generate_with_sae(
             self,
             base_image: Image,
             concept_embedding: torch.Tensor,
@@ -332,7 +345,7 @@ class Generator(GeneratorBase):
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             generator=self.initial_latent_generator,
-            latents= None,
+            latents= latents,
             callback_on_step_end=partial(
                 self.callback,
                 current_step=0,
