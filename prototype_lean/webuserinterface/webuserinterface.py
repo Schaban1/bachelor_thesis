@@ -102,7 +102,7 @@ class WebUI:
         self.images_sae = [img.copy() for img in generated_images]
         self.images_splice = [img.copy() for img in generated_images]
         print("[DEBUG webuserinterface: were the images generated?",flush=True)
-        self.slider_controller.on_images_generated(generated_images)
+        self.slider_controller.on_images_generated(generated_images, self.user_prompt)
 
     def _pil_to_data_url(self, img: Image.Image) -> str:
         buffer = BytesIO()

@@ -9,9 +9,9 @@ class SpliceExtractor:
         self.splice = splice_model
         self.vocabulary = splice.get_vocabulary("laion", 10000)
 
-    def extract_top_concepts(self, pil_image, topk=5):
-
-        sparse_weights = self.splice.encode_image(pil_image)
+    def extract_top_concepts(self, prompt, topk=5):
+        prompt_emb = self.splice.clip.encode_text(prompt)
+        sparse_weights = self.splice.encode_image(prompt_emb)
         print(f"[DEBUG] sparse_weights → type: {type(sparse_weights)}", flush=True)
         print(f"[DEBUG] sparse_weights → shape: {sparse_weights.shape}", flush=True)
 
