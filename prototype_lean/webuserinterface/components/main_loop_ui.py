@@ -62,7 +62,7 @@ class MainLoopUI(UIComponent):
             ngUI.space()
             print("[DEBUG mainloop webuserinterface builduserinterface: was async def build_userinterface() called?",flush=True)
 
-    def refresh_sliders(self, concepts_per_image, splice_concepts_per_image):
+    def refresh_sliders(self, prompt, concepts_per_image, splice_concepts_per_image):
         # SAE (first row)
         print("[DEBUG] refresh_sliders called with {len(concepts_per_image)} images",flush=True)
         for idx, container in enumerate(self.webUI.slider_containers):
@@ -111,7 +111,7 @@ class MainLoopUI(UIComponent):
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
                         slider.on('update:model-value',
                                 lambda e, i=idx, c=concept_name:
-                                self.webUI.slider_controller.on_slider_change(i, c, e.args, is_sae=False)
+                                self.webUI.slider_controller.on_slider_change(prompt, i, c, e.args, is_sae=False)
                                 )
 
 

@@ -104,9 +104,9 @@ class SliderController:
 
             splice_concepts_per_image.append([(name, value) for name, value, _ in splice_concepts])
 
-        self.webUI.main_loop_ui.refresh_sliders(concepts_per_image, splice_concepts_per_image)
+        self.webUI.main_loop_ui.refresh_sliders(prompt, concepts_per_image, splice_concepts_per_image)
 
-    def on_slider_change(self, image_idx, concept_name, value, is_sae=False):
+    def on_slider_change(self, prompt, image_idx, concept_name, value, is_sae=False):
         if is_sae:
             concept_idx = self.concept_maps[image_idx][concept_name]
             self.offsets[image_idx][concept_idx] = float(value)
@@ -152,9 +152,9 @@ class SliderController:
                 self.webUI.main_loop_ui.on_image_cached(True)
             else:
                 new_img = self.editor.splice_edit(
-                    base_image=self.original_images[image_idx],
+                    base_prompt=prompt,
                     concept_offsets=self.offsets_splice[image_idx],
-                    image_idx=image_idx,
+                    #image_idx=image_idx,
                     loading_progress=self.webUI.loading_ui.loading_progress,
                     queue_lock=self.webUI.queue_lock
                 )
