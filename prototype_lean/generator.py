@@ -277,7 +277,7 @@ class Generator(GeneratorBase):
         ).images
 
         result = queue_lock.do_work(task) if queue_lock else task()
-        images = result
+        images = result.result() if hasattr(result, "result") else result
         self.latest_images.extend(images)
         return images
 
