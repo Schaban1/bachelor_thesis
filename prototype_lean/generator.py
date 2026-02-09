@@ -174,6 +174,11 @@ class Generator(GeneratorBase):
         os.makedirs(CACHE_DIR, exist_ok=True)
         print(f"[CACHE] ALL MODELS → {CACHE_DIR}")
 
+        os.environ["TORCH_SDPA_DISABLE_FLASH_ATTENTION"] = "1"
+        torch.backends.cuda.enable_flash_sdp(False)
+        torch.backends.cuda.enable_mem_efficient_sdp(False)
+        torch.backends.cuda.enable_math_sdp(True)
+
         # MAIN PIPELINE: TEXT-TO-IMAGE
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
@@ -192,6 +197,16 @@ class Generator(GeneratorBase):
             self.pipe.enable_xformers_memory_efficient_attention()
         except:
             logging.warning("Cannot use xformers memory efficient attention (maybe xformers not installed)")
+
+        uncond_input = self.pipe.tokenizer([""], padding="max_length", max_length=77, return_tensors="pt").to(
+            self.device)
+        with torch.no_grad():
+            self.uncond_embeds = self.pipe.text_encoder(uncond_input.input_ids)[0]
+
+        self.initial_latent_generator = torch.Generator(device=self.device).manual_seed(42)
+        self.latents_fixed = torch.randn((1, self.pipe.unet.in_channels, self.height // 8, self.width // 8),
+                                         generator=self.initial_latent_generator, device=self.device,
+                                         dtype=self.pipe.dtype)
 
         self.negative_prompt_embeds = None
         self.negative_prompt = ""
@@ -222,6 +237,26 @@ class Generator(GeneratorBase):
             logging.warning("Cannot use xformers in IP pipe")
 
         self.splice = get_splice_model(self.pipe, self.device)
+
+        def manual_generate(prompt_embeds, num_steps=6, guidance=1.0):
+            self.pipe.scheduler.set_timesteps(num_steps, device=self.device)
+            latents_curr = self.latents_fixed.clone()
+            step_generator = torch.Generator(device=self.device).manual_seed(42)
+            for t in self.pipe.scheduler.timesteps:
+                latent_in = torch.cat([latents_curr] * 2)
+                latent_in = self.pipe.scheduler.scale_model_input(latent_in, t)
+                model_in_embeds = torch.cat([self.uncond_embeds, prompt_embeds], dim=0)
+                with torch.no_grad():
+                    noise_pred = self.pipe.unet(latent_in, t, encoder_hidden_states=model_in_embeds).sample
+                noise_uncond, noise_text = noise_pred.chunk(2)
+                noise_pred = noise_uncond + guidance * (noise_text - noise_uncond)
+                step_output = self.pipe.scheduler.step(noise_pred, t, latents_curr, generator=step_generator)
+                latents_curr = step_output.prev_sample if hasattr(step_output, "prev_sample") else step_output[0]
+            decoded = self.pipe.vae.decode(latents_curr / self.pipe.vae.config.scaling_factor).sample
+            image = (decoded / 2 + 0.5).clamp(0, 1).detach()
+            return image
+
+        self.manual_generate = manual_generate
 
     @torch.no_grad()
     def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress, queue_lock) -> list[Image]:
@@ -269,15 +304,12 @@ class Generator(GeneratorBase):
 
     @torch.no_grad()
     def generate_with_splice(self, prompt_embeds: Tensor, loading_progress=None, queue_lock=None):
-        task = lambda: self.pipe(
-            prompt_embeds=prompt_embeds,
-            num_inference_steps=self.num_inference_steps,
-            guidance_scale=self.guidance_scale,
-            generator=self.initial_latent_generator,
-        ).images
-
+        task = lambda: self.manual_generate(prompt_embeds, num_steps=self.num_inference_steps,
+                                            guidance=1.0)
         result = queue_lock.do_work(task) if queue_lock else task()
-        images = result.result() if hasattr(result, "result") else result
+        images_tensor = result
+        images = [self.pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0] for i in
+                  range(images_tensor.shape[0])]
         self.latest_images.extend(images)
         return images
 
