@@ -238,25 +238,7 @@ class Generator(GeneratorBase):
 
         self.splice = get_splice_model(self.pipe, self.device)
 
-        def manual_generate(prompt_embeds, num_steps=6, guidance=1.0):
-            self.pipe.scheduler.set_timesteps(num_steps, device=self.device)
-            latents_curr = self.latents_fixed.clone()
-            step_generator = torch.Generator(device=self.device).manual_seed(42)
-            for t in self.pipe.scheduler.timesteps:
-                latent_in = torch.cat([latents_curr] * 2)
-                latent_in = self.pipe.scheduler.scale_model_input(latent_in, t)
-                model_in_embeds = torch.cat([self.uncond_embeds, prompt_embeds], dim=0)
-                with torch.no_grad():
-                    noise_pred = self.pipe.unet(latent_in, t, encoder_hidden_states=model_in_embeds).sample
-                noise_uncond, noise_text = noise_pred.chunk(2)
-                noise_pred = noise_uncond + guidance * (noise_text - noise_uncond)
-                step_output = self.pipe.scheduler.step(noise_pred, t, latents_curr, generator=step_generator)
-                latents_curr = step_output.prev_sample if hasattr(step_output, "prev_sample") else step_output[0]
-            decoded = self.pipe.vae.decode(latents_curr / self.pipe.vae.config.scaling_factor).sample
-            image = (decoded / 2 + 0.5).clamp(0, 1).detach()
-            return image
 
-        self.manual_generate = manual_generate
 
     @torch.no_grad()
     def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress, queue_lock) -> list[Image]:
@@ -304,14 +286,34 @@ class Generator(GeneratorBase):
 
     @torch.no_grad()
     def generate_with_splice(self, prompt_embeds: Tensor, loading_progress=None, queue_lock=None):
-        task = lambda: self.manual_generate(prompt_embeds, num_steps=self.num_inference_steps,
-                                            guidance=1.0)
+        self.pipe.scheduler.set_timesteps(self.num_inference_steps, device=self.device)
+        latents_curr = self.latents_fixed.clone()
+        step_generator = torch.Generator(device=self.device).manual_seed(42)
+
+        task = lambda: self._run_manual_loop(prompt_embeds, latents_curr, step_generator)
+
         result = queue_lock.do_work(task) if queue_lock else task()
-        images_tensor = result
+        images_tensor = result.result() if hasattr(result, "result") else result
+
         images = [self.pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0] for i in
                   range(images_tensor.shape[0])]
         self.latest_images.extend(images)
         return images
+
+    def _run_manual_loop(self, prompt_embeds, latents_curr, step_generator):
+        for t in self.pipe.scheduler.timesteps:
+            latent_in = torch.cat([latents_curr] * 2)
+            latent_in = self.pipe.scheduler.scale_model_input(latent_in, t)
+            model_in_embeds = torch.cat([self.uncond_embeds, prompt_embeds], dim=0)
+            with torch.no_grad():
+                noise_pred = self.pipe.unet(latent_in, t, encoder_hidden_states=model_in_embeds).sample
+            noise_uncond, noise_text = noise_pred.chunk(2)
+            noise_pred = noise_uncond + 1.0 * (noise_text - noise_uncond)
+            step_output = self.pipe.scheduler.step(noise_pred, t, latents_curr, generator=step_generator)
+            latents_curr = step_output.prev_sample if hasattr(step_output, "prev_sample") else step_output[0]
+        decoded = self.pipe.vae.decode(latents_curr / self.pipe.vae.config.scaling_factor).sample
+        image = (decoded / 2 + 0.5).clamp(0, 1).detach()
+        return image
 
     @staticmethod
     def expand_to_prompt_embeds(x: torch.Tensor, seq_len: int = 77):
