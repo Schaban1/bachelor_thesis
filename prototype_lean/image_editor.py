@@ -35,7 +35,7 @@ class ImageEditor:
     def splice_edit(self, base_prompt: str, concept_offsets: dict, loading_progress=None, queue_lock=None):
         # Deterministic cache key
         base_hash = hashlib.md5(base_prompt.encode()).hexdigest()[:8]
-        state_items = sorted(concept_offsets.items())
+        state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
         state_key = tuple(state_items)
 
         cache_key = (base_hash, state_key)
@@ -59,8 +59,12 @@ class ImageEditor:
         # Decomposition
         weights = self.splice.encode_image(base_emb)
 
-        for concept_name, offset in concept_offsets.items():
-            idx = self.vocabulary.index(concept_name)
+        for concept, offset in concept_offsets.items():
+            if isinstance(concept, str):
+                idx = self.vocabulary.index(concept)
+            else:
+                idx = concept
+
             base_val = weights[0, idx].item()
 
             steps = int(abs(offset) / 0.1)
