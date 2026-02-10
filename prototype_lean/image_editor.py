@@ -86,13 +86,13 @@ class ImageEditor:
         denormalized = denormalized - torch.mean(denormalized) + torch.mean(base_emb)
 
         print("[DEBUG] denormalized device, dtype, norm, nan:", denormalized.device, denormalized.dtype,
-              float(denormalized.norm()), torch.isnan(denormalized).any())
+              float(denormalized.norm()), torch.isnan(denormalized).any(), flush=True)
 
         # Expand to full prompt_embeds
         prompt_emb_full = denormalized.unsqueeze(1).repeat(1, 77, 1)
 
         print("[DEBUG] prompt_emb_full device/dtype/min/max:", prompt_emb_full.device, prompt_emb_full.dtype,
-              float(prompt_emb_full.min()), float(prompt_emb_full.max()))
+              float(prompt_emb_full.min()), float(prompt_emb_full.max()), flush=True)
 
         # Generate
         images = self.generator.generate_with_splice(prompt_emb_full, loading_progress,
