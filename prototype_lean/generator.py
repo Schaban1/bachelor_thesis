@@ -288,9 +288,12 @@ class Generator(GeneratorBase):
         latents_curr = self.latents_fixed.clone()
         step_generator = torch.Generator(device=self.device).manual_seed(42)
 
-        # Cast to U-Net dtype
-        prompt_embeds = prompt_embeds.to(self.pipe.unet.dtype)
-        self.uncond_embeds = self.uncond_embeds.to(self.pipe.unet.dtype)
+        print("[DEBUG] _run_manual_loop: latents_curr.device/dtype:", latents_curr.device, latents_curr.dtype)
+        print("[DEBUG] _run_manual_loop: prompt_embeds.device/dtype:", prompt_embeds.device, prompt_embeds.dtype)
+
+        # Cast to U-Net dtype and ensure correct device
+        prompt_embeds = prompt_embeds.to(device=self.pipe.device, dtype=self.pipe.unet.dtype)
+        self.uncond_embeds = self.uncond_embeds.to(device=self.pipe.device, dtype=self.pipe.unet.dtype)
 
         for t in self.pipe.scheduler.timesteps:
             latent_in = torch.cat([latents_curr] * 2).to(self.pipe.unet.dtype)
