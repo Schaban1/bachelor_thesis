@@ -182,10 +182,9 @@ class Generator(GeneratorBase):
         # MAIN PIPELINE: TEXT-TO-IMAGE
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
-            requires_safety_checker=True,
+            torch_dtype=torch.float32,
             cache_dir=CACHE_DIR,
-            torch_dtype=torch.float16,
-        ).to(device=self.device)
+        ).to(self.device)
 
         self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.load_lora_weights(
@@ -201,7 +200,7 @@ class Generator(GeneratorBase):
         uncond_input = self.pipe.tokenizer([""], padding="max_length", max_length=77, return_tensors="pt").to(
             self.device)
         with torch.no_grad():
-            self.uncond_embeds = self.pipe.text_encoder(uncond_input.input_ids)[0].to(self.pipe.unet.dtype)
+            self.uncond_embeds = self.pipe.text_encoder(uncond_input.input_ids)[0]
 
         self.initial_latent_generator = torch.Generator(device=self.device).manual_seed(42)
         self.latents_fixed = torch.randn((1, self.pipe.unet.in_channels, self.height // 8, self.width // 8),
@@ -284,18 +283,6 @@ class Generator(GeneratorBase):
 
         return images
 
-    @torch.no_grad()
-    def generate_with_splice(self, prompt_embeds: Tensor, loading_progress=None, queue_lock=None):
-        task = lambda: self._run_manual_loop(prompt_embeds)
-
-        result = queue_lock.do_work(task) if queue_lock else task()
-        images_tensor = result.result() if hasattr(result, "result") else result
-
-        images = [self.pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0] for i in
-                  range(images_tensor.shape[0])]
-        self.latest_images.extend(images)
-        return images
-
     def _run_manual_loop(self, prompt_embeds):
         self.pipe.scheduler.set_timesteps(self.num_inference_steps, device=self.device)
         latents_curr = self.latents_fixed.clone()
@@ -321,6 +308,18 @@ class Generator(GeneratorBase):
         decoded = self.pipe.vae.decode(latents_curr / self.pipe.vae.config.scaling_factor).sample
         image = (decoded / 2 + 0.5).clamp(0, 1).detach()
         return image
+
+    @torch.no_grad()
+    def generate_with_splice(self, prompt_embeds: Tensor, loading_progress=None, queue_lock=None):
+        task = lambda: self._run_manual_loop(prompt_embeds)
+
+        result = queue_lock.do_work(task) if queue_lock else task()
+        images_tensor = result.result() if hasattr(result, "result") else result
+
+        images = [self.pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0] for i in
+                  range(images_tensor.shape[0])]
+        self.latest_images.extend(images)
+        return images
 
     @staticmethod
     def expand_to_prompt_embeds(x: torch.Tensor, seq_len: int = 77):
