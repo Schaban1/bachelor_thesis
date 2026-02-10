@@ -201,7 +201,7 @@ class Generator(GeneratorBase):
         uncond_input = self.pipe.tokenizer([""], padding="max_length", max_length=77, return_tensors="pt").to(
             self.device)
         with torch.no_grad():
-            self.uncond_embeds = self.pipe.text_encoder(uncond_input.input_ids)[0]
+            self.uncond_embeds = self.pipe.text_encoder(uncond_input.input_ids)[0].to(self.pipe.unet.dtype)
 
         self.initial_latent_generator = torch.Generator(device=self.device).manual_seed(42)
         self.latents_fixed = torch.randn((1, self.pipe.unet.in_channels, self.height // 8, self.width // 8),
@@ -286,11 +286,7 @@ class Generator(GeneratorBase):
 
     @torch.no_grad()
     def generate_with_splice(self, prompt_embeds: Tensor, loading_progress=None, queue_lock=None):
-        self.pipe.scheduler.set_timesteps(self.num_inference_steps, device=self.device)
-        latents_curr = self.latents_fixed.clone()
-        step_generator = torch.Generator(device=self.device).manual_seed(42)
-
-        task = lambda: self._run_manual_loop(prompt_embeds, latents_curr, step_generator)
+        task = lambda: self._run_manual_loop(prompt_embeds)
 
         result = queue_lock.do_work(task) if queue_lock else task()
         images_tensor = result.result() if hasattr(result, "result") else result
@@ -300,9 +296,17 @@ class Generator(GeneratorBase):
         self.latest_images.extend(images)
         return images
 
-    def _run_manual_loop(self, prompt_embeds, latents_curr, step_generator):
+    def _run_manual_loop(self, prompt_embeds):
+        self.pipe.scheduler.set_timesteps(self.num_inference_steps, device=self.device)
+        latents_curr = self.latents_fixed.clone()
+        step_generator = torch.Generator(device=self.device).manual_seed(42)
+
+        # Cast to U-Net dtype
+        prompt_embeds = prompt_embeds.to(self.pipe.unet.dtype)
+        self.uncond_embeds = self.uncond_embeds.to(self.pipe.unet.dtype)
+
         for t in self.pipe.scheduler.timesteps:
-            latent_in = torch.cat([latents_curr] * 2)
+            latent_in = torch.cat([latents_curr] * 2).to(self.pipe.unet.dtype)
             latent_in = self.pipe.scheduler.scale_model_input(latent_in, t)
             model_in_embeds = torch.cat([self.uncond_embeds, prompt_embeds], dim=0)
             with torch.no_grad():
@@ -311,6 +315,9 @@ class Generator(GeneratorBase):
             noise_pred = noise_uncond + 1.0 * (noise_text - noise_uncond)
             step_output = self.pipe.scheduler.step(noise_pred, t, latents_curr, generator=step_generator)
             latents_curr = step_output.prev_sample if hasattr(step_output, "prev_sample") else step_output[0]
+
+        # VAE decode
+        latents_curr = latents_curr.to(self.pipe.vae.dtype)
         decoded = self.pipe.vae.decode(latents_curr / self.pipe.vae.config.scaling_factor).sample
         image = (decoded / 2 + 0.5).clamp(0, 1).detach()
         return image
