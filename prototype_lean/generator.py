@@ -320,9 +320,9 @@ class Generator(GeneratorBase):
     def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float):
 
         pipe = self.edit_pipe
-        step_generator = self.edit_latent_generator
-        pipe.scheduler.set_timesteps(num_inference_steps, device=pipe.device)
         latents_curr = self.edit_latents_fixed.clone().to(pipe.device, dtype=pipe.unet.dtype)
+        pipe.scheduler.set_timesteps(num_inference_steps, device=latents_curr.device)
+        step_generator = torch.Generator(device=latents_curr.device).manual_seed(self.initial_latent_seed)
 
         prompt_embeds = prompt_embeds.to(device=pipe.device, dtype=pipe.unet.dtype)
         uncond_embeds = self.edit_uncond_embeds.to(device=pipe.device, dtype=pipe.unet.dtype)
