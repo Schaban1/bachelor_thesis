@@ -237,6 +237,40 @@ class Generator(GeneratorBase):
 
         self.splice = get_splice_model(self.pipe, self.device)
 
+        # --- EDIT PIPE ---
+        self.edit_pipe = StableDiffusionPipeline.from_pretrained(
+            hf_model_name,
+            torch_dtype=torch.float32,
+            cache_dir=CACHE_DIR,
+        ).to(self.device)
+
+        self.edit_pipe.scheduler = LCMScheduler.from_config(self.edit_pipe.scheduler.config)
+        try:
+            self.edit_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
+            self.edit_pipe.fuse_lora()
+        except Exception:
+            print("[WARN] edit_pipe: LORA not available or failed", flush=True)
+
+
+        uncond_input_edit = self.edit_pipe.tokenizer(
+            [""], padding="max_length", max_length=77, return_tensors="pt"
+        )
+
+        uncond_input_edit = {k: v.to(self.device) for k, v in uncond_input_edit.items()}
+        with torch.no_grad():
+            self.edit_uncond_embeds = self.edit_pipe.text_encoder(uncond_input_edit["input_ids"])[0]
+
+        self.edit_latent_generator = torch.Generator(device=self.device).manual_seed(self.initial_latent_seed)
+        self.edit_latents_fixed = torch.randn(
+            (1, self.edit_pipe.unet.in_channels, self.height // 8, self.width // 8),
+            generator=self.edit_latent_generator,
+            device=self.device,
+            dtype=torch.float32
+        )
+
+        print("[INIT] edit_pipe ready: dtype", self.edit_pipe.unet.dtype, "latents dtype", self.edit_latents_fixed.dtype, flush=True)
+
+
 
 
     @torch.no_grad()
@@ -283,44 +317,54 @@ class Generator(GeneratorBase):
 
         return images
 
-    def _run_manual_loop(self, prompt_embeds):
-        self.pipe.scheduler.set_timesteps(self.num_inference_steps, device=self.device)
-        latents_curr = self.latents_fixed.clone()
-        step_generator = torch.Generator(device=self.device).manual_seed(42)
+    def _run_manual_loop_edit(self, prompt_embeds, num_inference_steps: int = 6, guidance_scale: float = 1.0, latents=None):
+        """
+        Manual denoising loop
+        """
+        pipe = self.edit_pipe
+        if latents is None:
+            latents = self.edit_latents_fixed.clone()
 
-        print("[DEBUG] _run_manual_loop: latents_curr.device/dtype:", latents_curr.device, latents_curr.dtype, flush=True)
-        print("[DEBUG] _run_manual_loop: prompt_embeds.device/dtype:", prompt_embeds.device, prompt_embeds.dtype, flush=True)
+        print("[DEBUG] _run_manual_loop_edit: latents.device/dtype:", latents.device, latents.dtype, flush=True)
+        print("[DEBUG] _run_manual_loop_edit: prompt_embeds.device/dtype:", prompt_embeds.device, prompt_embeds.dtype, flush=True)
 
-        # Cast to U-Net dtype and ensure correct device
-        prompt_embeds = prompt_embeds.to(device=self.pipe.device, dtype=self.pipe.unet.dtype)
-        self.uncond_embeds = self.uncond_embeds.to(device=self.pipe.device, dtype=self.pipe.unet.dtype)
+        pipe.scheduler.set_timesteps(num_inference_steps, device=latents.device)
+        latents_curr = latents.clone()
+        step_generator = torch.Generator(device=latents.device).manual_seed(self.initial_latent_seed)
 
-        for t in self.pipe.scheduler.timesteps:
-            latent_in = torch.cat([latents_curr] * 2).to(self.pipe.unet.dtype)
-            latent_in = self.pipe.scheduler.scale_model_input(latent_in, t)
-            model_in_embeds = torch.cat([self.uncond_embeds, prompt_embeds], dim=0)
+        prompt_embeds = prompt_embeds.to(device=latents.device, dtype=torch.float32)
+        uncond = self.edit_uncond_embeds.to(device=latents.device, dtype=torch.float32)
+
+        for t in pipe.scheduler.timesteps:
+            latent_in = torch.cat([latents_curr] * 2)
+            latent_in = pipe.scheduler.scale_model_input(latent_in, t)
+
+            model_in_embeds = torch.cat([uncond, prompt_embeds], dim=0)
             with torch.no_grad():
-                noise_pred = self.pipe.unet(latent_in, t, encoder_hidden_states=model_in_embeds).sample
+                noise_pred = pipe.unet(latent_in, t, encoder_hidden_states=model_in_embeds).sample
+
             noise_uncond, noise_text = noise_pred.chunk(2)
-            noise_pred = noise_uncond + 1.0 * (noise_text - noise_uncond)
-            step_output = self.pipe.scheduler.step(noise_pred, t, latents_curr, generator=step_generator)
+            noise_pred = noise_uncond + guidance_scale * (noise_text - noise_uncond)
+
+            step_output = pipe.scheduler.step(noise_pred, t, latents_curr, generator=step_generator)
             latents_curr = step_output.prev_sample if hasattr(step_output, "prev_sample") else step_output[0]
 
-        # VAE decode
-        latents_curr = latents_curr.to(self.pipe.vae.dtype)
-        decoded = self.pipe.vae.decode(latents_curr / self.pipe.vae.config.scaling_factor).sample
+        latents_curr = latents_curr.to(pipe.vae.dtype)
+        decoded = pipe.vae.decode(latents_curr / pipe.vae.config.scaling_factor).sample
         image = (decoded / 2 + 0.5).clamp(0, 1).detach()
         return image
 
+
     @torch.no_grad()
-    def generate_with_splice(self, prompt_embeds: Tensor, loading_progress=None, queue_lock=None):
-        task = lambda: self._run_manual_loop(prompt_embeds)
+    def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None, num_inference_steps: int = 6, guidance_scale: float = 1.0):
+        prompt_embeds = prompt_embeds.to(self.device, dtype=torch.float32)
+
+        task = lambda: self._run_manual_loop_edit(prompt_embeds, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale, latents=self.edit_latents_fixed)
 
         result = queue_lock.do_work(task) if queue_lock else task()
         images_tensor = result.result() if hasattr(result, "result") else result
 
-        images = [self.pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0] for i in
-                  range(images_tensor.shape[0])]
+        images = [self.edit_pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0] for i in range(images_tensor.shape[0])]
         self.latest_images.extend(images)
         return images
 
