@@ -317,54 +317,58 @@ class Generator(GeneratorBase):
 
         return images
 
-    def _run_manual_loop_edit(self, prompt_embeds, num_inference_steps: int = 6, guidance_scale: float = 1.0, latents=None):
-        """
-        Manual denoising loop
-        """
-        pipe = self.edit_pipe
-        if latents is None:
-            latents = self.edit_latents_fixed.clone()
+    def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float):
 
-        print("[DEBUG] _run_manual_loop_edit: latents.device/dtype:", latents.device, latents.dtype, flush=True)
-        print("[DEBUG] _run_manual_loop_edit: prompt_embeds.device/dtype:", prompt_embeds.device, prompt_embeds.dtype, flush=True)
+        step_generator = torch.Generator(device=self.pipe.device).manual_seed(self.initial_latent_seed)
+        self.pipe.scheduler.set_timesteps(num_inference_steps, device=self.pipe.device)
+        latents_curr = self.latents_fixed.clone().to(self.pipe.device, dtype=self.pipe.unet.dtype)
 
-        pipe.scheduler.set_timesteps(num_inference_steps, device=latents.device)
-        latents_curr = latents.clone()
-        step_generator = torch.Generator(device=latents.device).manual_seed(self.initial_latent_seed)
+        prompt_embeds = prompt_embeds.to(device=self.pipe.device, dtype=self.pipe.unet.dtype)
+        uncond_embeds = self.uncond_embeds.to(device=self.pipe.device, dtype=self.pipe.unet.dtype)
 
-        prompt_embeds = prompt_embeds.to(device=latents.device, dtype=torch.float32)
-        uncond = self.edit_uncond_embeds.to(device=latents.device, dtype=torch.float32)
+        print("[DEBUG] _run_manual_loop: latents_curr.device/dtype:", latents_curr.device, latents_curr.dtype, flush=True)
+        print("[DEBUG] _run_manual_loop: prompt_embeds.device/dtype:", prompt_embeds.device, prompt_embeds.dtype, flush=True)
+        print("[DEBUG] _run_manual_loop: uncond_embeds.device/dtype:", uncond_embeds.device, uncond_embeds.dtype, flush=True)
+        print("[DEBUG] _run_manual_loop: scheduler timesteps len:", len(self.pipe.scheduler.timesteps), flush=True)
 
-        for t in pipe.scheduler.timesteps:
-            latent_in = torch.cat([latents_curr] * 2)
-            latent_in = pipe.scheduler.scale_model_input(latent_in, t)
+        for t in self.pipe.scheduler.timesteps:
+            latent_in = torch.cat([latents_curr] * 2).to(self.pipe.unet.dtype)
+            latent_in = self.pipe.scheduler.scale_model_input(latent_in, t)
+            model_in_embeds = torch.cat([uncond_embeds, prompt_embeds], dim=0)
 
-            model_in_embeds = torch.cat([uncond, prompt_embeds], dim=0)
             with torch.no_grad():
-                noise_pred = pipe.unet(latent_in, t, encoder_hidden_states=model_in_embeds).sample
+                noise_pred = self.pipe.unet(latent_in, t, encoder_hidden_states=model_in_embeds).sample
 
             noise_uncond, noise_text = noise_pred.chunk(2)
             noise_pred = noise_uncond + guidance_scale * (noise_text - noise_uncond)
 
-            step_output = pipe.scheduler.step(noise_pred, t, latents_curr, generator=step_generator)
+            step_output = self.pipe.scheduler.step(noise_pred, t, latents_curr, generator=step_generator)
             latents_curr = step_output.prev_sample if hasattr(step_output, "prev_sample") else step_output[0]
 
-        latents_curr = latents_curr.to(pipe.vae.dtype)
-        decoded = pipe.vae.decode(latents_curr / pipe.vae.config.scaling_factor).sample
+        latents_curr = latents_curr.to(self.pipe.vae.dtype)
+        decoded = self.pipe.vae.decode(latents_curr / self.pipe.vae.config.scaling_factor).sample
         image = (decoded / 2 + 0.5).clamp(0, 1).detach()
         return image
 
 
     @torch.no_grad()
-    def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None, num_inference_steps: int = 6, guidance_scale: float = 1.0):
-        prompt_embeds = prompt_embeds.to(self.device, dtype=torch.float32)
+    def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None):
+        num_inference_steps = 6
+        guidance_scale = 1.0
 
-        task = lambda: self._run_manual_loop_edit(prompt_embeds, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale, latents=self.edit_latents_fixed)
+        print("[DEBUG] generate_with_splice: incoming prompt_embeds shape/dtype/device:",
+              getattr(prompt_embeds, "shape", None), getattr(prompt_embeds, "dtype", None), getattr(prompt_embeds, "device", None),
+              flush=True)
 
+        task = lambda: self._run_manual_loop(prompt_embeds, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale)
         result = queue_lock.do_work(task) if queue_lock else task()
         images_tensor = result.result() if hasattr(result, "result") else result
 
-        images = [self.edit_pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0] for i in range(images_tensor.shape[0])]
+        images = []
+        for i in range(images_tensor.shape[0]):
+            pil = self.pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0]
+            images.append(pil)
+
         self.latest_images.extend(images)
         return images
 
