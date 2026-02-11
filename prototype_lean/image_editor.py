@@ -89,7 +89,24 @@ class ImageEditor:
               float(denormalized.norm()), torch.isnan(denormalized).any(), flush=True)
 
         # Expand to full prompt_embeds
-        prompt_emb_full = denormalized.unsqueeze(1).repeat(1, 77, 1)
+        original_starttoken = text_embeds[:, 0, :].detach()
+
+        def convert_to_full_text(summary_vec, original_starttoken, n_tokens=77):
+            if summary_vec.dim() == 1:
+                summary_vec = summary_vec.unsqueeze(0)
+            B, D = summary_vec.shape
+            first = original_starttoken.reshape(1, 1, D).expand(B, 1, D)
+            rest = summary_vec.reshape(B, 1, D).expand(B, n_tokens - 1, D)
+            full = torch.cat([first, rest], dim=1)
+            return full
+
+        summary_vec = denormalized.view(denormalized.shape[0], -1)
+        prompt_emb_full = convert_to_full_text(summary_vec, original_starttoken, n_tokens=77)
+
+        prompt_emb_full = prompt_emb_full.to(
+            device=self.generator.edit_pipe.device,
+            dtype=self.generator.edit_pipe.unet.dtype
+        )
 
         print("[DEBUG] prompt_emb_full device/dtype/min/max:", prompt_emb_full.device, prompt_emb_full.dtype,
               float(prompt_emb_full.min()), float(prompt_emb_full.max()), flush=True)
