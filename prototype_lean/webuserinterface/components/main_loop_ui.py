@@ -90,7 +90,7 @@ class MainLoopUI(UIComponent):
                         ngUI.label("More").classes('text-xs text-gray-500 w-12 text-right')
                         slider.on('update:model-value',
                                   lambda e, i=idx, c=concept_name:
-                                  self.webUI.slider_controller.on_slider_change(i, c, e.args, is_sae=True)
+                                  self.webUI.slider_controller.on_slider_change(prompt,i, c, e.args, is_sae=True)
                                   )
         # SpLiCE (second row)
         for idx, container in enumerate(self.webUI.slider_containers_splice):
