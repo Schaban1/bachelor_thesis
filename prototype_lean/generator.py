@@ -278,6 +278,7 @@ class Generator(GeneratorBase):
         """
         Generates a list of image(s) from given embedding
         """
+        print("++++GENERATE_IMAGE CALLED++++", flush=True)
         self.initial_latent_generator.manual_seed(self.initial_latent_seed)
         if embeddings.dtype != self.pipe.dtype:
             embeddings = embeddings.type(self.pipe.dtype)
@@ -318,7 +319,7 @@ class Generator(GeneratorBase):
         return images
 
     def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float, image_idx: int = 0):
-
+        print("++++RUN_MANUAL_LOOP CALLED++++", flush=True)
         pipe = self.edit_pipe
 
         seed = int(self.initial_latent_seed) + int(image_idx)
