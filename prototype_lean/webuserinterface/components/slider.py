@@ -154,7 +154,7 @@ class SliderController:
                 new_img = self.editor.splice_edit(
                     base_prompt=prompt,
                     concept_offsets=self.offsets_splice[image_idx],
-                    #image_idx=image_idx,
+                    image_idx=image_idx,
                     loading_progress=self.webUI.loading_ui.loading_progress,
                     queue_lock=self.webUI.queue_lock
                 )

@@ -32,7 +32,7 @@ class ImageEditor:
         # Caching: (base_prompt_hash, state_key) -> PIL image
         self.cache = defaultdict(dict)
 
-    def splice_edit(self, base_prompt: str, concept_offsets: dict, loading_progress=None, queue_lock=None):
+    def splice_edit(self, base_prompt: str, concept_offsets: dict, image_idx: int=0, loading_progress=None, queue_lock=None):
         # Deterministic cache key
         base_hash = hashlib.md5(base_prompt.encode()).hexdigest()[:8]
         state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
@@ -113,7 +113,7 @@ class ImageEditor:
 
         # Generate
         images = self.generator.generate_with_splice(prompt_emb_full, loading_progress,
-                                               queue_lock=queue_lock)
+                                               queue_lock=queue_lock, image_idx=image_idx)
 
         result_img = images[0]
 

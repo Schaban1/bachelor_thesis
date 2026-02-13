@@ -317,19 +317,28 @@ class Generator(GeneratorBase):
 
         return images
 
-    def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float):
+    def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float, image_idx: int = 0):
 
         pipe = self.edit_pipe
-        latents_curr = self.edit_latents_fixed.clone().to(pipe.device, dtype=pipe.unet.dtype)
-        pipe.scheduler.set_timesteps(num_inference_steps, device=latents_curr.device)
-        step_generator = torch.Generator(device=latents_curr.device).manual_seed(self.initial_latent_seed)
+
+        seed = int(self.initial_latent_seed) + int(image_idx)
+        step_generator = torch.Generator(device=pipe.device).manual_seed(seed)
+
+        latents_shape = (1, pipe.unet.in_channels, self.height // 8, self.width // 8)
+        latents_curr = torch.randn(latents_shape, generator=torch.Generator(device=pipe.device).manual_seed(seed),
+                                   device=pipe.device, dtype=pipe.unet.dtype)
 
         prompt_embeds = prompt_embeds.to(device=pipe.device, dtype=pipe.unet.dtype)
         uncond_embeds = self.edit_uncond_embeds.to(device=pipe.device, dtype=pipe.unet.dtype)
 
-        print("[DEBUG] _run_manual_loop: latents_curr.device/dtype:", latents_curr.device, latents_curr.dtype, flush=True)
-        print("[DEBUG] _run_manual_loop: prompt_embeds.device/dtype:", prompt_embeds.device, prompt_embeds.dtype, flush=True)
-        print("[DEBUG] _run_manual_loop: uncond_embeds.device/dtype:", uncond_embeds.device, uncond_embeds.dtype, flush=True)
+        print("[DEBUG] _run_manual_loop: latents_curr.device/dtype:", latents_curr.device, latents_curr.dtype,
+              flush=True)
+        print("[DEBUG] _run_manual_loop: prompt_embeds.device/dtype:", prompt_embeds.device, prompt_embeds.dtype,
+              flush=True)
+        print("[DEBUG] _run_manual_loop: uncond_embeds.device/dtype:", uncond_embeds.device, uncond_embeds.dtype,
+              flush=True)
+
+        pipe.scheduler.set_timesteps(num_inference_steps, device=latents_curr.device)
 
         for t in pipe.scheduler.timesteps:
             latent_in = torch.cat([latents_curr] * 2).to(pipe.unet.dtype)
@@ -352,7 +361,7 @@ class Generator(GeneratorBase):
 
 
     @torch.no_grad()
-    def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None):
+    def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None, image_idx: int=0):
         num_inference_steps = 6
         guidance_scale = 1.0
 
@@ -360,7 +369,7 @@ class Generator(GeneratorBase):
               getattr(prompt_embeds, "shape", None), getattr(prompt_embeds, "dtype", None), getattr(prompt_embeds, "device", None),
               flush=True)
 
-        task = lambda: self._run_manual_loop(prompt_embeds, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale)
+        task = lambda: self._run_manual_loop(prompt_embeds, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale,image_idx=image_idx)
         result = queue_lock.do_work(task) if queue_lock else task()
         images_tensor = result.result() if hasattr(result, "result") else result
 
