@@ -327,6 +327,9 @@ class Generator(GeneratorBase):
         latents_shape = (1, pipe.unet.in_channels, self.height // 8, self.width // 8)
         latents_curr = torch.randn(latents_shape, generator=torch.Generator(device=pipe.device).manual_seed(seed),
                                    device=pipe.device, dtype=pipe.unet.dtype)
+        print("image_idx:", image_idx)
+        print("latents mean:", latents_curr.mean().item())
+        print("latents std:", latents_curr.std().item())
 
         prompt_embeds = prompt_embeds.to(device=pipe.device, dtype=pipe.unet.dtype)
         uncond_embeds = self.edit_uncond_embeds.to(device=pipe.device, dtype=pipe.unet.dtype)
