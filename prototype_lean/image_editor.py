@@ -29,7 +29,7 @@ class ImageEditor:
             cache_dir=CACHE_DIR
         )
 
-        # Caching: (base_prompt_hash, state_key) -> PIL image
+        # Caching: (image_idx, base_prompt_hash, state_key) -> PIL image
         self.cache = defaultdict(dict)
 
     def splice_edit(self, base_prompt: str, concept_offsets: dict, image_idx: int=0, loading_progress=None, queue_lock=None):
@@ -38,9 +38,12 @@ class ImageEditor:
         state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
         state_key = tuple(state_items)
 
-        cache_key = (base_hash, state_key)
+        cache_key = (int(image_idx), base_hash, state_key)
         if cache_key in self.cache:
-            print(f"[CACHE HIT] Returning cached image for prompt '{base_prompt}' | offsets {state_key}")
+            print(
+                f"[CACHE HIT] Returning cached image for image_idx={image_idx} "
+                f"prompt='{base_prompt}' | offsets {state_key}"
+            )
             return self.cache[cache_key]
 
         text_inputs = self.generator.pipe.tokenizer(
