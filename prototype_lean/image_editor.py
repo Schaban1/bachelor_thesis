@@ -138,54 +138,53 @@ class ImageEditor:
             return cached_img
 
         inputs = self.clip_processor(images=base_image, return_tensors="pt")["pixel_values"].to(self.device)
-
         original_clip_feat = self.clip_model.get_image_features(inputs)
-
         eps = 1e-6
 
-        # --- ORIGINAL NORM ---
         orig_norm = original_clip_feat.norm(dim=-1, keepdim=True)
-        print(f"[DEBUG] original norm: {orig_norm.item():.6f}", flush=True)
+        print(f"[DEBUG] original norm: {float(orig_norm.item()):.6f}", flush=True)
 
         clip_feat_norm = original_clip_feat / orig_norm.clamp_min(eps)
-
-        norm_after_norm = clip_feat_norm.norm(dim=-1)
-        print(f"[DEBUG] norm after normalization (should be 1.0): {norm_after_norm.item():.6f}", flush=True)
 
         acts_original = self.sae.encode(clip_feat_norm)
         recon_original = self.sae.decode(acts_original)
 
         acts_modified = acts_original.clone()
 
-        per_step_scale = 0.15
+        per_step_scale = 0.05
 
         for concept_idx, offset in concept_offsets.items():
-            base_val = acts_modified[0, concept_idx].item()
+            orig_val = acts_original[0, concept_idx]
             steps = int(abs(offset) / 0.1)
             direction = 1.0 if offset > 0 else -1.0
-
-            delta = direction * steps * per_step_scale * base_val
-            acts_modified[0, concept_idx] = torch.clamp(
-                acts_modified[0, concept_idx] + delta,
-                min=0.0
-            )
+            delta = orig_val * (direction * steps * per_step_scale)
+            acts_modified[0, concept_idx] = torch.clamp(orig_val + delta, min=0.0)
 
         recon_modified = self.sae.decode(acts_modified)
 
         steering_delta = recon_modified - recon_original
-        target_feat_norm = clip_feat_norm + steering_delta
+        steering_norm = steering_delta.norm(dim=-1, keepdim=True)
+        print(f"[DEBUG] steering_norm before clamp: {float(steering_norm.item()):.6f}", flush=True)
 
-        # --- BEFORE RENORMALIZATION ---
-        pre_norm = target_feat_norm.norm(dim=-1)
-        print(f"[DEBUG] target norm before renorm: {pre_norm.item():.6f}", flush=True)
+        max_fraction = 0.30
+        desired_max = orig_norm * max_fraction
+        scale = (desired_max / (steering_norm + eps)).clamp(max=1.0)
+        steering_delta = steering_delta * scale
 
-        # re-scale back to original magnitude
-        target_feat = target_feat_norm / target_feat_norm.norm(dim=-1, keepdim=True).clamp_min(eps)
-        target_feat = target_feat * orig_norm
+        steering_norm_after = steering_delta.norm(dim=-1, keepdim=True)
+        print(
+            f"[DEBUG] steering_norm after clamp: {float(steering_norm_after.item()):.6f} scale used: {float(scale.item()):.6f}",
+            flush=True)
 
-        # --- AFTER RENORMALIZATION ---
+        target_feat = clip_feat_norm + steering_delta
+
+        pre_norm = target_feat.norm(dim=-1)
+        print(f"[DEBUG] target norm before renorm: {float(pre_norm.item()):.6f}", flush=True)
+
+        target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True).clamp_min(eps) * orig_norm
+
         final_norm = target_feat.norm(dim=-1)
-        print(f"[DEBUG] final norm after rescale: {final_norm.item():.6f}", flush=True)
+        print(f"[DEBUG] final norm after rescale: {float(final_norm.item()):.6f}", flush=True)
 
         new_img = self.generator.generate_with_sae(
             base_image, target_feat, loading_progress, queue_lock
