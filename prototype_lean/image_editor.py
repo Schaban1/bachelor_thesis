@@ -141,34 +141,52 @@ class ImageEditor:
 
         original_clip_feat = self.clip_model.get_image_features(inputs)
 
-        # normalized version for calculations
-        #clip_feat_norm = original_clip_feat / original_clip_feat.norm(dim=-1, keepdim=True)
+        eps = 1e-6
 
-        with torch.no_grad():
-            acts_original = self.sae.encode(original_clip_feat)
-            recon_original = self.sae.decode(acts_original)
+        # --- ORIGINAL NORM ---
+        orig_norm = original_clip_feat.norm(dim=-1, keepdim=True)
+        print(f"[DEBUG] original norm: {orig_norm.item():.6f}", flush=True)
 
-            acts_modified = acts_original.clone()
-            for concept_idx, offset in concept_offsets.items():
-                base_val = acts_modified[0, concept_idx].item()
+        clip_feat_norm = original_clip_feat / orig_norm.clamp_min(eps)
 
-                steps = int(abs(offset) / 0.1)
-                direction = 1.0 if offset > 0 else -1.0
+        norm_after_norm = clip_feat_norm.norm(dim=-1)
+        print(f"[DEBUG] norm after normalization (should be 1.0): {norm_after_norm.item():.6f}", flush=True)
 
-                delta = direction * steps * 0.3 * base_val
-                new_val = base_val + delta
+        acts_original = self.sae.encode(clip_feat_norm)
+        recon_original = self.sae.decode(acts_original)
 
-                acts_modified[0, concept_idx] = torch.clamp(
-                    torch.tensor(new_val, device=acts_modified.device),
-                    min=0.0
-                )
+        acts_modified = acts_original.clone()
 
-            recon_modified = self.sae.decode(acts_modified)
-            steering_delta = recon_modified - recon_original
-            target_feat = original_clip_feat + steering_delta
-            target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True)
+        per_step_scale = 0.15
 
-        # Generate using the new target embedding
+        for concept_idx, offset in concept_offsets.items():
+            base_val = acts_modified[0, concept_idx].item()
+            steps = int(abs(offset) / 0.1)
+            direction = 1.0 if offset > 0 else -1.0
+
+            delta = direction * steps * per_step_scale * base_val
+            acts_modified[0, concept_idx] = torch.clamp(
+                acts_modified[0, concept_idx] + delta,
+                min=0.0
+            )
+
+        recon_modified = self.sae.decode(acts_modified)
+
+        steering_delta = recon_modified - recon_original
+        target_feat_norm = clip_feat_norm + steering_delta
+
+        # --- BEFORE RENORMALIZATION ---
+        pre_norm = target_feat_norm.norm(dim=-1)
+        print(f"[DEBUG] target norm before renorm: {pre_norm.item():.6f}", flush=True)
+
+        # re-scale back to original magnitude
+        target_feat = target_feat_norm / target_feat_norm.norm(dim=-1, keepdim=True).clamp_min(eps)
+        target_feat = target_feat * orig_norm
+
+        # --- AFTER RENORMALIZATION ---
+        final_norm = target_feat.norm(dim=-1)
+        print(f"[DEBUG] final norm after rescale: {final_norm.item():.6f}", flush=True)
+
         new_img = self.generator.generate_with_sae(
             base_image, target_feat, loading_progress, queue_lock
         )
@@ -176,6 +194,5 @@ class ImageEditor:
         img_hash = hashlib.md5(new_img.tobytes()).hexdigest()[:8]
         print(f"[GENERATOR] New Image {image_idx} Created | Pixel Hash: {img_hash}", flush=True)
 
-        # Cache result
         self.cache[image_idx][state_key] = new_img
         return new_img
