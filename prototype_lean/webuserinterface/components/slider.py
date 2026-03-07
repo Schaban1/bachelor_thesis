@@ -124,7 +124,7 @@ class SliderController:
                 self.webUI.main_loop_ui.on_image_cached(True)
             else:
                 new_img = self.editor.sae_edit(
-                    base_image=self.original_images[image_idx],
+                    base_prompt=prompt,
                     concept_offsets=self.offsets[image_idx],
                     image_idx=image_idx,
                     loading_progress=self.webUI.loading_ui.loading_progress,

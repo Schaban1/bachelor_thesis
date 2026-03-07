@@ -136,42 +136,50 @@ class ImageEditor:
 
         return result_img
 
+    @torch.no_grad()
     def sae_edit(self, base_prompt: str, concept_offsets: dict, image_idx: int = 0, loading_progress=None, queue_lock=None):
         base_hash = hashlib.md5(base_prompt.encode()).hexdigest()[:8]
         state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
         state_key = tuple(state_items)
-        cache_key = (image_idx, base_hash, state_key)
+        cache_key = (int(image_idx), base_hash, state_key)
 
         if cache_key in self.cache:
             print(f"[CACHE HIT] sae_edit for image {image_idx}", flush=True)
             return self.cache[cache_key]
 
         text_inputs = self.generator.pipe.tokenizer(
-            base_prompt, padding="max_length", max_length=77, truncation=True, return_tensors="pt"
+            base_prompt, padding="max_length", max_length=self.generator.pipe.tokenizer.model_max_length,
+            truncation=True, return_tensors="pt"
         ).to(self.generator.device)
-
         with torch.no_grad():
             text_embeds = self.generator.pipe.text_encoder(text_inputs.input_ids)[0]
 
         summary = text_embeds[:, -1, :].detach()
         original_starttoken = text_embeds[:, 0, :].detach()
 
+        # build a single combined direction from all concept offsets
+        total_direction = torch.zeros_like(summary)
         for concept_name, offset in concept_offsets.items():
+            if offset == 0:
+                continue
             direction = self.build_direction(concept_name)
-            edited_summary = summary + offset * direction  # relative Edit
+            if direction.dim() == 1:
+                direction = direction.unsqueeze(0)
+            total_direction = total_direction + float(offset) * direction
 
-            recon = self.sae.decode(edited_summary.unsqueeze(0))
-            denormalized = recon / torch.std(recon) * torch.std(summary)
-            denormalized = denormalized - torch.mean(denormalized) + torch.mean(summary)
+        edited_summary = summary + total_direction
 
-        prompt_emb_full = self._convert_to_full_text(denormalized, original_starttoken)
+        prompt_emb_full = self._convert_to_full_text(edited_summary.squeeze(0), original_starttoken.squeeze(0))
+
+        target_device = getattr(self.generator.edit_pipe, "device", self.generator.device)
+        target_dtype = getattr(self.generator.edit_pipe.unet, "dtype", torch.float32)
+        prompt_emb_full = prompt_emb_full.to(device=target_device, dtype=target_dtype)
 
         sae_image_idx = image_idx + 100
         images = self.generator.generate_with_splice(prompt_emb_full, loading_progress, queue_lock, image_idx=sae_image_idx)
         result_img = images[0]
 
         self.cache[cache_key] = result_img
-        print(f"[SAE EDIT] New image for prompt '{base_prompt}' | offsets {state_key}", flush=True)
         return result_img
 
     def build_direction(self, concept_name):
