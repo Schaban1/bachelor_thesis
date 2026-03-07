@@ -166,7 +166,8 @@ class ImageEditor:
 
         prompt_emb_full = self._convert_to_full_text(denormalized, original_starttoken)
 
-        images = self.generator.generate_with_splice(prompt_emb_full, loading_progress, queue_lock, image_idx)
+        sae_image_idx = image_idx + 100
+        images = self.generator.generate_with_splice(prompt_emb_full, loading_progress, queue_lock, image_idx=sae_image_idx)
         result_img = images[0]
 
         self.cache[cache_key] = result_img
