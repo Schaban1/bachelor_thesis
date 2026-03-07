@@ -5,6 +5,7 @@ from pathlib import Path
 import os
 import hashlib
 import splice
+from constants import RESOURCES_DIR
 
 class ImageEditor:
     def __init__(self, generator):
@@ -32,7 +33,16 @@ class ImageEditor:
         # Caching: (image_idx, base_prompt_hash, state_key) -> PIL image
         self.cache = defaultdict(dict)
 
-    def splice_edit(self, base_prompt: str, concept_offsets: dict, image_idx: int=0, loading_progress=None, queue_lock=None):
+
+        self.sae_vocab_index = {}
+        csv_path = RESOURCES_DIR / "concept_names.csv"
+        with open(csv_path, "r") as f:
+            for line in f:
+                idx, name = line.strip().split(",")
+                self.sae_vocab_index[name] = int(idx)
+
+    def splice_edit(self, base_prompt: str, concept_offsets: dict, image_idx: int = 0, loading_progress=None,
+                    queue_lock=None):
         # Deterministic cache key
         base_hash = hashlib.md5(base_prompt.encode()).hexdigest()[:8]
         state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
@@ -116,7 +126,7 @@ class ImageEditor:
 
         # Generate
         images = self.generator.generate_with_splice(prompt_emb_full, loading_progress,
-                                               queue_lock=queue_lock, image_idx=image_idx)
+                                                     queue_lock=queue_lock, image_idx=image_idx)
 
         result_img = images[0]
 
@@ -126,72 +136,87 @@ class ImageEditor:
 
         return result_img
 
-    @torch.no_grad()
-    def sae_edit(self, base_image, concept_offsets, image_idx, loading_progress=None, queue_lock=None):
-        state_items = sorted(concept_offsets.items())
+    def sae_edit(self, base_prompt: str, concept_offsets: dict, image_idx: int = 0, loading_progress=None, queue_lock=None):
+        base_hash = hashlib.md5(base_prompt.encode()).hexdigest()[:8]
+        state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
         state_key = tuple(state_items)
+        cache_key = (image_idx, base_hash, state_key)
 
-        if state_key in self.cache[image_idx]:
-            cached_img = self.cache[image_idx][state_key]
-            img_hash = hashlib.md5(cached_img.tobytes()).hexdigest()[:8]
-            print(f"[CACHE HIT] Returning image {image_idx} | ID: {img_hash}", flush=True)
-            return cached_img
+        if cache_key in self.cache:
+            print(f"[CACHE HIT] sae_edit for image {image_idx}", flush=True)
+            return self.cache[cache_key]
 
-        inputs = self.clip_processor(images=base_image, return_tensors="pt")["pixel_values"].to(self.device)
-        original_clip_feat = self.clip_model.get_image_features(inputs)
-        eps = 1e-6
+        text_inputs = self.generator.pipe.tokenizer(
+            base_prompt, padding="max_length", max_length=77, truncation=True, return_tensors="pt"
+        ).to(self.generator.device)
 
-        orig_norm = original_clip_feat.norm(dim=-1, keepdim=True)
-        print(f"[DEBUG] original norm: {float(orig_norm.item()):.6f}", flush=True)
+        with torch.no_grad():
+            text_embeds = self.generator.pipe.text_encoder(text_inputs.input_ids)[0]
 
-        clip_feat_norm = original_clip_feat / orig_norm.clamp_min(eps)
+        summary = text_embeds[:, -1, :].detach()
+        original_starttoken = text_embeds[:, 0, :].detach()
 
-        acts_original = self.sae.encode(clip_feat_norm)
-        recon_original = self.sae.decode(acts_original)
+        for concept_name, offset in concept_offsets.items():
+            direction = self.build_direction(concept_name)
+            edited_summary = summary + offset * direction  # relative Edit
 
-        acts_modified = acts_original.clone()
+            recon = self.sae.decode(edited_summary.unsqueeze(0))
+            denormalized = recon / torch.std(recon) * torch.std(summary)
+            denormalized = denormalized - torch.mean(denormalized) + torch.mean(summary)
 
-        per_step_scale = 0.05
+        prompt_emb_full = self._convert_to_full_text(denormalized, original_starttoken)
 
-        for concept_idx, offset in concept_offsets.items():
-            orig_val = acts_original[0, concept_idx]
-            steps = int(abs(offset) / 0.1)
-            direction = 1.0 if offset > 0 else -1.0
-            delta = orig_val * (direction * steps * per_step_scale)
-            acts_modified[0, concept_idx] = torch.clamp(orig_val + delta, min=0.0)
+        images = self.generator.generate_with_splice(prompt_emb_full, loading_progress, queue_lock, image_idx)
+        result_img = images[0]
 
-        recon_modified = self.sae.decode(acts_modified)
+        self.cache[cache_key] = result_img
+        print(f"[SAE EDIT] New image for prompt '{base_prompt}' | offsets {state_key}", flush=True)
+        return result_img
 
-        steering_delta = recon_modified - recon_original
-        steering_norm = steering_delta.norm(dim=-1, keepdim=True)
-        print(f"[DEBUG] steering_norm before clamp: {float(steering_norm.item()):.6f}", flush=True)
+    def build_direction(self, concept_name):
+        pos_templates = [
+            "a {}", "the {}", "this is a {}", "image of a {}", "photo of a {}",
+            "picture of {}", "close-up of a {}", "detailed {}", "beautiful {}",
+            "realistic {}", "{}", "{} object", "{} scene", "{} in nature"
+        ]
+        neg_templates = ["", "nothing", "empty scene", "blank", "no {}", "without {}"]
+        pos_prompts = [t.format(concept_name) for t in pos_templates * 2]
+        neg_prompts = [t.format(concept_name) for t in neg_templates * 2]
 
-        max_fraction = 0.30
-        desired_max = orig_norm * max_fraction
-        scale = (desired_max / (steering_norm + eps)).clamp(max=1.0)
-        steering_delta = steering_delta * scale
+        pos_emb = torch.mean(torch.stack([
+            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, -1, :]
+            for p in pos_prompts
+        ]), dim=0)
+        neg_emb = torch.mean(torch.stack([
+            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, -1, :]
+            for p in neg_prompts
+        ]), dim=0)
 
-        steering_norm_after = steering_delta.norm(dim=-1, keepdim=True)
-        print(
-            f"[DEBUG] steering_norm after clamp: {float(steering_norm_after.item()):.6f} scale used: {float(scale.item()):.6f}",
-            flush=True)
+        direction = (pos_emb - neg_emb)
+        direction = direction / (direction.norm() + 1e-8)
+        return direction
 
-        target_feat = clip_feat_norm + steering_delta
+    def edit_with_direction(self, original_prompt, direction, strength=1.0):
+        inputs = self.generator.pipe.tokenizer(
+            original_prompt, padding="max_length", max_length=77, truncation=True, return_tensors="pt"
+        ).to(self.device)
+        with torch.no_grad():
+            text_embeds = self.generator.pipe.text_encoder(inputs.input_ids)[0]
+        summary = text_embeds[:, -1, :]
+        edited_summary = summary + strength * direction
+        full = torch.cat([
+            text_embeds[:, 0, :].unsqueeze(1),
+            edited_summary.unsqueeze(1).expand(-1, 76, -1)
+        ], dim=1)
+        return full
 
-        pre_norm = target_feat.norm(dim=-1)
-        print(f"[DEBUG] target norm before renorm: {float(pre_norm.item()):.6f}", flush=True)
-
-        target_feat = target_feat / target_feat.norm(dim=-1, keepdim=True).clamp_min(eps) * orig_norm
-
-        final_norm = target_feat.norm(dim=-1)
-        print(f"[DEBUG] final norm after rescale: {float(final_norm.item()):.6f}", flush=True)
-
-        new_img = self.generator.generate_with_sae(
-            base_image, target_feat, loading_progress, queue_lock
-        )
-
-        img_hash = hashlib.md5(new_img.tobytes()).hexdigest()[:8]
-        print(f"[GENERATOR] New Image {image_idx} Created | Pixel Hash: {img_hash}", flush=True)
-
-        self.cache[image_idx][state_key] = new_img
-        return new_img
+    def _convert_to_full_text(self, summary_vec, original_starttoken, n_tokens=77):
+        if summary_vec.dim() == 1:
+            summary_vec = summary_vec.unsqueeze(0)
+        if original_starttoken.dim() == 1:
+            original_starttoken = original_starttoken.unsqueeze(0)
+        k = summary_vec.shape[-1]
+        return torch.cat([
+            original_starttoken.reshape([1, 1, k]).expand(summary_vec.shape[0], 1, -1),
+            summary_vec.reshape([1, 1, k]).expand(summary_vec.shape[0], n_tokens - 1, -1)
+        ], dim=1)
