@@ -148,40 +148,51 @@ class ImageEditor:
             return self.cache[cache_key]
 
         text_inputs = self.generator.pipe.tokenizer(
-            base_prompt, padding="max_length", max_length=self.generator.pipe.tokenizer.model_max_length,
-            truncation=True, return_tensors="pt"
+            base_prompt, padding="max_length", max_length=77, truncation=True, return_tensors="pt"
         ).to(self.generator.device)
+
         with torch.no_grad():
             text_embeds = self.generator.pipe.text_encoder(text_inputs.input_ids)[0]
 
-        summary = text_embeds[:, -1, :].detach()
-        original_starttoken = text_embeds[:, 0, :].detach()
-
-        # build a single combined direction from all concept offsets
-        total_direction = torch.zeros_like(summary)
-        for concept_name, offset in concept_offsets.items():
+        total_direction = torch.zeros(
+            (1, text_embeds.shape[-1]),
+            device=text_embeds.device,
+            dtype=text_embeds.dtype,
+        )
+        for concept_idx, offset in concept_offsets.items():
             if offset == 0:
                 continue
+            concept_name = self.vocabulary[concept_idx] if isinstance(concept_idx, int) else str(concept_idx)
             direction = self.build_direction(concept_name)
             if direction.dim() == 1:
                 direction = direction.unsqueeze(0)
             total_direction = total_direction + float(offset) * direction
 
-        edited_summary = summary + total_direction
-
-        prompt_emb_full = self._convert_to_full_text(edited_summary.squeeze(0), original_starttoken.squeeze(0))
+        prompt_emb_full = self.edit_with_direction(
+            base_prompt,
+            total_direction,
+            strength=1.0,
+        )
 
         target_device = getattr(self.generator.edit_pipe, "device", self.generator.device)
         target_dtype = getattr(self.generator.edit_pipe.unet, "dtype", torch.float32)
         prompt_emb_full = prompt_emb_full.to(device=target_device, dtype=target_dtype)
 
         sae_image_idx = image_idx + 100
-        images = self.generator.generate_with_splice(prompt_emb_full, loading_progress, queue_lock, image_idx=sae_image_idx)
+
+        images = self.generator.generate_with_splice(
+            prompt_emb_full,
+            loading_progress,
+            queue_lock,
+            image_idx=sae_image_idx,
+            is_sae=True
+        )
+
         result_img = images[0]
 
         self.cache[cache_key] = result_img
+        print(f"[SAE EDIT] New image for prompt '{base_prompt}' | offsets {state_key}", flush=True)
         return result_img
-
     def build_direction(self, concept_name):
         pos_templates = [
             "a {}", "the {}", "this is a {}", "image of a {}", "photo of a {}",

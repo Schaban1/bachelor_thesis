@@ -4,17 +4,8 @@ from .ui_component import UIComponent
 
 class MainLoopUI(UIComponent):
     def create_label_updater(self, name, base_value, is_relative=False):
-        """
-        Creates a dedicated function for updating labels.
-        - If is_relative=True (SAE): Calculates Base * (1 + v)
-        - If is_relative=False (Splice): Calculates Base + v
-        """
-        if is_relative:
-            # SAE Logic: Percentage change (e.g. 0.05 is +5%)
-            return lambda v: f"{name}: {max(0.0, base_value + v):.2f}"
-        else:
-            # Splice Logic: Absolute addition (e.g. 0.1 is +0.1)
-            return lambda v: f"{name}: {max(0.0, base_value + v):.2f}"
+        """Creates a dedicated function for updating labels."""
+        return lambda v: f"{name}: {max(0.0, base_value + v):.2f}"
     def build_userinterface(self):
         print("[DEBUG] build_userinterface: START", flush=True)
         with ngUI.column().classes('mx-auto items-center pl-24 pr-24') \
@@ -30,7 +21,7 @@ class MainLoopUI(UIComponent):
                 with ngUI.column().classes('w-full items-center'):
                     ngUI.label('SAE Extractor').classes('text-center font-bold')
                     ngUI.label(
-                        "SAE sliders adjust concept strength relatively in 5 % steps (min./max.: ±10%)"
+                        "SAE sliders adjust concept strength in absolute 0.5 steps (min./max.: ±1.0)"
                     ).classes('text-sm text-gray-600 italic mb-2 text-center')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
@@ -79,7 +70,7 @@ class MainLoopUI(UIComponent):
                         # MIDDLE: Slider + Value
                         with ngUI.row().classes('flex-grow items-center'):
                             # FIX: Added 'label-value' prop to show % sign on the handle
-                            slider = ngUI.slider(min=-0.1, max=0.1, step=0.05, value=0) \
+                            slider = ngUI.slider(min=-1.0, max=1.0, step=0.5, value=0) \
                                 .props('label-always') \
                                 .classes('flex-grow')
                             ngUI.label().bind_text_from(

@@ -363,17 +363,24 @@ class Generator(GeneratorBase):
         image = (decoded / 2 + 0.5).clamp(0, 1).detach()
         return image
 
-
     @torch.no_grad()
-    def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None, image_idx: int=0):
-        num_inference_steps = 6
-        guidance_scale = 1.0
+    def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None,
+                             image_idx: int = 0, is_sae=False):
+        if is_sae:
+            num_inference_steps = 20
+            guidance_scale = 7.5
+            print(f"[DEBUG] generate_with_splice: SAE-Mode → {num_inference_steps} steps + guidance {guidance_scale}", flush=True)
+        else:
+            num_inference_steps = 6
+            guidance_scale = 1.0
+            print(f"[DEBUG] generate_with_splice: SpLiCE-Mode → {num_inference_steps} steps + guidance {guidance_scale}", flush=True)
 
         print("[DEBUG] generate_with_splice: incoming prompt_embeds shape/dtype/device:",
-              getattr(prompt_embeds, "shape", None), getattr(prompt_embeds, "dtype", None), getattr(prompt_embeds, "device", None),
+              getattr(prompt_embeds, "shape", None), getattr(prompt_embeds, "dtype", None),
+              getattr(prompt_embeds, "device", None),
               flush=True)
 
-        task = lambda: self._run_manual_loop(prompt_embeds, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale,image_idx=image_idx)
+        task = lambda: self._run_manual_loop(prompt_embeds, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale, image_idx=image_idx)
         result = queue_lock.do_work(task) if queue_lock else task()
         images_tensor = result.result() if hasattr(result, "result") else result
 
