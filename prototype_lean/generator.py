@@ -367,8 +367,8 @@ class Generator(GeneratorBase):
     def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None,
                              image_idx: int = 0, is_sae=False):
         if is_sae:
-            num_inference_steps = 14
-            guidance_scale = 4.5
+            num_inference_steps = 18
+            guidance_scale = 3.0
             print(f"[DEBUG] generate_with_splice: SAE-Mode → {num_inference_steps} steps + guidance {guidance_scale}", flush=True)
         else:
             num_inference_steps = 6
