@@ -138,11 +138,19 @@ class ImageEditor:
         return result_img
 
     @torch.no_grad()
-    def sae_edit(self, base_prompt: str, concept_offsets: dict, image_idx: int = 0, loading_progress=None, queue_lock=None):
+    def sae_edit(
+            self,
+            base_prompt: str,
+            concept_offsets: dict,
+            image_idx: int = 0,
+            active_concept_slot_idx: int = 0,
+            loading_progress=None,
+            queue_lock=None
+    ):
         base_hash = hashlib.md5(base_prompt.encode()).hexdigest()[:8]
         state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
         state_key = tuple(state_items)
-        cache_key = (int(image_idx), base_hash, state_key)
+        cache_key = (int(image_idx), int(active_concept_slot_idx), base_hash, state_key)
 
         if cache_key in self.cache:
             print(f"[CACHE HIT] sae_edit for image {image_idx}", flush=True)
@@ -179,7 +187,7 @@ class ImageEditor:
         target_dtype = getattr(self.generator.edit_pipe.unet, "dtype", torch.float32)
         prompt_emb_full = prompt_emb_full.to(device=target_device, dtype=target_dtype)
 
-        sae_image_idx = image_idx + 100
+        sae_image_idx = 100 + (int(image_idx) * 5) + int(active_concept_slot_idx)
 
         images = self.generator.generate_with_splice(
             prompt_emb_full,

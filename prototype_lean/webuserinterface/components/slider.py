@@ -15,6 +15,7 @@ class SliderController:
         self.editor = ImageEditor(generator)
 
         # State Containers
+        self.concept_slots = [{} for _ in range(webUI.num_images_to_generate)]
         self.concept_maps = [{} for _ in range(webUI.num_images_to_generate)]
         self.concept_maps_splice = [{} for _ in range(webUI.num_images_to_generate)]
         self.offsets = [{} for _ in range(webUI.num_images_to_generate)]
@@ -28,14 +29,14 @@ class SliderController:
         # Duplicate tracker: Stores the last processed key per image
         self.last_processed_keys = {}
 
-    def _get_cache_key(self, image_idx, offsets_dict):
+    def _get_cache_key(self, image_idx, offsets_dict, variant=None):
         """
         Generates a deterministic, immutable cache key.
         Rounds floats to 2 decimals to avoid precision mismatches.
         """
         sorted_items = sorted(offsets_dict.items())
         rounded_items = tuple((k, round(v, 2)) for k, v in sorted_items)
-        return (image_idx, rounded_items)
+        return (image_idx, rounded_items, variant)
 
     def load_fresh_sae(self):
         """Loads a new SAE model from disk"""
@@ -85,10 +86,11 @@ class SliderController:
             # --- SAE SETUP ---
             concepts = self.sae_extractor.extract_top_concepts(img)
             self.concept_maps[i] = {name: idx for name, _, idx in concepts}
+            self.concept_slots[i] = {idx: slot_idx for slot_idx, (_, _, idx) in enumerate(concepts)}
             self.offsets[i] = {idx: 0.0 for _, _, idx in concepts}
 
             # Cache Initial State
-            cache_key = self._get_cache_key(i, self.offsets[i])
+            cache_key = self._get_cache_key(i, self.offsets[i], variant="sae_base")
             self.image_cache[cache_key] = img.copy()
 
             concepts_per_image.append([(name, value) for name, value, _ in concepts])
@@ -99,7 +101,7 @@ class SliderController:
             self.offsets_splice[i] = {idx: 0.0 for _, _, idx in splice_concepts}
 
             # Cache Initial State
-            cache_key_splice = self._get_cache_key(i, self.offsets_splice[i])
+            cache_key_splice = self._get_cache_key(i, self.offsets_splice[i], variant="splice")
             self.image_cache_splice[cache_key_splice] = img.copy()
 
             splice_concepts_per_image.append([(name, value) for name, value, _ in splice_concepts])
@@ -109,10 +111,15 @@ class SliderController:
     def on_slider_change(self, prompt, image_idx, concept_name, value, is_sae=False):
         if is_sae:
             concept_idx = self.concept_maps[image_idx][concept_name]
+            concept_slot_idx = self.concept_slots[image_idx].get(concept_idx, 0)
             self.offsets[image_idx][concept_idx] = float(value)
 
             # Generate Key
-            cache_key = self._get_cache_key(image_idx, self.offsets[image_idx])
+            cache_key = self._get_cache_key(
+                image_idx,
+                self.offsets[image_idx],
+                variant=f"sae_slot_{concept_slot_idx}"
+            )
 
             # Double Popup Fix for SAE
             if self.last_processed_keys.get(f"sae_{image_idx}") == cache_key:
@@ -127,6 +134,7 @@ class SliderController:
                     base_prompt=prompt,
                     concept_offsets=self.offsets[image_idx],
                     image_idx=image_idx,
+                    active_concept_slot_idx=concept_slot_idx,
                     loading_progress=self.webUI.loading_ui.loading_progress,
                     queue_lock=self.webUI.queue_lock
                 )
@@ -140,8 +148,7 @@ class SliderController:
             concept_idx = self.concept_maps_splice[image_idx][concept_name]
             self.offsets_splice[image_idx][concept_idx] = float(value)
 
-            cache_key = self._get_cache_key(image_idx, self.offsets_splice[image_idx])
-
+            cache_key = self._get_cache_key(image_idx, self.offsets_splice[image_idx], variant="splice")
             # Double Popup Fix for Splice
             if self.last_processed_keys.get(f"splice_{image_idx}") == cache_key:
                 return
