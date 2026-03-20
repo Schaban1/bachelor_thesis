@@ -138,19 +138,11 @@ class ImageEditor:
         return result_img
 
     @torch.no_grad()
-    def sae_edit(
-            self,
-            base_prompt: str,
-            concept_offsets: dict,
-            image_idx: int = 0,
-            active_concept_slot_idx: int = 0,
-            loading_progress=None,
-            queue_lock=None
-    ):
+    def sae_edit(self, base_prompt: str, concept_offsets: dict, image_idx: int = 0, loading_progress=None, queue_lock=None):
         base_hash = hashlib.md5(base_prompt.encode()).hexdigest()[:8]
         state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
         state_key = tuple(state_items)
-        cache_key = (int(image_idx), int(active_concept_slot_idx), base_hash, state_key)
+        cache_key = (int(image_idx), base_hash, state_key)
 
         if cache_key in self.cache:
             print(f"[CACHE HIT] sae_edit for image {image_idx}", flush=True)
@@ -187,7 +179,29 @@ class ImageEditor:
         target_dtype = getattr(self.generator.edit_pipe.unet, "dtype", torch.float32)
         prompt_emb_full = prompt_emb_full.to(device=target_device, dtype=target_dtype)
 
-        sae_image_idx = 100 + (int(image_idx) * 5) + int(active_concept_slot_idx)
+        sorted_offsets = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
+        non_zero_items = []
+        for idx, offset in sorted_offsets:
+            rounded_offset = round(float(offset), 2)
+            if rounded_offset == 0.0:
+                continue
+            if isinstance(idx, int):
+                stable_idx = idx
+            else:
+                stable_idx = int(hashlib.md5(str(idx).encode()).hexdigest()[:8], 16)
+            non_zero_items.append((stable_idx, rounded_offset))
+        non_zero_items = tuple(non_zero_items)
+        if len(non_zero_items) == 1:
+            # seed path for single-slider edits
+            seed_variant = (non_zero_items[0][0] % 10000) + 1
+        elif len(non_zero_items) > 1:
+            # deterministic for multi-slider states
+            digest = hashlib.md5(str(non_zero_items).encode()).hexdigest()[:8]
+            seed_variant = int(digest, 16) % 10000 + 10001
+        else:
+            seed_variant = 0
+
+        sae_image_idx = 100 + (int(image_idx) * 100000) + seed_variant
 
         images = self.generator.generate_with_splice(
             prompt_emb_full,
