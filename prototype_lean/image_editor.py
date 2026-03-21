@@ -83,7 +83,8 @@ class ImageEditor:
             steps = int(round(abs(float(offset)) / 0.1))
             direction = 1.0 if offset > 0 else -1.0
 
-            delta = direction * steps * 0.25
+            # delta = direction * steps * 0.25
+            delta = direction * steps
             new_val = base_val + delta
 
             clamped_val = torch.clamp(
