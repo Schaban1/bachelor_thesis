@@ -80,18 +80,16 @@ class ImageEditor:
 
             base_val = weights[0, idx].item()
 
-            steps = int(round(abs(float(offset)) / 0.1))
-            direction = 1.0 if offset > 0 else -1.0
-
-            # delta = direction * steps * 0.25
-            delta = direction * steps
-            new_val = base_val + delta
+            new_val = base_val + offset
 
             clamped_val = torch.clamp(
                 torch.tensor(new_val, device=weights.device),
                 min=0.0
             )
             weights[0, idx] = clamped_val
+
+            print(
+                f"[SPLICE] {concept}: base={base_val:.4f} | offset={offset:+.2f} | new={new_val:.4f} | clamped={clamped_val:.4f}")
 
         # Recompose
         recon = self.splice.recompose_image(weights)
