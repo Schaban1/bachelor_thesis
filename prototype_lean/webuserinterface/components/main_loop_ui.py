@@ -37,7 +37,7 @@ class MainLoopUI(UIComponent):
                 with ngUI.column().classes('w-full items-center'):
                     ngUI.label('Splice Extractor').classes('text-center font-bold')
                     ngUI.label(
-                        "Splice sliders adjust concept strength in absolute 0.1 steps (min./max.: ±0.2)"
+                        "Splice sliders adjust concept strength in absolute 0.2 steps (min./max.: ±0.4)"
                     ).classes('text-sm text-gray-600 italic mb-2 text-center')
                 for i in range(self.webUI.num_images_to_generate):
                     with ngUI.column().classes('items-center'):
@@ -92,7 +92,7 @@ class MainLoopUI(UIComponent):
                     with ngUI.row().classes('w-full items-center gap-2'):
                         ngUI.label("Less").classes('text-xs text-gray-500 w-12 text-left')
                         with ngUI.row().classes('flex-grow items-center'):
-                            slider = ngUI.slider(min=-0.2, max=0.2, step=0.1, value=0) \
+                            slider = ngUI.slider(min=-0.4, max=0.4, step=0.2, value=0) \
                                 .props('label-always') \
                                 .classes('flex-grow')
                             ngUI.label().bind_text_from(
