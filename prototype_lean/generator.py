@@ -11,6 +11,7 @@ from pathlib import Path
 import os
 from constants import RESOURCES_DIR
 
+import numpy as np
 import torch.optim.optimizer as opt_fix
 import torch.nn as nn
 import torch.nn.functional as F
@@ -386,7 +387,10 @@ class Generator(GeneratorBase):
 
         images = []
         for i in range(images_tensor.shape[0]):
-            pil = self.edit_pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0]
+            #pil = self.edit_pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0]
+            img = images_tensor[i].detach().cpu().permute(1, 2, 0).numpy()
+            img = (img * 255).clip(0, 255).astype(np.uint8)
+            pil = Image.fromarray(img)
             images.append(pil)
 
         self.latest_images.extend(images)
