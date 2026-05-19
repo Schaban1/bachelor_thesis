@@ -166,14 +166,14 @@ class Generator(GeneratorBase):
         self.sae_model.load_state_dict(state_dict, strict=False)
         self.sae_model.eval()
 
-        os.environ["HF_HOME"] = str(Path(__file__).resolve().parent / "cache")
-        os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
-        os.environ["DIFFUSERS_CACHE"] = os.environ["HF_HOME"]
-        os.environ["TORCH_HOME"] = os.environ["HF_HOME"]
+        #os.environ["HF_HOME"] = str(Path(__file__).resolve().parent / "cache")
+        #os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
+        #os.environ["DIFFUSERS_CACHE"] = os.environ["HF_HOME"]
+        #os.environ["TORCH_HOME"] = os.environ["HF_HOME"]
 
-        CACHE_DIR = os.environ["HF_HOME"]
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        print(f"[CACHE] ALL MODELS → {CACHE_DIR}")
+        #CACHE_DIR = os.environ["HF_HOME"]
+        #os.makedirs(CACHE_DIR, exist_ok=True)
+        #print(f"[CACHE] ALL MODELS → {CACHE_DIR}")
 
         os.environ["TORCH_SDPA_DISABLE_FLASH_ATTENTION"] = "1"
         torch.backends.cuda.enable_flash_sdp(False)
@@ -184,7 +184,7 @@ class Generator(GeneratorBase):
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             torch_dtype=torch.float32,
-            cache_dir=CACHE_DIR,
+            #cache_dir=CACHE_DIR,
         ).to(self.device)
 
         self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
@@ -223,7 +223,7 @@ class Generator(GeneratorBase):
         self.ip_pipe = StableDiffusionPipeline.from_pretrained(
                 hf_model_name,
                 requires_safety_checker=True,
-                cache_dir=CACHE_DIR,
+                #cache_dir=CACHE_DIR,
                 torch_dtype=torch.float16,
             ).to(device=self.device)
 
@@ -242,7 +242,7 @@ class Generator(GeneratorBase):
         self.edit_pipe = StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             torch_dtype=torch.float32,
-            cache_dir=CACHE_DIR,
+            #cache_dir=CACHE_DIR,
         ).to(self.device)
 
         self.edit_pipe.scheduler = LCMScheduler.from_config(self.edit_pipe.scheduler.config)
@@ -387,10 +387,7 @@ class Generator(GeneratorBase):
 
         images = []
         for i in range(images_tensor.shape[0]):
-            #pil = self.edit_pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0]
-            img = images_tensor[i].detach().cpu().permute(1, 2, 0).numpy()
-            img = (img * 255).clip(0, 255).astype(np.uint8)
-            pil = Image.fromarray(img)
+            pil = self.edit_pipe.image_processor.postprocess(images_tensor[i:i + 1], output_type='pil')[0]
             images.append(pil)
 
         self.latest_images.extend(images)

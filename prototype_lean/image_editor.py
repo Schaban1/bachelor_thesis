@@ -15,19 +15,19 @@ class ImageEditor:
 
         self.vocabulary = splice.get_vocabulary("laion", 10000)
 
-        CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        print(f"[CACHE] ImageEditor SAE using cache: {CACHE_DIR}")
+        #CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
+        #os.makedirs(CACHE_DIR, exist_ok=True)
+        #print(f"[CACHE] ImageEditor SAE using cache: {CACHE_DIR}")
 
         self.device = "cuda"
         self.clip_model = CLIPModel.from_pretrained(
             "laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
-            cache_dir=CACHE_DIR
+            #cache_dir=CACHE_DIR
         ).to(self.device).eval()
 
         self.clip_processor = CLIPProcessor.from_pretrained(
             "laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
-            cache_dir=CACHE_DIR
+            #cache_dir=CACHE_DIR
         )
 
         # Caching: (image_idx, base_prompt_hash, state_key) -> PIL image

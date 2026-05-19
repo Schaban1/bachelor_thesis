@@ -31,11 +31,18 @@ class SpliceExtractor:
 class SAEExtractor:
     def __init__(self, sae, concept_names):
         self.device = "cuda"
-        CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        print(f"[CACHE] SAEExtractor using cache: {CACHE_DIR}")
-        self.clip_model = CLIPModel.from_pretrained("laion/CLIP-ViT-L-14-laion2B-s32B-b82K", cache_dir=CACHE_DIR).to(self.device).eval()
-        self.clip_processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-L-14-laion2B-s32B-b82K",cache_dir=CACHE_DIR)
+        #CACHE_DIR = str(Path(__file__).resolve().parent / "cache")
+        #os.makedirs(CACHE_DIR, exist_ok=True)
+        #print(f"[CACHE] SAEExtractor using cache: {CACHE_DIR}")
+        self.clip_model = CLIPModel.from_pretrained(
+            "laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
+            # cache_dir=CACHE_DIR
+        ).to(self.device).eval()
+
+        self.clip_processor = CLIPProcessor.from_pretrained(
+            "laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
+            # cache_dir=CACHE_DIR
+        )
 
         self.sae = sae
         self.concept_names = concept_names
