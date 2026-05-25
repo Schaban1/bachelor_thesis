@@ -95,9 +95,8 @@ class ImageEditor:
         recon = self.splice.recompose_image(weights)
 
         # Denormalize
-        #denormalized = recon / torch.std(recon) * torch.std(base_emb)
-        #denormalized = denormalized - torch.mean(denormalized) + torch.mean(base_emb)
-        denormalized = recon * base_emb.norm()
+        denormalized = recon / torch.std(recon) * torch.std(base_emb)
+        denormalized = denormalized - torch.mean(denormalized) + torch.mean(base_emb)
 
         print("[DEBUG] denormalized device, dtype, norm, nan:", denormalized.device, denormalized.dtype,
               float(denormalized.norm()), torch.isnan(denormalized).any(), flush=True)
