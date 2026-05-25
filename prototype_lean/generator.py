@@ -361,8 +361,9 @@ class Generator(GeneratorBase):
 
         latents_curr = latents_curr.to(pipe.vae.dtype)
         decoded = pipe.vae.decode(latents_curr / pipe.vae.config.scaling_factor).sample
-        image = (decoded / 2 + 0.5).clamp(0, 1).detach()
-        return image
+        #image = (decoded / 2 + 0.5).clamp(0, 1).detach()
+        #return image
+        return decoded
 
     @torch.no_grad()
     def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None,
