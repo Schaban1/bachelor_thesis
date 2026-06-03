@@ -67,7 +67,7 @@ class ImageEditor:
         with torch.no_grad():
             text_embeds = self.generator.pipe.text_encoder(text_inputs.input_ids)[0]
 
-        base_emb = text_embeds[:, -1:, :].squeeze(1)  # summary token
+        base_emb = text_embeds[:, text_inputs.attention_mask.sum()-2, :]  # summary token
 
         # Decomposition
         weights = self.splice.encode_image(base_emb)
@@ -244,7 +244,7 @@ class ImageEditor:
         ).to(self.device)
         with torch.no_grad():
             text_embeds = self.generator.pipe.text_encoder(inputs.input_ids)[0]
-        summary = text_embeds[:, -1, :]
+        summary = text_embeds[:, inputs.attention_mask.sum()-2, :]
         edited_summary = summary + strength * direction
         full = torch.cat([
             text_embeds[:, 0, :].unsqueeze(1),
