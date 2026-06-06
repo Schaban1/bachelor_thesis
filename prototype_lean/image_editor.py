@@ -226,12 +226,11 @@ class ImageEditor:
         neg_prompts = [t.format(concept_name) for t in neg_templates * 2]
 
         pos_emb = torch.mean(torch.stack([
-            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, -1, :]
+            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, self.generator.pipe.tokenizer(p, return_tensors="pt").attention_mask.sum()-2, :]
             for p in pos_prompts
         ]), dim=0)
         neg_emb = torch.mean(torch.stack([
-            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, -1, :]
-            for p in neg_prompts
+            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, self.generator.pipe.tokenizer(p, return_tensors="pt").attention_mask.sum()-2, :]            for p in neg_prompts
         ]), dim=0)
 
         direction = (pos_emb - neg_emb)
