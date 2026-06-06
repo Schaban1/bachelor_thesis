@@ -23,15 +23,27 @@ class VLMBackbone(torch.nn.Module):
         ).to(self.pipe.device)
         with torch.no_grad():
             text_embeds = self.pipe.text_encoder(text_inputs.input_ids)[0]
-        summary_token = text_embeds[:, -1:, :].squeeze(1)  # (B,768)
+        summary_token = text_embeds[:, text_inputs.attention_mask.sum()-2, :]  # (B,768)
         return summary_token
 
 def get_splice_model(pipe, device="cuda"):
     vlm_backbone = VLMBackbone(pipe)
 
-    concepts_tensor = torch.load(RESOURCES_DIR / "concepts_tensor_laion_10k.pt", map_location="cpu").to(device)
+    concepts = splice.get_vocabulary("laion", 10000)
+    embedded_concepts = []
+    for concept in concepts:
+        emb = vlm_backbone.encode_text(concept)
+        embedded_concepts.append(emb.squeeze(0))
 
-    image_mean = torch.mean(concepts_tensor, dim=0)
+    concepts_tensor = torch.stack(embedded_concepts).float()
+
+    
+    concepts_tensor = torch.nn.functional.normalize(concepts_tensor, dim=1)
+    
+    image_mean = torch.mean(concepts_tensor,dim=0)
+    
+    concepts_tensor = concepts_tensor - torch.mean(concepts_tensor, dim=0)
+    concepts_tensor = torch.nn.functional.normalize(concepts_tensor, dim=1)
 
     splicemodel = splice.SPLICE(image_mean, concepts_tensor, clip=vlm_backbone, device=device, return_weights=True)
     splicemodel.eval()

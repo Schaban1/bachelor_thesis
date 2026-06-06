@@ -6,6 +6,7 @@ import os
 import hashlib
 import splice
 from constants import RESOURCES_DIR
+import math
 
 class ImageEditor:
     def __init__(self, generator):
@@ -67,7 +68,7 @@ class ImageEditor:
         with torch.no_grad():
             text_embeds = self.generator.pipe.text_encoder(text_inputs.input_ids)[0]
 
-        base_emb = text_embeds[:, -1:, :].squeeze(1)  # summary token
+        base_emb = text_embeds[:, text_inputs.attention_mask.sum()-2, :]  # summary token
 
         # Decomposition
         weights = self.splice.encode_image(base_emb)
@@ -171,7 +172,7 @@ class ImageEditor:
         prompt_emb_full = self.edit_with_direction(
             base_prompt,
             total_direction,
-            strength=1.0,
+            strength=0.2,
         )
 
         target_device = getattr(self.generator.edit_pipe, "device", self.generator.device)
@@ -226,26 +227,25 @@ class ImageEditor:
         neg_prompts = [t.format(concept_name) for t in neg_templates * 2]
 
         pos_emb = torch.mean(torch.stack([
-            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, -1, :]
+            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, self.generator.pipe.tokenizer(p, return_tensors="pt").attention_mask.sum()-2, :]
             for p in pos_prompts
         ]), dim=0)
         neg_emb = torch.mean(torch.stack([
-            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, -1, :]
-            for p in neg_prompts
+            self.generator.pipe.text_encoder(self.generator.pipe.tokenizer(p, return_tensors="pt").to(self.device).input_ids)[0][:, self.generator.pipe.tokenizer(p, return_tensors="pt").attention_mask.sum()-2, :]            for p in neg_prompts
         ]), dim=0)
 
         direction = (pos_emb - neg_emb)
         direction = direction / (direction.norm() + 1e-8)
         return direction
 
-    def edit_with_direction(self, original_prompt, direction, strength=1.0):
+    def edit_with_direction(self, original_prompt, direction, strength=0.2):
         inputs = self.generator.pipe.tokenizer(
             original_prompt, padding="max_length", max_length=77, truncation=True, return_tensors="pt"
         ).to(self.device)
         with torch.no_grad():
             text_embeds = self.generator.pipe.text_encoder(inputs.input_ids)[0]
-        summary = text_embeds[:, -1, :]
-        edited_summary = summary + strength * direction
+        summary = text_embeds[:, inputs.attention_mask.sum()-2, :]
+        edited_summary = math.sqrt(1-strength**2) * summary + strength * (((direction-direction.mean())/direction.std())*summary.std()+summary.mean())
         full = torch.cat([
             text_embeds[:, 0, :].unsqueeze(1),
             edited_summary.unsqueeze(1).expand(-1, 76, -1)
