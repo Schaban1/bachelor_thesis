@@ -6,6 +6,7 @@ import os
 import hashlib
 import splice
 from constants import RESOURCES_DIR
+import math
 
 class ImageEditor:
     def __init__(self, generator):
@@ -171,7 +172,7 @@ class ImageEditor:
         prompt_emb_full = self.edit_with_direction(
             base_prompt,
             total_direction,
-            strength=1.0,
+            strength=0.2,
         )
 
         target_device = getattr(self.generator.edit_pipe, "device", self.generator.device)
@@ -237,14 +238,14 @@ class ImageEditor:
         direction = direction / (direction.norm() + 1e-8)
         return direction
 
-    def edit_with_direction(self, original_prompt, direction, strength=1.0):
+    def edit_with_direction(self, original_prompt, direction, strength=0.2):
         inputs = self.generator.pipe.tokenizer(
             original_prompt, padding="max_length", max_length=77, truncation=True, return_tensors="pt"
         ).to(self.device)
         with torch.no_grad():
             text_embeds = self.generator.pipe.text_encoder(inputs.input_ids)[0]
         summary = text_embeds[:, inputs.attention_mask.sum()-2, :]
-        edited_summary = summary + strength * direction
+        edited_summary = math.sqrt(1-strength**2) * summary + strength * (((direction-direction.mean())/direction.std())*summary.std()+summary.mean())
         full = torch.cat([
             text_embeds[:, 0, :].unsqueeze(1),
             edited_summary.unsqueeze(1).expand(-1, 76, -1)
