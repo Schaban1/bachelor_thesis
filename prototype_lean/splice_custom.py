@@ -23,7 +23,7 @@ class VLMBackbone(torch.nn.Module):
         ).to(self.pipe.device)
         with torch.no_grad():
             text_embeds = self.pipe.text_encoder(text_inputs.input_ids)[0]
-        summary_token = text_embeds[:, -1:, :].squeeze(1)  # (B,768)
+        summary_token = text_embeds[:, text_inputs.attention_mask.sum() - 2, :]
         return summary_token
 
 def get_splice_model(pipe, device="cuda"):
