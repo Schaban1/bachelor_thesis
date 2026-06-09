@@ -17,6 +17,7 @@ class SpliceExtractor:
             "laion/CLIP-ViT-L-14-laion2B-s32B-b82K"
         )
 
+    @torch.no_grad()
     def extract_top_concepts(self, pil_image, topk=5):
         #prompt_emb = self.splice.clip.encode_text(prompt)
         inputs = self.clip_processor(images=pil_image, return_tensors="pt")["pixel_values"].to(self.device)
