@@ -94,7 +94,7 @@ class SliderController:
             concepts_per_image.append([(name, value) for name, value, _ in concepts])
 
             # --- SPLICE SETUP ---
-            splice_concepts = self.splice_extractor.extract_top_concepts(prompt)
+            splice_concepts = self.splice_extractor.extract_top_concepts(img)
             self.concept_maps_splice[i] = {name: idx for name, _, idx in splice_concepts}
             self.offsets_splice[i] = {idx: 0.0 for _, _, idx in splice_concepts}
 

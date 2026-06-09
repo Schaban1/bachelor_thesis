@@ -8,10 +8,21 @@ class SpliceExtractor:
     def __init__(self, splice_model):
         self.splice = splice_model
         self.vocabulary = splice.get_vocabulary("laion", 10000)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.clip_model = CLIPModel.from_pretrained(
+            "laion/CLIP-ViT-L-14-laion2B-s32B-b82K"
+        ).to(self.device).eval()
 
-    def extract_top_concepts(self, prompt, topk=5):
-        prompt_emb = self.splice.clip.encode_text(prompt)
-        sparse_weights = self.splice.encode_image(prompt_emb)
+        self.clip_processor = CLIPProcessor.from_pretrained(
+            "laion/CLIP-ViT-L-14-laion2B-s32B-b82K"
+        )
+
+    def extract_top_concepts(self, pil_image, topk=5):
+        #prompt_emb = self.splice.clip.encode_text(prompt)
+        inputs = self.clip_processor(images=pil_image, return_tensors="pt")["pixel_values"].to(self.device)
+        clip_feat = self.clip_model.get_image_features(inputs)
+        #sparse_weights = self.splice.encode_image(prompt_emb)
+        sparse_weights = self.splice.encode_image(clip_feat)
         print(f"[DEBUG] sparse_weights → type: {type(sparse_weights)}", flush=True)
         print(f"[DEBUG] sparse_weights → shape: {sparse_weights.shape}", flush=True)
 
