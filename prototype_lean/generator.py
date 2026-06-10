@@ -319,6 +319,29 @@ class Generator(GeneratorBase):
 
         return images
 
+    @torch.no_grad()
+    def generate_images_manual_loop(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None):
+        if prompt_embeds.dtype != self.edit_pipe.dtype:
+            prompt_embeds = prompt_embeds.type(self.edit_pipe.dtype)
+        prompt_embeds = prompt_embeds.to(self.edit_pipe.device)
+
+        images = []
+        for i in range(prompt_embeds.shape[0]):
+            task = lambda i=i: self._run_manual_loop(
+                prompt_embeds=prompt_embeds[i:i + 1],
+                num_inference_steps=self.num_inference_steps,
+                guidance_scale=self.guidance_scale,
+                image_idx=i,
+            )
+            result = queue_lock.do_work(task) if queue_lock else task()
+            image_tensor = result.result() if hasattr(result, "result") else result
+
+            pil = self.edit_pipe.image_processor.postprocess(image_tensor, output_type='pil')[0]
+            images.append(pil)
+
+        self.latest_images.extend(images)
+        return images
+
     def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float, image_idx: int = 0):
         print("++++RUN_MANUAL_LOOP CALLED++++", flush=True)
         pipe = self.edit_pipe

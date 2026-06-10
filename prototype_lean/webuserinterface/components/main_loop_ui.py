@@ -51,7 +51,7 @@ class MainLoopUI(UIComponent):
                         self.webUI.slider_containers_splice.append(container)
 
             ngUI.space()
-            print("[DEBUG mainloop webuserinterface builduserinterface: was async def build_userinterface() called?",flush=True)
+            print("[DEBUG] mainloop webuserinterface builduserinterface: was async def build_userinterface() called?",flush=True)
 
     def refresh_sliders(self, prompt, concepts_per_image, splice_concepts_per_image):
         # SAE (first row)

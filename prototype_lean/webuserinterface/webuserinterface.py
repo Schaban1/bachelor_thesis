@@ -92,16 +92,21 @@ class WebUI:
     def generate_images(self):
         print("Generate new Images.")
         embeddings = self.pipe.encode_prompt(
-            self.user_prompt, device=self.pipe.device, num_images_per_prompt=self.num_images_to_generate, do_classifier_free_guidance=False
+            self.user_prompt,
+            device=self.pipe.device,
+            num_images_per_prompt=self.num_images_to_generate,
+            do_classifier_free_guidance=False
         )[0]
-        latents = torch.randn(
-            (self.num_images_to_generate, self.pipe.unet.config.in_channels, 512 // 8, 512 // 8),
-            device=self.pipe.device
-        ) * self.pipe.scheduler.init_noise_sigma
-        generated_images = self.generator.generate_image(embeddings, latents, self.loading_ui.loading_progress, self.queue_lock)
+
+        generated_images = self.generator.generate_images_manual_loop(
+            embeddings,
+            self.loading_ui.loading_progress,
+            self.queue_lock
+        )
+
         self.images_sae = [img.copy() for img in generated_images]
         self.images_splice = [img.copy() for img in generated_images]
-        print("[DEBUG webuserinterface: were the images generated?",flush=True)
+        print("[DEBUG] webuserinterface: were the images generated?", flush=True)
         self.slider_controller.on_images_generated(generated_images, self.user_prompt)
 
     def _pil_to_data_url(self, img: Image.Image) -> str:
