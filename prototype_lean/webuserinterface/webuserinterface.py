@@ -1,60 +1,106 @@
+import datetime
+import torch
 from nicegui import ui as ngUI
 from nicegui import binding
 from PIL import Image
 from constants import WebUIState, ScoreMode
 from .components import InitialIterationUI, LoadingUI, MainLoopUI, SliderController
-import torch
+from .study_ui import StudyUI
 import os
 import base64
 from io import BytesIO
 import csv
 from pathlib import Path
 
+
 class WebUI:
-    session_id = binding.BindableProperty()
-    state = binding.BindableProperty()
-    is_initial_iteration = binding.BindableProperty()
+    session_id             = binding.BindableProperty()
+    state                  = binding.BindableProperty()
+    is_initial_iteration   = binding.BindableProperty()
     is_main_loop_iteration = binding.BindableProperty()
-    is_generating = binding.BindableProperty()
-    user_prompt = binding.BindableProperty()
+    is_generating          = binding.BindableProperty()
+    user_prompt            = binding.BindableProperty()
     num_images_to_generate = binding.BindableProperty()
-    score_mode = binding.BindableProperty()
-    image_display_width = binding.BindableProperty()
-    image_display_height = binding.BindableProperty()
+    score_mode             = binding.BindableProperty()
+    image_display_width    = binding.BindableProperty()
+    image_display_height   = binding.BindableProperty()
+
+    # Study-mode state
+    study_phase         = binding.BindableProperty()   # 'intro' | 'prompt_engineering' | 'sliders' | 'done' | 'demo'
+    study_phase_is_task = binding.BindableProperty()   # True when task bar should be shown
+    study_task_idx      = binding.BindableProperty()   # index of current task
+    show_sliders        = binding.BindableProperty()   # False during PE round
+    show_demo_ui        = binding.BindableProperty()   # False on intro / done screens
+    study_selected_image_idx  = binding.BindableProperty()  # PE round: chosen final image
+    study_selected_sae_idx    = binding.BindableProperty()  # Slider round: chosen final SAE image
+    study_selected_splice_idx = binding.BindableProperty()  # Slider round: chosen final Splice image
+    study_selection_tick      = binding.BindableProperty()  # on every selection change
 
     @classmethod
     async def create(cls, args, pipe, generator, queue_lock):
         self = cls()
         loading_label = ngUI.label("Starting session...")
         await ngUI.context.client.connected()
-        self.args = args
-        self.pipe = pipe
-        self.generator = generator
-        self.queue_lock = queue_lock
-        self.session_id = "demo"
-        self.state = None
-        self.is_initial_iteration = False
-        self.is_generating = False
-        #self.iteration = 0
-        self.user_prompt = ""
+        self.args           = args
+        self.pipe           = pipe
+        self.generator      = generator
+        self.queue_lock     = queue_lock
+        self.session_id     = "demo"
+        self.state          = None
+        self.is_initial_iteration   = False
+        self.is_generating          = False
+        self.user_prompt            = ""
         self.num_images_to_generate = self.args.num_recommendations
-        self.score_mode = self.args.score_mode
+        self.score_mode             = self.args.score_mode
         self.image_display_width, self.image_display_height = tuple(self.args.image_display_size)
-        self.images_sae = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
+
+        self.images_sae    = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
         self.images_splice = [Image.new('RGB', (self.image_display_width, self.image_display_height)) for _ in range(self.num_images_to_generate)]
-        self.images_display = [None for _ in range(self.num_images_to_generate)]
+        self.images_display        = [None for _ in range(self.num_images_to_generate)]
         self.images_display_splice = [None for _ in range(self.num_images_to_generate)]
-        self.slider_containers = []
+        self.slider_containers        = []
         self.slider_containers_splice = []
+
         RESOURCES_DIR = Path(__file__).resolve().parent.parent / "resources"
         with open(RESOURCES_DIR / "concept_names.csv", newline='', encoding='utf-8') as f:
             reader = csv.reader(f)
             concept_names = [row[1] for row in reader]
-        self.concept_names = concept_names
+        self.concept_names     = concept_names
         self.slider_controller = SliderController(self, generator.splice, generator, generator.sae_model, self.concept_names)
+
+        # Study-mode defaults (starts on intro screen)
+        self.study_phase         = 'intro'
+        self.study_phase_is_task = False
+        self.study_task_idx      = 0
+        self.show_sliders        = True
+        self.show_demo_ui        = False
+        self.study_selected_image_idx  = None
+        self.study_selected_sae_idx    = None
+        self.study_selected_splice_idx = None
+        self.study_selection_tick      = 0
+        self.study_session_id    = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
         self.setup_root()
         loading_label.delete()
         return self
+
+    def select_study_image(self, idx, row='sae'):
+        """
+        During PE round: sets study_selected_image_idx
+        During slider round: sets study_selected_sae_idx or study_selected_splice_idx
+        depending on which row's button was clicked
+        """
+        if self.study_phase == 'prompt_engineering':
+            self.study_selected_image_idx = idx
+            ngUI.notify(f'Image {idx + 1} selected as final image', type='positive')
+        elif self.study_phase == 'sliders':
+            if row == 'sae':
+                self.study_selected_sae_idx = idx
+                ngUI.notify(f'Image {idx + 1} selected as final SAE image', type='positive')
+            else:
+                self.study_selected_splice_idx = idx
+                ngUI.notify(f'Image {idx + 1} selected as final Splice image', type='positive')
+        self.study_selection_tick = (self.study_selection_tick or 0) + 1
 
     def run(self):
         print("Start running the Web UI.")
@@ -67,9 +113,9 @@ class WebUI:
         self.update_state_variables()
 
     def update_state_variables(self):
-        self.is_initial_iteration = self.state == WebUIState.INIT_STATE
+        self.is_initial_iteration   = self.state == WebUIState.INIT_STATE
         self.is_main_loop_iteration = self.state == WebUIState.MAIN_STATE
-        self.is_generating = self.state == WebUIState.GENERATING_STATE
+        self.is_generating          = self.state == WebUIState.GENERATING_STATE
 
     def build_userinterface(self):
         print("Building User Interface.")
@@ -77,14 +123,24 @@ class WebUI:
         with self.root:
             ngUI.html(webis_template_top).classes('w-full')
             ngUI.space().classes('w-full h-full')
-            InitialIterationUI(self)
-            self.main_loop_ui = MainLoopUI(self)
-            self.loading_ui = LoadingUI(self)
+
+            # Study UI: intro screen, task bar, done screen
+            StudyUI(self)
+
+            # Normal demo UI
+            with ngUI.column().classes('w-full') \
+                    .bind_visibility_from(self, 'show_demo_ui'):
+                InitialIterationUI(self)
+                self.main_loop_ui = MainLoopUI(self)
+                self.loading_ui   = LoadingUI(self)
+
             ngUI.space().classes('w-full h-full')
             ngUI.html(webis_template_bottom).classes('w-full')
 
     def setup_root(self):
-        self.root = ngUI.column().classes('w-full h-full').style('font-family:"Product Sans","Noto Sans","Verdana", sans-serif;')
+        self.root = ngUI.column().classes('w-full h-full').style(
+            'font-family:"Product Sans","Noto Sans","Verdana", sans-serif;'
+        )
         ngUI.add_head_html('<style>.nicegui-content { padding: 0; }</style>')
         ngUI.query('.nicegui-content').classes('w-full')
         ngUI.query('.q-page').classes('flex')
@@ -104,7 +160,7 @@ class WebUI:
             self.queue_lock
         )
 
-        self.images_sae = [img.copy() for img in generated_images]
+        self.images_sae    = [img.copy() for img in generated_images]
         self.images_splice = [img.copy() for img in generated_images]
         print("[DEBUG] webuserinterface: were the images generated?", flush=True)
         self.slider_controller.on_images_generated(generated_images, self.user_prompt)
@@ -116,28 +172,20 @@ class WebUI:
 
     def update_image_displays(self, single_idx=None):
         if single_idx is not None:
-            # Update SAE Row
             data_url_sae = self._pil_to_data_url(self.images_sae[single_idx])
             self.images_display[single_idx].set_source(data_url_sae)
-
-            # Update Splice Row
             data_url_splice = self._pil_to_data_url(self.images_splice[single_idx])
             self.images_display_splice[single_idx].set_source(data_url_splice)
         else:
             for i in range(self.num_images_to_generate):
-                # Update SAE
                 data_url_sae = self._pil_to_data_url(self.images_sae[i])
                 self.images_display[i].set_source(data_url_sae)
-
-                # Update Splice
                 data_url_splice = self._pil_to_data_url(self.images_splice[i])
                 self.images_display_splice[i].set_source(data_url_splice)
 
-
-
     def get_webis_demo_template_html(self):
-        script_dir = os.path.dirname(__file__)
-        top_path = os.path.join(script_dir, "webis_template_top.html")
+        script_dir  = os.path.dirname(__file__)
+        top_path    = os.path.join(script_dir, "webis_template_top.html")
         bottom_path = os.path.join(script_dir, "webis_template_bottom.html")
         with open(top_path) as f:
             top = f.read()
