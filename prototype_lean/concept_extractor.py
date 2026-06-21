@@ -1,5 +1,6 @@
 import torch
 import splice
+from transformers import CLIPProcessor, CLIPModel
 from pathlib import Path
 import os
 
