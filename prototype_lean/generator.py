@@ -271,9 +271,6 @@ class Generator(GeneratorBase):
 
         print("[INIT] edit_pipe ready: dtype", self.edit_pipe.unet.dtype, "latents dtype", self.edit_latents_fixed.dtype, flush=True)
 
-
-
-
     @torch.no_grad()
     def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress, queue_lock) -> list[Image]:
         """
@@ -284,8 +281,8 @@ class Generator(GeneratorBase):
         if embeddings.dtype != self.pipe.dtype:
             embeddings = embeddings.type(self.pipe.dtype)
         embeddings = embeddings.to(self.pipe.device)
-        #latents = latents.to(self.pipe.device)
-        #latents = latents.type(self.pipe.dtype)
+        # latents = latents.to(self.pipe.device)
+        # latents = latents.type(self.pipe.dtype)
 
         pos_prompt_embeds = embeddings
         num_embeddings = pos_prompt_embeds.shape[0]
@@ -314,13 +311,13 @@ class Generator(GeneratorBase):
             result = queue_lock.do_work(task)
             images.extend(result.result())
 
-        print(f"[GENERATOR] FINAL: returning {len(images)} images",flush=True)
+        print(f"[GENERATOR] FINAL: returning {len(images)} images", flush=True)
         self.latest_images.extend(images)
 
         return images
 
     @torch.no_grad()
-    def generate_images_manual_loop(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None):
+    def generate_images_manual_loop(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None,  prompt_seed: int | None = None):
         if prompt_embeds.dtype != self.edit_pipe.dtype:
             prompt_embeds = prompt_embeds.type(self.edit_pipe.dtype)
         prompt_embeds = prompt_embeds.to(self.edit_pipe.device)
@@ -332,6 +329,7 @@ class Generator(GeneratorBase):
                 num_inference_steps=self.num_inference_steps,
                 guidance_scale=self.guidance_scale,
                 image_idx=i,
+                prompt_seed=prompt_seed,
             )
             result = queue_lock.do_work(task) if queue_lock else task()
             image_tensor = result.result() if hasattr(result, "result") else result
@@ -342,11 +340,12 @@ class Generator(GeneratorBase):
         self.latest_images.extend(images)
         return images
 
-    def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float, image_idx: int = 0):
+    def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float, image_idx: int = 0, prompt_seed: int | None = None):
         print("++++RUN_MANUAL_LOOP CALLED++++", flush=True)
         pipe = self.edit_pipe
 
-        seed = int(self.initial_latent_seed) + int(image_idx)
+        seed_base = self.initial_latent_seed if prompt_seed is None else int(prompt_seed)
+        seed = seed_base + int(image_idx)
         step_generator = torch.Generator(device=pipe.device).manual_seed(seed)
 
         latents_shape = (1, pipe.unet.in_channels, self.height // 8, self.width // 8)
@@ -429,69 +428,3 @@ class Generator(GeneratorBase):
         x = x.repeat(1, seq_len, 1)  # [1,77,768]
         return x
 
-    @torch.no_grad()
-    def generate_with_sae(
-            self,
-            base_image: Image,
-            concept_embedding: torch.Tensor,
-            loading_progress,
-            queue_lock
-    ) -> Image:
-        self.initial_latent_generator.manual_seed(self.initial_latent_seed)
-
-        concept_embedding = self.expand_to_prompt_embeds(concept_embedding)
-        concept_embedding = concept_embedding.to(dtype=torch.float16, device=self.device)
-
-        strength = 0.8
-        num_inference_steps = 8
-        guidance_scale = 8.0
-
-        # PIL -> model tensor
-        image = self.ip_pipe.image_processor.preprocess(
-            base_image,
-            height=self.height,
-            width=self.width
-        ).to(self.device, self.ip_pipe.dtype)
-
-        latents = self.ip_pipe.vae.encode(image).latent_dist.sample()
-        latents = latents * self.ip_pipe.vae.config.scaling_factor
-
-        latents = latents.to(self.ip_pipe.device, dtype=self.ip_pipe.dtype)
-
-        self.ip_pipe.scheduler.set_timesteps(num_inference_steps, device=self.device)
-        start_idx = int((1.0 - strength) * num_inference_steps)
-        start_idx = min(start_idx, num_inference_steps - 1)
-        timestep = self.ip_pipe.scheduler.timesteps[start_idx]
-
-        noise = torch.randn(
-            latents.shape,
-            device=latents.device,
-            dtype=latents.dtype,
-            generator=self.initial_latent_generator,
-        )
-
-        latents = self.ip_pipe.scheduler.add_noise(latents, noise, timestep)
-
-        task = lambda: self.ip_pipe(
-            height=self.height,
-            width=self.width,
-            num_images_per_prompt=1,
-            prompt_embeds=concept_embedding,
-            negative_prompt_embeds=self.negative_prompt_embed.repeat(1, 1, 1) if self.use_negative_prompt else None,
-            num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
-            generator=self.initial_latent_generator,
-            latents= latents,
-            callback_on_step_end=partial(
-                self.callback,
-                current_step=0,
-                num_embeddings=1,
-                loading_progress=loading_progress,
-                batch_size=1,
-                num_steps=self.num_inference_steps,
-            ),
-
-        ).images[0]
-
-        result = queue_lock.do_work(task)
-        return result.result()  # single PIL image

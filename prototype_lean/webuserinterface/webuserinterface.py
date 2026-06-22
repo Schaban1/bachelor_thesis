@@ -11,7 +11,7 @@ import base64
 from io import BytesIO
 import csv
 from pathlib import Path
-
+import hashlib
 
 class WebUI:
     session_id             = binding.BindableProperty()
@@ -154,10 +154,16 @@ class WebUI:
             do_classifier_free_guidance=False
         )[0]
 
+        prompt_seed = int(
+            hashlib.md5(f"{self.session_id}|{self.user_prompt}".encode()).hexdigest()[:8],
+            16
+        )
+
         generated_images = self.generator.generate_images_manual_loop(
             embeddings,
             self.loading_ui.loading_progress,
-            self.queue_lock
+            self.queue_lock,
+            prompt_seed = prompt_seed,
         )
 
         self.images_sae    = [img.copy() for img in generated_images]
