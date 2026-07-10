@@ -36,6 +36,7 @@ class WebUI:
     study_selected_sae_idx    = binding.BindableProperty()  # Slider round: chosen final SAE image
     study_selected_splice_idx = binding.BindableProperty()  # Slider round: chosen final Splice image
     study_selection_tick      = binding.BindableProperty()  # on every selection change
+    study_tick = binding.BindableProperty()
 
     @classmethod
     async def create(cls, args, pipe, generator, queue_lock):
@@ -74,6 +75,7 @@ class WebUI:
         self.study_phase_is_task = False
         self.study_task_idx      = 0
         self.study_group = 'a'
+        self.study_tick = 0
         self.show_sliders        = True
         self.show_demo_ui        = False
         self.study_selected_image_idx  = None

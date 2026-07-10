@@ -73,6 +73,12 @@ class StudyUI:
         self._build_task_bar()
         self._build_done()
 
+    def _bump_tick(self):
+        self.webUI.study_tick = (self.webUI.study_tick or 0) + 1
+
+    def _current_phase(self):
+        return _phase_for(self.webUI.study_group, self.webUI.study_task_idx)
+
     def _build_intro(self):
         with ngUI.column() \
                 .classes('mx-auto items-center gap-6 p-12 max-w-2xl') \
@@ -112,24 +118,23 @@ There are no right or wrong answers.
         with ngUI.column() \
                 .classes('w-full max-w-5xl mx-auto px-8 pt-4 pb-2 gap-2') \
                 .bind_visibility_from(self.webUI, 'study_phase_is_task'):
-
             with ngUI.row().classes('w-full items-center justify-between'):
                 ngUI.label() \
                     .bind_text_from(
-                        self.webUI, 'study_task_idx',
-                        backward=lambda i: (
-                            'Prompt Engineering'
-                            if _phase_for(self.webUI.study_group, i) == 'prompt_engineering'
-                            else 'Concept Sliders'
-                        )
-                    ).style('font-size: 120%; font-weight: bold; color: #444;')
+                    self.webUI, 'study_tick',
+                    backward=lambda _: (
+                        'Prompt Engineering'
+                        if self._current_phase() == 'prompt_engineering'
+                        else 'Concept Sliders'
+                    )
+                ).style('font-size: 120%; font-weight: bold; color: #444;')
 
                 with ngUI.row().classes('items-center gap-4'):
                     ngUI.label() \
                         .bind_text_from(
-                            self.webUI, 'study_task_idx',
-                            backward=lambda i: f'Task {i + 1} of {NUM_TASKS}'
-                        ).style('color: #888;')
+                        self.webUI, 'study_tick',
+                        backward=lambda _: f'Task {self.webUI.study_task_idx + 1} of {NUM_TASKS}'
+                    ).style('color: #888;')
                     ngUI.button('Back to Demo Mode', on_click=self._go_to_demo) \
                         .props('flat rounded size=sm')
 
@@ -138,37 +143,36 @@ There are no right or wrong answers.
                     .style('background: #f0f4f8; border-radius: 12px;'):
                 ngUI.label() \
                     .bind_text_from(
-                        self.webUI, 'study_task_idx',
-                        backward=lambda i: f"Context: {STUDY_TASKS[i]['scenario']}"
-                    ).style('font-weight: bold;')
+                    self.webUI, 'study_tick',
+                    backward=lambda _: f"Context: {STUDY_TASKS[self.webUI.study_task_idx]['scenario']}"
+                ).style('font-weight: bold;')
                 ngUI.label() \
                     .bind_text_from(
-                        self.webUI, 'study_task_idx',
-                        backward=lambda i: f"Goal: {STUDY_TASKS[i]['goal']}"
-                    ).classes('mt-1 text-gray-700')
+                    self.webUI, 'study_tick',
+                    backward=lambda _: f"Goal: {STUDY_TASKS[self.webUI.study_task_idx]['goal']}"
+                ).classes('mt-1 text-gray-700')
                 ngUI.label() \
                     .bind_text_from(
-                        self.webUI, 'study_task_idx',
-                        backward=lambda i: f'Starting prompt: "{STUDY_TASKS[i]["prompt"]}"'
-                    ).classes('mt-1 text-sm text-gray-500 italic')
+                    self.webUI, 'study_tick',
+                    backward=lambda _: f'Starting prompt: "{STUDY_TASKS[self.webUI.study_task_idx]["prompt"]}"'
+                ).classes('mt-1 text-sm text-gray-500 italic')
                 ngUI.label() \
                     .bind_text_from(
-                        self.webUI, 'study_task_idx',
-                        backward=lambda i: (
-                            PE_INSTRUCTIONS
-                            if _phase_for(self.webUI.study_group, i) == 'prompt_engineering'
-                            else SLIDER_INSTRUCTIONS
-                        )
-                    ).classes('mt-2 text-sm text-blue-700')
+                    self.webUI, 'study_tick',
+                    backward=lambda _: (
+                        PE_INSTRUCTIONS
+                        if self._current_phase() == 'prompt_engineering'
+                        else SLIDER_INSTRUCTIONS
+                    )
+                ).classes('mt-2 text-sm text-blue-700')
 
             with ngUI.row().classes('w-full justify-between items-center mt-1') \
                     .bind_visibility_from(self.webUI, 'is_main_loop_iteration'):
-
                 ngUI.button('↻ Generate New Images', on_click=self._on_regenerate) \
                     .props('outline rounded') \
                     .bind_visibility_from(
-                        self.webUI, 'study_phase', value='prompt_engineering'
-                    )
+                    self.webUI, 'study_phase', value='prompt_engineering'
+                )
                 ngUI.space()
                 ngUI.button('Task Done ✓', on_click=self._on_task_done) \
                     .props('color=green unelevated rounded') \
@@ -198,11 +202,19 @@ There are no right or wrong answers.
         self.webUI.study_selected_sae_idx    = None
         self.webUI.study_selected_splice_idx = None
         self._apply_phase()
+        print(
+            f"[STUDY DEBUG] group={self.webUI.study_group}, "
+            f"task={self.webUI.study_task_idx}, "
+            f"phase={self.webUI.study_phase}, "
+            f"show_sliders={self.webUI.show_sliders}",
+            flush=True
+        )
         self._prefill_prompt()
+        self._bump_tick()
         self.webUI.change_state(WebUIState.INIT_STATE)
 
     def _apply_phase(self):
-        phase = _phase_for(self.webUI.study_group, self.webUI.study_task_idx)
+        phase = self._current_phase()
         self.webUI.study_phase  = phase
         self.webUI.show_sliders = (phase == 'sliders')
 
@@ -224,7 +236,7 @@ There are no right or wrong answers.
         self.webUI.change_state(WebUIState.INIT_STATE)
 
     def _on_task_done(self):
-        phase = _phase_for(self.webUI.study_group, self.webUI.study_task_idx)
+        phase = self._current_phase()
 
         if phase == 'prompt_engineering' \
                 and self.webUI.study_selected_image_idx is None:
@@ -269,6 +281,7 @@ There are no right or wrong answers.
         self.webUI.study_task_idx += 1
         self._apply_phase()
         self._prefill_prompt()
+        self._bump_tick()
         self.webUI.change_state(WebUIState.INIT_STATE)
 
     def _finish_study(self):
@@ -297,7 +310,7 @@ There are no right or wrong answers.
     # Logging
     def _save_task_log(self):
         task_idx = self.webUI.study_task_idx
-        phase    = _phase_for(self.webUI.study_group, task_idx)
+        phase = self._current_phase()
 
         out_dir = (
             Path.home() / "study_results"
