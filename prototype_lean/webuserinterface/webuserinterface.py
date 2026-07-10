@@ -29,6 +29,7 @@ class WebUI:
     study_phase         = binding.BindableProperty()   # 'intro' | 'prompt_engineering' | 'sliders' | 'done' | 'demo'
     study_phase_is_task = binding.BindableProperty()   # True when task bar should be shown
     study_task_idx      = binding.BindableProperty()   # index of current task
+    study_group = binding.BindableProperty()  # a or b
     show_sliders        = binding.BindableProperty()   # False during PE round
     show_demo_ui        = binding.BindableProperty()   # False on intro / done screens
     study_selected_image_idx  = binding.BindableProperty()  # PE round: chosen final image
@@ -72,6 +73,7 @@ class WebUI:
         self.study_phase         = 'intro'
         self.study_phase_is_task = False
         self.study_task_idx      = 0
+        self.study_group = 'a'
         self.show_sliders        = True
         self.show_demo_ui        = False
         self.study_selected_image_idx  = None
