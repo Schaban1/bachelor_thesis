@@ -34,7 +34,7 @@ STUDY_TASKS = [
         "goal":     "The image should still look like evening, but not feel threatening. It should suggest that people could walk there comfortably.",
     },
     {
-        "prompt":   "a small study desk",
+        "prompt":   "study blog",
         "scenario": "A student is building the front page for a study blog.",
         "goal":     "The desk should give the impression that someone could sit down and start working without feeling pressured.",
     },
@@ -183,7 +183,7 @@ There are no right or wrong answers.
                 .classes('mx-auto items-center gap-6 p-12 max-w-2xl') \
                 .bind_visibility_from(self.webUI, 'study_phase', value='done'):
 
-            ngUI.label('Study complete — thank you!') \
+            ngUI.label('Study complete, thank you!') \
                 .style('font-size: 200%; font-weight: bold;')
             ngUI.label(
                 'Your results have been saved. You can now close this window.'
@@ -260,7 +260,7 @@ There are no right or wrong answers.
         if idx == 2:
             sus_url = SUS_FORM_PE_URL if phase == 'prompt_engineering' else SUS_FORM_SLIDERS_URL
             self._show_sus_popup(
-                title='Halfway done — please fill in the first questionnaire.',
+                title='Halfway done, please fill in the first questionnaire.',
                 url=sus_url,
                 then=self._advance_task
             )
@@ -269,7 +269,7 @@ There are no right or wrong answers.
         if idx == 5:
             sus_url = SUS_FORM_SLIDERS_URL if phase == 'sliders' else SUS_FORM_PE_URL
             self._show_sus_popup(
-                title='Study complete — please fill in the final questionnaire.',
+                title='Study complete, please fill in the final questionnaire.',
                 url=sus_url,
                 then=self._finish_study
             )
