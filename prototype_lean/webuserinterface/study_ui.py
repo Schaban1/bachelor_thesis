@@ -201,6 +201,9 @@ There are no right or wrong answers.
         self.webUI.study_selected_image_idx  = None
         self.webUI.study_selected_sae_idx    = None
         self.webUI.study_selected_splice_idx = None
+        self.webUI.study_selected_prompt = ""
+        self.webUI.study_original_images = []
+        self.webUI.study_task_has_original = False
         self._apply_phase()
         print(
             f"[STUDY DEBUG] group={self.webUI.study_group}, "
@@ -255,6 +258,8 @@ There are no right or wrong answers.
         self.webUI.study_selected_sae_idx    = None
         self.webUI.study_selected_splice_idx = None
 
+        self.webUI.study_selected_prompt = ""
+
         idx = self.webUI.study_task_idx
 
         if idx == 2:
@@ -279,6 +284,8 @@ There are no right or wrong answers.
 
     def _advance_task(self):
         self.webUI.study_task_idx += 1
+        self.webUI.study_original_images = []
+        self.webUI.study_task_has_original = False
         self._apply_phase()
         self._prefill_prompt()
         self._bump_tick()
@@ -329,12 +336,12 @@ There are no right or wrong answers.
         }
 
         # Save original images (before any edit) from images_sae
-        for i, img in enumerate(self.webUI.images_sae):
+        for i, img in enumerate(self.webUI.study_original_images):
             p = out_dir / f"original_{i:02d}.jpg"
             img.save(str(p))
         log_entry["originals"] = [
             str(out_dir / f"original_{i:02d}.jpg")
-            for i in range(len(self.webUI.images_sae))
+            for i in range(len(self.webUI.study_original_images))
         ]
 
         if phase == 'prompt_engineering':
@@ -343,6 +350,7 @@ There are no right or wrong answers.
             self.webUI.images_sae[idx].save(str(p))
             log_entry["pe_final"]     = str(p)
             log_entry["selected_idx"] = idx
+            log_entry["prompt_for_final"] = self.webUI.study_selected_prompt
 
         elif phase == 'sliders':
             sae_idx    = self.webUI.study_selected_sae_idx

@@ -81,6 +81,8 @@ class WebUI:
         self.study_selected_image_idx  = None
         self.study_selected_sae_idx    = None
         self.study_selected_splice_idx = None
+        self.study_original_images = []
+        self.study_task_has_original = False
         self.study_selection_tick      = 0
         self.study_session_id    = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -173,6 +175,10 @@ class WebUI:
         self.images_sae    = [img.copy() for img in generated_images]
         self.images_splice = [img.copy() for img in generated_images]
         print("[DEBUG] webuserinterface: were the images generated?", flush=True)
+        if getattr(self, 'study_phase_is_task', False) and not self.study_task_has_original:
+            self.study_original_images = [img.copy() for img in generated_images]
+            self.study_task_has_original = True
+
         self.slider_controller.on_images_generated(generated_images, self.user_prompt)
 
     def _pil_to_data_url(self, img: Image.Image) -> str:
