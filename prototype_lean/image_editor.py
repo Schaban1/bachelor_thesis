@@ -50,7 +50,7 @@ class ImageEditor:
         state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
         state_key = tuple(state_items)
 
-        cache_key = (int(image_idx), base_hash, state_key)
+        cache_key = ("splice",int(image_idx), base_hash, state_key)
         if cache_key in self.cache:
             print(
                 f"[CACHE HIT] Returning cached image for image_idx={image_idx} "
@@ -143,7 +143,7 @@ class ImageEditor:
         base_hash = hashlib.md5(base_prompt.encode()).hexdigest()[:8]
         state_items = sorted(concept_offsets.items(), key=lambda x: str(x[0]))
         state_key = tuple(state_items)
-        cache_key = (int(image_idx), base_hash, state_key)
+        cache_key = ("sae",int(image_idx), base_hash, state_key)
 
         if cache_key in self.cache:
             print(f"[CACHE HIT] sae_edit for image {image_idx}", flush=True)

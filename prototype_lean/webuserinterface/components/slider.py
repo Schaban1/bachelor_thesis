@@ -85,7 +85,7 @@ class SliderController:
             # --- SAE SETUP ---
             concepts = self.sae_extractor.extract_top_concepts(img)
             self.concept_maps[i] = {name: idx for name, _, idx in concepts}
-            self.offsets[i] = {idx: 0.0 for _, _, idx in concepts}
+            self.offsets[i] = {name: 0.0 for name, _, _ in concepts}
 
             # Cache Initial State
             cache_key = self._get_cache_key(i, self.offsets[i])
@@ -108,8 +108,9 @@ class SliderController:
 
     def on_slider_change(self, prompt, image_idx, concept_name, value, is_sae=False):
         if is_sae:
-            concept_idx = self.concept_maps[image_idx][concept_name]
-            self.offsets[image_idx][concept_idx] = float(value)
+            #concept_idx = self.concept_maps[image_idx][concept_name]
+            #self.offsets[image_idx][concept_idx] = float(value)
+            self.offsets[image_idx][concept_name] = float(value)
 
             # Generate Key
             cache_key = self._get_cache_key(image_idx, self.offsets[image_idx])
