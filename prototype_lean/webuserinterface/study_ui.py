@@ -34,7 +34,7 @@ STUDY_TASKS = [
         "goal":     "The image should still look like evening, but not feel threatening. It should suggest that people could walk there comfortably.",
     },
     {
-        "prompt":   "study blog",
+        "prompt":   "study desk",
         "scenario": "A student is building the front page for a study blog.",
         "goal":     "The desk should give the impression that someone could sit down and start working without feeling pressured.",
     },
@@ -335,7 +335,7 @@ There are no right or wrong answers.
             "prompt_used":  self.webUI.user_prompt,
         }
 
-        # Save original images (before any edit) from images_sae
+        # Save original images from images_sae
         for i, img in enumerate(self.webUI.study_original_images):
             p = out_dir / f"original_{i:02d}.jpg"
             img.save(str(p))

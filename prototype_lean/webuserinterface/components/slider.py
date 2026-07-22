@@ -108,8 +108,6 @@ class SliderController:
 
     def on_slider_change(self, prompt, image_idx, concept_name, value, is_sae=False):
         if is_sae:
-            #concept_idx = self.concept_maps[image_idx][concept_name]
-            #self.offsets[image_idx][concept_idx] = float(value)
             self.offsets[image_idx][concept_name] = float(value)
 
             # Generate Key

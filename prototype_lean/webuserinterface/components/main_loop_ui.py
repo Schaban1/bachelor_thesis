@@ -95,7 +95,6 @@ class MainLoopUI(UIComponent):
                         container = ngUI.column().classes('w-full mt-2 space-y-1')
                         self.webUI.slider_containers_splice.append(container)
 
-                        # "Select as final image" — only shown during the slider study round
                         with ngUI.column().classes('w-full items-center mt-2 gap-1') \
                                 .bind_visibility_from(self.webUI, 'study_phase', value='sliders'):
                             ngUI.button(

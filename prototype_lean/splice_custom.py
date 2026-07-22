@@ -1,12 +1,10 @@
 import torch
 import splice
-from pathlib import Path
-from constants import RESOURCES_DIR
 
 class VLMBackbone(torch.nn.Module):
     def __init__(self, pipe):
         super().__init__()
-        self.pipe = pipe  # SD pipe für text encoder
+        self.pipe = pipe
 
     def encode_image(self, image):
 
@@ -23,7 +21,9 @@ class VLMBackbone(torch.nn.Module):
         ).to(self.pipe.device)
         with torch.no_grad():
             text_embeds = self.pipe.text_encoder(text_inputs.input_ids)[0]
+        ####### code suggestion/improvement by Niklas Deckers #################
         summary_token = text_embeds[:, text_inputs.attention_mask.sum() - 2, :]
+        #######################################################################
         return summary_token
 
 def get_splice_model(pipe, device="cuda"):
@@ -32,6 +32,7 @@ def get_splice_model(pipe, device="cuda"):
     #concepts_tensor = torch.load(RESOURCES_DIR / "concepts_tensor_laion_10k.pt", map_location="cpu").to(device)
     #image_mean = torch.mean(concepts_tensor, dim=0)
 
+    ####### code suggestion/improvement by Niklas Deckers #################
     concepts = splice.get_vocabulary("laion", 10000)
     embedded_concepts = []
     for concept in concepts:
@@ -46,6 +47,7 @@ def get_splice_model(pipe, device="cuda"):
 
     concepts_tensor = concepts_tensor - torch.mean(concepts_tensor, dim=0)
     concepts_tensor = torch.nn.functional.normalize(concepts_tensor, dim=1)
+    #########################################################################
 
     splicemodel = splice.SPLICE(image_mean, concepts_tensor, clip=vlm_backbone, device=device, return_weights=True)
     splicemodel.eval()

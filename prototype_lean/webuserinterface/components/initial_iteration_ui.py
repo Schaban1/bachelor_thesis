@@ -18,9 +18,9 @@ class InitialIterationUI(UIComponent):
 
 Enter a prompt to generate 4 images. Adjust sliders to edit each image's style.
 Example prompts:
-- `a fox firefighter`
-- `an avocado chair`
-- `an illustration of love`
+- `a mountain cabin`
+- `a park bench`
+- `a classroom`
                 """)
                 ngUI.label('Start by generating images.').classes('mt-8') \
                     .style('font-size: 200%; font-weight: bold;')

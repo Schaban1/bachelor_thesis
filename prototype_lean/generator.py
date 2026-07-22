@@ -2,12 +2,11 @@ import logging
 import torch
 from PIL.Image import Image
 from abc import abstractmethod, ABC
-from diffusers import StableDiffusionPipeline, LCMScheduler, EulerDiscreteScheduler
+from diffusers import StableDiffusionPipeline, LCMScheduler
 from functools import partial
 from nicegui import binding
 from torch import Tensor
 from nicegui import ui as ngUI
-from pathlib import Path
 import os
 from constants import RESOURCES_DIR
 
@@ -22,9 +21,11 @@ import sys
 if not hasattr(opt_fix, "params_t"):
     opt_fix.params_t = Union[Iterable[torch.Tensor], Iterable[Dict[str, Any]]]
 
+
 class MockHookPoint(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
+
 
 tl_module = MagicMock()
 tl_module.HookedTransformer = MagicMock
@@ -60,8 +61,6 @@ def get_bias_tensor(module_or_tensor):
 def manual_encode_fix(self, x):
     # Logic: (Input - PreBias) -> Encoder -> Activation
 
-    #x = x / x.norm(dim=-1, keepdim=True)
-
     # 1. Apply pre-encoder bias
     if hasattr(self, 'pre_encoder_bias'):
         bias = get_bias_tensor(self.pre_encoder_bias)
@@ -79,7 +78,7 @@ def manual_encode_fix(self, x):
 
 
 def manual_decode_fix(self, f):
-    # Logic: Features -> Decoder -> + PostBias (Reconstruction)
+    # Logic: Features -> Decoder -> + PostBias
     x = self.decoder(f)
 
     # 1. Apply post-decoder bias
@@ -89,10 +88,13 @@ def manual_decode_fix(self, f):
 
     return x
 
-from sparse_autoencoder import SparseAutoencoder,SparseAutoencoderConfig
+
+from sparse_autoencoder import SparseAutoencoder, SparseAutoencoderConfig
+
 SparseAutoencoder.encode = manual_encode_fix
 SparseAutoencoder.decode = manual_decode_fix
 from splice_custom import get_splice_model
+
 
 class GeneratorBase(ABC):
     def __init__(self):
@@ -110,6 +112,7 @@ class GeneratorBase(ABC):
     def clear_latest_images(self) -> None:
         self.latest_images = []
 
+
 class Generator(GeneratorBase):
     height = binding.BindableProperty()
     width = binding.BindableProperty()
@@ -122,7 +125,6 @@ class Generator(GeneratorBase):
     def __init__(self,
                  batch_size: int = None,
                  hf_model_name: str = "stable-diffusion-v1-5/stable-diffusion-v1-5",
-                 cache_dir: str | None = '/cache/',
                  num_inference_steps: int = 20,
                  device: str = 'cuda',
                  guidance_scale: float = 7.,
@@ -166,25 +168,17 @@ class Generator(GeneratorBase):
         self.sae_model.load_state_dict(state_dict, strict=False)
         self.sae_model.eval()
 
-        #os.environ["HF_HOME"] = str(Path(__file__).resolve().parent / "cache")
-        #os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
-        #os.environ["DIFFUSERS_CACHE"] = os.environ["HF_HOME"]
-        #os.environ["TORCH_HOME"] = os.environ["HF_HOME"]
-
-        #CACHE_DIR = os.environ["HF_HOME"]
-        #os.makedirs(CACHE_DIR, exist_ok=True)
-        #print(f"[CACHE] ALL MODELS → {CACHE_DIR}")
-
+        ####### code suggestion/improvement by Niklas Deckers ##########
         os.environ["TORCH_SDPA_DISABLE_FLASH_ATTENTION"] = "1"
         torch.backends.cuda.enable_flash_sdp(False)
         torch.backends.cuda.enable_mem_efficient_sdp(False)
         torch.backends.cuda.enable_math_sdp(True)
+        #################################################################
 
         # MAIN PIPELINE: TEXT-TO-IMAGE
         self.pipe = pipe if pipe else StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             torch_dtype=torch.float32,
-            #cache_dir=CACHE_DIR,
         ).to(self.device)
 
         self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
@@ -198,6 +192,7 @@ class Generator(GeneratorBase):
         except:
             logging.warning("Cannot use xformers memory efficient attention (maybe xformers not installed)")
 
+        ####### code suggestion/improvement by Niklas Deckers ##########
         uncond_input = self.pipe.tokenizer([""], padding="max_length", max_length=77, return_tensors="pt").to(
             self.device)
         with torch.no_grad():
@@ -207,6 +202,7 @@ class Generator(GeneratorBase):
         self.latents_fixed = torch.randn((1, self.pipe.unet.in_channels, self.height // 8, self.width // 8),
                                          generator=self.initial_latent_generator, device=self.device,
                                          dtype=self.pipe.dtype)
+        #################################################################
 
         self.negative_prompt_embeds = None
         self.negative_prompt = ""
@@ -219,22 +215,6 @@ class Generator(GeneratorBase):
                                                          return_tensors="pt", ).to(self.pipe.text_encoder.device)
             self.negative_prompt_embed = self.pipe.text_encoder(negative_prompt_tokens.input_ids)[0]
 
-        # IP-ADAPTER PIPELINE
-        self.ip_pipe = StableDiffusionPipeline.from_pretrained(
-                hf_model_name,
-                requires_safety_checker=True,
-                #cache_dir=CACHE_DIR,
-                torch_dtype=torch.float16,
-            ).to(device=self.device)
-
-        self.ip_pipe.scheduler = LCMScheduler.from_config(self.ip_pipe.scheduler.config)
-        self.ip_pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
-        self.ip_pipe.fuse_lora()
-
-        try:
-            self.ip_pipe.enable_xformers_memory_efficient_attention()
-        except:
-            logging.warning("Cannot use xformers in IP pipe")
 
         self.splice = get_splice_model(self.pipe, self.device)
 
@@ -242,7 +222,6 @@ class Generator(GeneratorBase):
         self.edit_pipe = StableDiffusionPipeline.from_pretrained(
             hf_model_name,
             torch_dtype=torch.float32,
-            #cache_dir=CACHE_DIR,
         ).to(self.device)
 
         self.edit_pipe.scheduler = LCMScheduler.from_config(self.edit_pipe.scheduler.config)
@@ -252,7 +231,7 @@ class Generator(GeneratorBase):
         except Exception:
             print("[WARN] edit_pipe: LORA not available or failed", flush=True)
 
-
+        ####### code suggestion/improvement by Niklas Deckers ##########
         uncond_input_edit = self.edit_pipe.tokenizer(
             [""], padding="max_length", max_length=77, return_tensors="pt"
         )
@@ -260,7 +239,6 @@ class Generator(GeneratorBase):
         uncond_input_edit = {k: v.to(self.device) for k, v in uncond_input_edit.items()}
         with torch.no_grad():
             self.edit_uncond_embeds = self.edit_pipe.text_encoder(uncond_input_edit["input_ids"])[0]
-
         self.edit_latent_generator = torch.Generator(device=self.device).manual_seed(self.initial_latent_seed)
         self.edit_latents_fixed = torch.randn(
             (1, self.edit_pipe.unet.in_channels, self.height // 8, self.width // 8),
@@ -268,8 +246,10 @@ class Generator(GeneratorBase):
             device=self.device,
             dtype=torch.float32
         )
+        #################################################################
 
-        print("[INIT] edit_pipe ready: dtype", self.edit_pipe.unet.dtype, "latents dtype", self.edit_latents_fixed.dtype, flush=True)
+        print("[INIT] edit_pipe ready: dtype", self.edit_pipe.unet.dtype, "latents dtype",
+              self.edit_latents_fixed.dtype, flush=True)
 
     @torch.no_grad()
     def generate_image(self, embeddings: Tensor, latents: Tensor, loading_progress, queue_lock) -> list[Image]:
@@ -294,7 +274,8 @@ class Generator(GeneratorBase):
                                      width=self.width,
                                      num_images_per_prompt=1,
                                      prompt_embeds=pos_prompt_embeds[i:i + batch_steps],
-                                     negative_prompt_embeds=self.negative_prompt_embed.repeat(batch_steps, 1, 1) if self.use_negative_prompt else None,
+                                     negative_prompt_embeds=self.negative_prompt_embed.repeat(batch_steps, 1,
+                                                                                              1) if self.use_negative_prompt else None,
                                      num_inference_steps=self.num_inference_steps,
                                      guidance_scale=self.guidance_scale,
                                      latents=None,
@@ -317,7 +298,8 @@ class Generator(GeneratorBase):
         return images
 
     @torch.no_grad()
-    def generate_images_manual_loop(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None,  prompt_seed: int | None = None):
+    def generate_images_manual_loop(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None,
+                                    prompt_seed: int | None = None):
         if prompt_embeds.dtype != self.edit_pipe.dtype:
             prompt_embeds = prompt_embeds.type(self.edit_pipe.dtype)
         prompt_embeds = prompt_embeds.to(self.edit_pipe.device)
@@ -340,10 +322,12 @@ class Generator(GeneratorBase):
         self.latest_images.extend(images)
         return images
 
-    def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float, image_idx: int = 0, prompt_seed: int | None = None):
+    def _run_manual_loop(self, prompt_embeds, num_inference_steps: int, guidance_scale: float, image_idx: int = 0,
+                         prompt_seed: int | None = None):
         print("++++RUN_MANUAL_LOOP CALLED++++", flush=True)
         pipe = self.edit_pipe
 
+        ####### code suggestion/improvement by Niklas Deckers ##########
         seed_base = self.initial_latent_seed if prompt_seed is None else int(prompt_seed)
         seed = seed_base + int(image_idx)
         step_generator = torch.Generator(device=pipe.device).manual_seed(seed)
@@ -351,12 +335,15 @@ class Generator(GeneratorBase):
         latents_shape = (1, pipe.unet.in_channels, self.height // 8, self.width // 8)
         latents_curr = torch.randn(latents_shape, generator=torch.Generator(device=pipe.device).manual_seed(seed),
                                    device=pipe.device, dtype=pipe.unet.dtype)
+        #################################################################
         print("image_idx:", image_idx, flush=True)
         print("latents mean:", latents_curr.mean().item(), flush=True)
-        print("latents std:", latents_curr.std().item(),flush=True)
+        print("latents std:", latents_curr.std().item(), flush=True)
 
+        ####### code suggestion/improvement by Niklas Deckers ##########
         prompt_embeds = prompt_embeds.to(device=pipe.device, dtype=pipe.unet.dtype)
         uncond_embeds = self.edit_uncond_embeds.to(device=pipe.device, dtype=pipe.unet.dtype)
+        #################################################################
 
         print("[DEBUG] _run_manual_loop: latents_curr.device/dtype:", latents_curr.device, latents_curr.dtype,
               flush=True)
@@ -365,6 +352,7 @@ class Generator(GeneratorBase):
         print("[DEBUG] _run_manual_loop: uncond_embeds.device/dtype:", uncond_embeds.device, uncond_embeds.dtype,
               flush=True)
 
+        ####### code suggestion/improvement by Niklas Deckers ##########
         pipe.scheduler.set_timesteps(num_inference_steps, device=latents_curr.device)
 
         for t in pipe.scheduler.timesteps:
@@ -383,28 +371,35 @@ class Generator(GeneratorBase):
 
         latents_curr = latents_curr.to(pipe.vae.dtype)
         decoded = pipe.vae.decode(latents_curr / pipe.vae.config.scaling_factor).sample
-        #image = (decoded / 2 + 0.5).clamp(0, 1).detach()
-        #return image
+        # image = (decoded / 2 + 0.5).clamp(0, 1).detach()
+        # return image
         return decoded
+        #################################################################
 
     @torch.no_grad()
     def generate_with_splice(self, prompt_embeds: torch.Tensor, loading_progress=None, queue_lock=None,
                              image_idx: int = 0, is_sae=False):
         if is_sae:
+            ####### code suggestion/improvement by Niklas Deckers ##########
             num_inference_steps = 6
             guidance_scale = 1.0
-            print(f"[DEBUG] generate_with_splice: SAE-Mode → {num_inference_steps} steps + guidance {guidance_scale}", flush=True)
+            #################################################################
+            print(f"[DEBUG] generate_with_splice: SAE-Mode → {num_inference_steps} steps + guidance {guidance_scale}",
+                  flush=True)
         else:
             num_inference_steps = 6
             guidance_scale = 1.0
-            print(f"[DEBUG] generate_with_splice: SpLiCE-Mode → {num_inference_steps} steps + guidance {guidance_scale}", flush=True)
+            print(
+                f"[DEBUG] generate_with_splice: SpLiCE-Mode → {num_inference_steps} steps + guidance {guidance_scale}",
+                flush=True)
 
         print("[DEBUG] generate_with_splice: incoming prompt_embeds shape/dtype/device:",
               getattr(prompt_embeds, "shape", None), getattr(prompt_embeds, "dtype", None),
               getattr(prompt_embeds, "device", None),
               flush=True)
 
-        task = lambda: self._run_manual_loop(prompt_embeds, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale, image_idx=image_idx)
+        task = lambda: self._run_manual_loop(prompt_embeds, num_inference_steps=num_inference_steps,
+                                             guidance_scale=guidance_scale, image_idx=image_idx)
         result = queue_lock.do_work(task) if queue_lock else task()
         images_tensor = result.result() if hasattr(result, "result") else result
 
@@ -415,16 +410,4 @@ class Generator(GeneratorBase):
 
         self.latest_images.extend(images)
         return images
-
-    @staticmethod
-    def expand_to_prompt_embeds(x: torch.Tensor, seq_len: int = 77):
-        """
-        x: [768] oder [1,768]
-        return: [1,77,768]
-        """
-        if x.dim() == 1:
-            x = x.unsqueeze(0)  # [1,768]
-        x = x.unsqueeze(1)  # [1,1,768]
-        x = x.repeat(1, seq_len, 1)  # [1,77,768]
-        return x
 

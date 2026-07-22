@@ -133,7 +133,7 @@ class WebUI:
             # Study UI: intro screen, task bar, done screen
             StudyUI(self)
 
-            # Normal demo UI
+            # Standard demo UI
             with ngUI.column().classes('w-full') \
                     .bind_visibility_from(self, 'show_demo_ui'):
                 InitialIterationUI(self)

@@ -1,8 +1,6 @@
-# Concept Sliders System - Splice
+# Concept Sliders System
 
 ## Guide for running the system
-
-- **EDIT**: No manual inclusion/adjustment of `image_mean` file needed anymore.
 
 - **EDIT**: Use the following image when running the container:
 ```
@@ -17,17 +15,14 @@ bash -c "cd ~/bachelor_thesis/prototype_lean && python3 main.py"
 
 ## Overview
 
-- `webuserinterface`: Contains the WebUI, leaner version of 
-prototype, where `slider.py` handles slider logic of sliders in 
-`main_loop_ui.py`.
-- `generator.py`: Contains two different image generation pipes
-one standard pipe for initial image generation and one ip_pipe
-which is used to edit the images when adjusting the
-sliders.
-- `splice_custom.py`: Custom backbone for Splice because we use
-a CLIP model that needs compatibility with **ip_pipe**.
-- `concept_extractor.py`: Uses the method `encode_image(image)` from Splice repo
-to extract top k=3 concepts.
-- `image_editor.py`: Uses the methods `encode_image(image)` 
-and from Splice repo `recompose_image(weights)`
-to output edited image.
+- `main.py` starts the Hydra-configured application
+- `app.py` initializes the Stable Diffusion pipeline, generator, and NiceGUI server
+- `generator.py` loads Stable Diffusion, LCM-LoRA, the trained SAE checkpoint, and the Splice model and performs initial and edited image generation
+- `splice_custom.py` constructs the Splice model in the Stable Diffusion text-conditioning space
+- `concept_extractor.py` extracts prompt-level Splice concepts and image-specific SAE concepts
+- `image_editor.py` applies Splice coefficient edits and SAE-selected text-direction edits and regenerates individual images
+- `webuserinterface` contains the NiceGUI demo interface, user-study workflow, image displays, slider controls, and questionnaire handling
+- `configs/config.yaml` contains model, generation, device, display, and output settings
+- `resources` contains the trained SAE checkpoint and the mapping from SAE unit indices to concept names
+
+The application provides a demo mode for exploration and a study mode comparing iterative prompt revision with the concept-slider workflow.
