@@ -44,7 +44,6 @@ class App:
         pipe.vae = torch.compile(pipe.vae, backend="cudagraphs")
         global generator
         generator = Generator(
-            cache_dir=args.path.cache_dir,
             device=args.device,
             hf_model_name=args.hf_model_name,
             pipe=pipe,
